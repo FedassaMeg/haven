@@ -1,0 +1,4 @@
+config:
+  aws:region: us-west-2
+  haven:dbName: haven
+  haven:dbUser: haven

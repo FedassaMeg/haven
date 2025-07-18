@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: haven_db
+    environment:
+      POSTGRES_DB: haven
+      POSTGRES_USER: haven
+      POSTGRES_PASSWORD: haven
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: start-dev --http-port=8080
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+
+  kafka:  # optional; comment out if not using yet
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+
+  zookeeper:
+    image: bitnami/zookeeper:3.9
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
+
+volumes:
+  pgdata:

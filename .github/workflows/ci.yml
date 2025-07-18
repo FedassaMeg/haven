@@ -1,0 +1,41 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: haven
+          POSTGRES_USER: haven
+          POSTGRES_PASSWORD: haven
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U haven" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build backend
+        run: cd backend && ./gradlew build --stacktrace
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v1
+      - name: Build frontend
+        run: cd frontend && bun install && bun run build
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: haven-build
+          path: |
+            backend/**/build/libs/*.jar
+            frontend/apps/*/.next

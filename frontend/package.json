@@ -1,0 +1,17 @@
+{
+  "name": "haven-frontend",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "bun run build:all",
+    "build:all": "bun run --filter='./apps/*' build",
+    "dev": "bun run --filter=cm-portal dev",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.base.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2",
+    "eslint": "^9.31.0",
+    "@types/node": "^24.0.14"
+  }
+}

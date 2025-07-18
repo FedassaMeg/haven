@@ -1,0 +1,17 @@
+{
+  "name": "haven-dev",
+  "dockerComposeFile": "../docker-compose.dev.yml",
+  "service": "db",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "ms-azuretools.vscode-docker",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "postCreateCommand": "./scripts/bootstrap.sh"
+}
