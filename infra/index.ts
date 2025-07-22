@@ -1,15 +1,9 @@
 import * as pulumi from "@pulumi/pulumi";
-import { buildAwsStack } from "./modules/aws";
-import { buildAzureStack } from "./modules/azure";
-import { buildGcpStack } from "./modules/gcp";
+import * as aws from "@pulumi/aws";
+import * as awsx from "@pulumi/awsx";
 
-const cfg = new pulumi.Config("haven");
-const provider = process.env.CLOUD_PROVIDER ?? "aws";
+// Create an AWS resource (S3 Bucket)
+const bucket = new aws.s3.BucketV2("my-bucket");
 
-let outputs: any;
-if (provider === "aws") outputs = buildAwsStack(cfg);
-else if (provider === "azure") outputs = buildAzureStack(cfg);
-else outputs = buildGcpStack(cfg);
-
-export const dbEndpoint = outputs.dbEndpoint;
-export const k8sClusterName = outputs.clusterName;
+// Export the name of the bucket
+export const bucketName = bucket.id;

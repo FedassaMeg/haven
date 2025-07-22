@@ -1,4 +1,3 @@
 config:
-  aws:region: us-west-2
-  haven:dbName: haven
-  haven:dbUser: haven
+  aws:region: us-west-1
+  aws:profile: AdministratorAccess-938108731377
