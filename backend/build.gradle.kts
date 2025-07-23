@@ -1,14 +1,13 @@
 plugins {
-  `java-platform`
   id("org.springframework.boot") version "3.3.1" apply false
   id("io.spring.dependency-management") version "1.1.5" apply false
   kotlin("jvm") version "1.9.24" apply false // if using kotlin
 }
 
-javaPlatform.allowDependencies()
-
 subprojects {
-  apply(plugin = "java-library")
+  if (name != "platform-bom") {
+    apply(plugin = "java-library")
+  }
   repositories {
     mavenCentral()
   }
