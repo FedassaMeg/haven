@@ -16,18 +16,21 @@ dependencyManagement {
 
 dependencies {
     api(project(":shared-kernel"))
-    api(project(":event-store"))
-    
-    // Spring Boot starters
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
     
     // Spring Framework
     implementation("org.springframework:spring-context")
     implementation("org.springframework:spring-tx")
     
-    // JSON handling
-    implementation("com.fasterxml.jackson.core:jackson-databind")
+    // JPA/Hibernate
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    
+    // Validation
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    
+    // Reporting libraries (optional for future use)
+    // implementation("net.sf.jasperreports:jasperreports:6.20.6")
+    // implementation("org.apache.poi:poi:5.2.4")
+    // implementation("org.apache.poi:poi-ooxml:5.2.4")
     
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

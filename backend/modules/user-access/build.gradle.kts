@@ -16,21 +16,24 @@ dependencyManagement {
 
 dependencies {
     api(project(":shared-kernel"))
-    api(project(":event-store"))
-    
-    // Spring Boot starters
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
     
     // Spring Framework
     implementation("org.springframework:spring-context")
     implementation("org.springframework:spring-tx")
     
-    // JSON handling
-    implementation("com.fasterxml.jackson.core:jackson-databind")
+    // JPA/Hibernate
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    
+    // Security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    
+    // Validation
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.mockito:mockito-junit-jupiter")
 }
 
