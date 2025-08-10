@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { useAuth as useAuthContext } from './providers.tsx';
-import type { UserRole, ResourceType, ActionType } from './types';
+import { useAuth as useAuthContext } from './providers';
+import { UserRole, ResourceType, ActionType } from './types';
 
 // Re-export useAuth from providers for convenience
-export { useAuth } from './providers.tsx';
+export { useAuth } from './providers';
 
 // Custom hooks for common auth operations
 export function usePermissions() {
