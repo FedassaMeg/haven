@@ -17,6 +17,7 @@ gradle-app.setting
 !gradle-wrapper.jar
 .gradletasknamecache
 bin/
+backend/**/.gradle/
 
 # Java/Spring Boot
 *.log
