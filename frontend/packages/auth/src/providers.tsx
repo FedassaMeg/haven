@@ -1,21 +1,22 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import Keycloak, { KeycloakInstance, KeycloakProfile } from 'keycloak-js';
-import Cookies from 'js-cookie';
+import {
+  UserRole,
+  ResourceType,
+  ActionType,
+} from './types';
 import type {
   AuthContextType,
   AuthProviderProps,
   AuthState,
   User,
   KeycloakConfig,
-  UserRole,
-  ResourceType,
-  ActionType,
 } from './types';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_COOKIE = 'haven-auth-token';
-const REFRESH_TOKEN_COOKIE = 'haven-refresh-token';
+const TOKEN_KEY = 'haven-auth-token';
+const REFRESH_TOKEN_KEY = 'haven-refresh-token';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
@@ -51,8 +52,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
         const authenticated = await kc.init({
           ...initOptions,
-          token: Cookies.get(TOKEN_COOKIE),
-          refreshToken: Cookies.get(REFRESH_TOKEN_COOKIE),
+          token: sessionStorage.getItem(TOKEN_KEY) || undefined,
+          refreshToken: sessionStorage.getItem(REFRESH_TOKEN_KEY) || undefined,
         });
 
         if (authenticated) {
@@ -67,12 +68,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             refreshToken: kc.refreshToken || null,
           });
 
-          // Store tokens in cookies
+          // Store tokens in sessionStorage
           if (kc.token) {
-            Cookies.set(TOKEN_COOKIE, kc.token, { secure: true, sameSite: 'strict' });
+            sessionStorage.setItem(TOKEN_KEY, kc.token);
           }
           if (kc.refreshToken) {
-            Cookies.set(REFRESH_TOKEN_COOKIE, kc.refreshToken, { secure: true, sameSite: 'strict' });
+            sessionStorage.setItem(REFRESH_TOKEN_KEY, kc.refreshToken);
           }
 
           onAuthSuccess?.(user);
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           kc.updateToken(30).then((refreshed) => {
             if (refreshed) {
               if (kc.token) {
-                Cookies.set(TOKEN_COOKIE, kc.token, { secure: true, sameSite: 'strict' });
+                sessionStorage.setItem(TOKEN_KEY, kc.token);
               }
               setAuthState(prev => ({ ...prev, token: kc.token || null }));
             }
@@ -144,9 +145,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
   const logout = useCallback(async (redirectUri?: string) => {
     if (keycloak) {
-      // Clear cookies
-      Cookies.remove(TOKEN_COOKIE);
-      Cookies.remove(REFRESH_TOKEN_COOKIE);
+      // Clear sessionStorage
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(REFRESH_TOKEN_KEY);
       
       setAuthState({
         user: null,
@@ -171,7 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       try {
         const refreshed = await keycloak.updateToken(minValidity);
         if (refreshed && keycloak.token) {
-          Cookies.set(TOKEN_COOKIE, keycloak.token, { secure: true, sameSite: 'strict' });
+          sessionStorage.setItem(TOKEN_KEY, keycloak.token);
           setAuthState(prev => ({ ...prev, token: keycloak.token || null }));
         }
         return refreshed;
@@ -213,7 +214,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         [ActionType.CLOSE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
       },
       [ResourceType.REPORT]: {
-        [ActionType.read]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER, UserRole.SUPERVISOR, UserRole.VIEWER],
+        [ActionType.READ]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER, UserRole.SUPERVISOR, UserRole.VIEWER],
         [ActionType.CREATE]: [UserRole.SUPERVISOR],
       },
     };
