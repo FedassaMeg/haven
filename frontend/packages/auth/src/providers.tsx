@@ -22,10 +22,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
   config,
   initOptions = {
-    onLoad: 'check-sso',
-    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+    onLoad: 'login-required',
     checkLoginIframe: false,
     enableLogging: process.env.NODE_ENV === 'development',
+    pkceMethod: 'S256',
   },
   onAuthSuccess,
   onAuthError,

@@ -170,7 +170,7 @@ export function useForm<T extends Record<string, any>>(
     }
   }, [validationRules]);
 
-  const setTouched = React.useCallback((field: keyof T) => {
+  const setFieldTouched = React.useCallback((field: keyof T) => {
     setTouched(prev => ({ ...prev, [field]: true }));
   }, []);
 
@@ -198,7 +198,7 @@ export function useForm<T extends Record<string, any>>(
     touched,
     isValid,
     setValue,
-    setTouched,
+    setFieldTouched,
     validate,
     reset,
   };

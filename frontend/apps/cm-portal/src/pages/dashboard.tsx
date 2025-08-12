@@ -4,6 +4,11 @@ import { useClients, useCases } from '@haven/api-client';
 import AppLayout from '../components/AppLayout';
 import Link from 'next/link';
 import { useState } from 'react';
+import { 
+  Bell, Search, FileText, Calendar, Users, AlertTriangle, Heart, Phone, 
+  ChevronRight, Clock, CheckCircle2, UserPlus, FolderOpen, BarChart3, 
+  Shield, ArrowUp, ArrowDown 
+} from 'lucide-react';
 
 interface DashboardStatsProps {
   title: string;
@@ -66,103 +71,40 @@ interface RecentActivityItem {
 }
 
 const RecentActivity: React.FC = () => {
-  // Mock data - in real app this would come from API
   const activities: RecentActivityItem[] = [
     {
       id: '1',
       type: 'client_created',
-      description: 'New client "John Smith" was created',
+      description: 'Client confirmed safe housing placement',
       timestamp: '2 hours ago',
-      user: 'Sarah Johnson',
+      user: 'System',
     },
     {
       id: '2', 
       type: 'case_opened',
-      description: 'Case "Housing Assessment" was opened for Maria Garcia',
+      description: 'Legal documents submitted to court',
       timestamp: '4 hours ago',
       user: 'Mike Chen',
     },
     {
       id: '3',
       type: 'case_assigned',
-      description: 'Case "Financial Aid" was assigned to Jessica Brown',
-      timestamp: '6 hours ago',
-      user: 'David Wilson',
-    },
-    {
-      id: '4',
-      type: 'case_closed',
-      description: 'Case "Employment Services" was closed successfully',
+      description: 'New crisis protocol guidelines available',
       timestamp: '1 day ago',
-      user: 'Lisa Rodriguez',
+      user: 'Admin',
     },
   ];
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'client_created':
-        return (
-          <div className="w-8 h-8 bg-success-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-        );
-      case 'case_opened':
-        return (
-          <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-        );
-      case 'case_assigned':
-        return (
-          <div className="w-8 h-8 bg-warning-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-warning-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-        );
-      case 'case_closed':
-        return (
-          <div className="w-8 h-8 bg-secondary-100 rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-            </svg>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-start space-x-3">
-              {getActivityIcon(activity.type)}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-secondary-900">{activity.description}</p>
-                <p className="text-xs text-secondary-500">
-                  by {activity.user} • {activity.timestamp}
-                </p>
-              </div>
-            </div>
-          ))}
+    <div className="space-y-4">
+      {activities.map((activity) => (
+        <div key={activity.id} className="text-sm">
+          <p className="font-medium text-slate-800">Case #2024-{activity.id.padStart(4, '0')}</p>
+          <p className="text-slate-600">{activity.description}</p>
+          <p className="text-xs text-slate-500 mt-1">{activity.timestamp}</p>
         </div>
-        <div className="mt-4 pt-4 border-t border-secondary-200">
-          <Link href="/activity" className="text-sm text-primary-600 hover:text-primary-700">
-            View all activity
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
 };
 
@@ -170,166 +112,330 @@ function DashboardContent() {
   const { user, fullName } = useCurrentUser();
   const { clients, loading: clientsLoading } = useClients({ activeOnly: true });
   const { cases, loading: casesLoading } = useCases({ activeOnly: true });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const activeCases = cases?.filter(c => c.status !== 'CLOSED') || [];
   const myCases = cases?.filter(c => c.assignment?.assigneeId === user?.id) || [];
   const casesNeedingAttention = cases?.filter(c => {
-    // Mock logic for cases needing attention
     const createdDays = new Date().getTime() - new Date(c.createdAt).getTime();
     return createdDays > 30 * 24 * 60 * 60 * 1000; // Over 30 days old
   }) || [];
+  
+  const todaysPriorities = [
+    { id: '1', type: 'urgent', title: 'Safety check - Sarah M.', due: '2:00 PM today', icon: AlertTriangle },
+    { id: '2', type: 'normal', title: 'Complete case notes - Maria L.', due: 'End of day', icon: FileText },
+    { id: '3', type: 'normal', title: 'Team meeting preparation', due: 'Tomorrow 9:00 AM', icon: Users }
+  ];
+
+  const greeting = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {fullName || user?.firstName}</h1>
-        <p className="text-primary-100">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardStats
-          title="Total Clients"
-          value={clientsLoading ? '...' : clients?.length || 0}
-          subtitle="Active clients"
-          trend={{ value: '12%', isPositive: true }}
-          icon={
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-            </svg>
-          }
-        />
-        <DashboardStats
-          title="Active Cases"
-          value={casesLoading ? '...' : activeCases.length}
-          subtitle="Open cases"
-          trend={{ value: '8%', isPositive: true }}
-          icon={
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          }
-        />
-        <DashboardStats
-          title="My Cases"
-          value={casesLoading ? '...' : myCases.length}
-          subtitle="Assigned to me"
-          icon={
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          }
-        />
-        <DashboardStats
-          title="Needs Attention"
-          value={casesLoading ? '...' : casesNeedingAttention.length}
-          subtitle="Overdue cases"
-          trend={{ value: '3', isPositive: false }}
-          icon={
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          }
-        />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <Link href="/clients/new">
-                <Button variant="outline" className="w-full h-20 flex-col space-y-2">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span>Add Client</span>
-                </Button>
-              </Link>
-              <Link href="/cases/new">
-                <Button variant="outline" className="w-full h-20 flex-col space-y-2">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>Open Case</span>
-                </Button>
-              </Link>
-              <Link href="/clients">
-                <Button variant="outline" className="w-full h-20 flex-col space-y-2">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <span>Search Clients</span>
-                </Button>
-              </Link>
-              <Link href="/reports">
-                <Button variant="outline" className="w-full h-20 flex-col space-y-2">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span>Reports</span>
-                </Button>
-              </Link>
+    <div className="min-h-screen bg-slate-50">
+      {/* Enhanced Header with Search */}
+      <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-6 flex-1">
+            <h1 className="font-bold text-xl text-blue-600">Haven Portal</h1>
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search cases, clients, or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full text-sm"
+              />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <RecentActivity />
-      </div>
-
-      {/* Cases Needing Attention */}
-      {casesNeedingAttention.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <svg className="w-5 h-5 text-warning-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                Cases Needing Attention
-              </CardTitle>
-              <Badge variant="warning">{casesNeedingAttention.length}</Badge>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-medium text-sm">
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                </span>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {casesNeedingAttention.slice(0, 3).map((case_) => (
-                <div key={case_.id} className="flex items-center justify-between p-3 border border-warning-200 rounded-lg bg-warning-50">
-                  <div>
-                    <p className="font-medium text-secondary-900">{case_.description}</p>
-                    <p className="text-sm text-secondary-600">
-                      Client ID: {case_.clientId} • Opened {new Date(case_.createdAt).toLocaleDateString()}
-                    </p>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="font-bold text-2xl text-slate-800 mb-2">
+            Good {greeting}, {fullName || user?.firstName}.
+          </h2>
+          <p className="text-slate-600">You have {myCases.length} cases to review today.</p>
+        </div>
+
+        {/* Enhanced Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Total Clients</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">
+                    {clientsLoading ? '...' : clients?.length || 0}
+                  </p>
+                  <div className="flex items-center mt-2">
+                    <ArrowUp className="w-4 h-4 text-green-500 mr-1" />
+                    <span className="text-sm font-medium text-green-600">+12%</span>
+                    <span className="text-sm text-slate-500 ml-2">from last month</span>
                   </div>
-                  <Link href={`/cases/${case_.id}`}>
-                    <Button size="sm">View Case</Button>
-                  </Link>
                 </div>
-              ))}
-              {casesNeedingAttention.length > 3 && (
-                <div className="text-center pt-2">
-                  <Link href="/cases/attention" className="text-sm text-primary-600 hover:text-primary-700">
-                    View all {casesNeedingAttention.length} cases needing attention
-                  </Link>
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Users className="w-6 h-6 text-blue-600" />
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Active Cases</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">
+                    {casesLoading ? '...' : activeCases.length}
+                  </p>
+                  <div className="flex items-center mt-2">
+                    <ArrowUp className="w-4 h-4 text-green-500 mr-1" />
+                    <span className="text-sm font-medium text-green-600">+8%</span>
+                    <span className="text-sm text-slate-500 ml-2">from last month</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-amber-100 rounded-lg">
+                  <FolderOpen className="w-6 h-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">My Cases</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">
+                    {casesLoading ? '...' : myCases.length}
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">Assigned to me</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <Shield className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Needs Attention</p>
+                  <p className="text-3xl font-bold text-slate-900 mt-1">
+                    {casesLoading ? '...' : casesNeedingAttention.length}
+                  </p>
+                  <div className="flex items-center mt-2">
+                    <ArrowDown className="w-4 h-4 text-red-500 mr-1" />
+                    <span className="text-sm font-medium text-red-600">3</span>
+                    <span className="text-sm text-slate-500 ml-2">overdue</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-red-100 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content Area */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Active Cases Panel */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-bold text-lg text-slate-800">Active Cases</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activeCases.slice(0, 3).map((case_, index) => {
+                  const statusBadge = case_.status === 'OPEN' ? 
+                    { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200', label: 'Follow-up needed' } :
+                    case_.status === 'IN_PROGRESS' ?
+                    { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200', label: 'On track' } :
+                    { bg: 'bg-cyan-100', text: 'text-cyan-800', border: 'border-cyan-200', label: 'New referral' };
+                  
+                  return (
+                    <div key={case_.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-slate-800">Case #2024-{case_.id.slice(0, 4)}</h3>
+                          <p className="text-sm text-slate-600">{case_.description}</p>
+                        </div>
+                        <Badge variant="secondary" className={`${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+                          {statusBadge.label}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-slate-600 mb-3">
+                        Client ID: {case_.clientId?.slice(0, 8)}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Calendar className="w-3 h-3" />
+                        <span>Last updated: {new Date(case_.updatedAt || case_.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {activeCases.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-4">No active cases</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Today's Priorities */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-bold text-lg text-slate-800">Today's Priorities</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {todaysPriorities.map((priority) => {
+                  const Icon = priority.icon;
+                  return (
+                    <div 
+                      key={priority.id} 
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        priority.type === 'urgent' 
+                          ? 'bg-amber-50 border-amber-200' 
+                          : 'border-slate-200'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${
+                        priority.type === 'urgent' ? 'text-amber-600' : 'text-slate-500'
+                      }`} />
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-800">{priority.title}</p>
+                        <p className="text-sm text-slate-600">Due: {priority.due}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Recent Updates */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-bold text-lg text-slate-800">Recent Updates</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RecentActivity />
+              </CardContent>
+            </Card>
+
+            {/* Wellbeing Reminder */}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="font-bold text-lg text-blue-800 flex items-center gap-2">
+                  <Heart className="w-5 h-5" />
+                  Wellbeing Check
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-blue-700 mb-4">
+                  You've handled {myCases.length} cases today. Remember to take breaks when needed.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-blue-300 text-blue-700 hover:bg-blue-100 bg-transparent"
+                >
+                  Take a Breathing Break
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Quick Resources */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-bold text-lg text-slate-800">Quick Resources</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="ghost" className="w-full justify-start text-left h-auto p-3 hover:bg-slate-50">
+                  <Phone className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Crisis Hotline</p>
+                    <p className="text-xs text-slate-500">24/7 Support</p>
+                  </div>
+                </Button>
+                <Button variant="ghost" className="w-full justify-start text-left h-auto p-3 hover:bg-slate-50">
+                  <FileText className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Legal Templates</p>
+                    <p className="text-xs text-slate-500">Forms & Documents</p>
+                  </div>
+                </Button>
+                <Button variant="ghost" className="w-full justify-start text-left h-auto p-3 hover:bg-slate-50">
+                  <Users className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Peer Support</p>
+                    <p className="text-xs text-slate-500">Connect with colleagues</p>
+                  </div>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Cases Needing Attention */}
+        {casesNeedingAttention.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center font-bold text-lg text-slate-800">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mr-2" />
+                  Cases Needing Attention
+                </CardTitle>
+                <Badge variant="warning" className="bg-amber-100 text-amber-800">
+                  {casesNeedingAttention.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {casesNeedingAttention.slice(0, 3).map((case_) => (
+                  <div key={case_.id} className="flex items-center justify-between p-3 border border-amber-200 rounded-lg bg-amber-50">
+                    <div>
+                      <p className="font-medium text-slate-900">{case_.description}</p>
+                      <p className="text-sm text-slate-600">
+                        Client ID: {case_.clientId?.slice(0, 8)} • Opened {new Date(case_.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Link href={`/cases/${case_.id}`}>
+                      <Button size="sm" className="bg-amber-600 hover:bg-amber-700">View Case</Button>
+                    </Link>
+                  </div>
+                ))}
+                {casesNeedingAttention.length > 3 && (
+                  <div className="text-center pt-2">
+                    <Link href="/cases/attention" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                      View all {casesNeedingAttention.length} cases needing attention
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
@@ -337,10 +443,8 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <ProtectedRoute>
-      <AppLayout title="Dashboard">
-        <div className="p-6">
-          <DashboardContent />
-        </div>
+      <AppLayout title="Dashboard" hideHeader={true}>
+        <DashboardContent />
       </AppLayout>
     </ProtectedRoute>
   );
