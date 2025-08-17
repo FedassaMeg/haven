@@ -28,7 +28,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         checkLoginIframe: false,
         enableLogging: process.env.NODE_ENV === 'development',
         pkceMethod: 'S256',
-        redirectUri: typeof window !== 'undefined' ? window.location.origin + '/' : '',
+        redirectUri: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000/',
       }}
     >
       <Component {...pageProps} />
