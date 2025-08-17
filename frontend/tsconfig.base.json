@@ -6,6 +6,10 @@
     "strict": true,
     "jsx": "preserve",
     "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
       "@haven/ui": ["packages/ui/src"],
