@@ -15,11 +15,6 @@ import java.util.Optional;
 public class ClientAppService {
     
     private final ClientRepository clientRepository;
-    
-    public ClientAppService(ClientRepository clientRepository) {
-        this.clientRepository = clientRepository;
-    }
-    
     private final ClientDomainService clientDomainService;
     
     public ClientAppService(ClientRepository clientRepository, ClientDomainService clientDomainService) {
