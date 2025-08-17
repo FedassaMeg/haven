@@ -55,8 +55,25 @@ function useApiState<T>(initialData: T | null = null): [
 // Client hooks
 export function useClients(params?: ClientSearchParams) {
   const [state, { setData, setLoading, setError }] = useApiState<Client[]>([]);
+  
+  // Stabilize params to prevent infinite re-renders
+  const paramsKey = JSON.stringify(params || {});
 
-  const fetchClients = useCallback(async () => {
+  useEffect(() => {
+    const fetchClients = async () => {
+      setLoading(true);
+      try {
+        const clients = await apiClient.getClients(params);
+        setData(clients);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchClients();
+  }, [paramsKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
     setLoading(true);
     try {
       const clients = await apiClient.getClients(params);
@@ -66,36 +83,38 @@ export function useClients(params?: ClientSearchParams) {
     }
   }, [params, setData, setLoading, setError]);
 
-  useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
-
   return {
     clients: state.data,
     loading: state.loading,
     error: state.error,
-    refetch: fetchClients,
+    refetch,
   };
 }
 
 export function useClient(id: string | null) {
   const [state, { setData, setLoading, setError }] = useApiState<Client>();
+  const [hasError, setHasError] = useState(false);
 
   const fetchClient = useCallback(async () => {
     if (!id) return;
     
     setLoading(true);
+    setHasError(false);
     try {
       const client = await apiClient.getClient(id);
       setData(client);
     } catch (error) {
       setError(handleApiError(error as ApiError));
+      setHasError(true);
     }
   }, [id, setData, setLoading, setError]);
 
   useEffect(() => {
-    fetchClient();
-  }, [fetchClient]);
+    // Only fetch if we don't have an error
+    if (!hasError) {
+      fetchClient();
+    }
+  }, [fetchClient, hasError]);
 
   return {
     client: state.data,
@@ -151,8 +170,25 @@ export function useUpdateClientDemographics() {
 // Case hooks
 export function useCases(params?: CaseSearchParams) {
   const [state, { setData, setLoading, setError }] = useApiState<Case[]>([]);
+  
+  // Stabilize params to prevent infinite re-renders
+  const paramsKey = JSON.stringify(params || {});
 
-  const fetchCases = useCallback(async () => {
+  useEffect(() => {
+    const fetchCases = async () => {
+      setLoading(true);
+      try {
+        const cases = await apiClient.getCases(params);
+        setData(cases);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchCases();
+  }, [paramsKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
     setLoading(true);
     try {
       const cases = await apiClient.getCases(params);
@@ -162,36 +198,38 @@ export function useCases(params?: CaseSearchParams) {
     }
   }, [params, setData, setLoading, setError]);
 
-  useEffect(() => {
-    fetchCases();
-  }, [fetchCases]);
-
   return {
     cases: state.data,
     loading: state.loading,
     error: state.error,
-    refetch: fetchCases,
+    refetch,
   };
 }
 
 export function useCase(id: string | null) {
   const [state, { setData, setLoading, setError }] = useApiState<Case>();
+  const [hasError, setHasError] = useState(false);
 
   const fetchCase = useCallback(async () => {
     if (!id) return;
     
     setLoading(true);
+    setHasError(false);
     try {
       const caseData = await apiClient.getCase(id);
       setData(caseData);
     } catch (error) {
       setError(handleApiError(error as ApiError));
+      setHasError(true);
     }
   }, [id, setData, setLoading, setError]);
 
   useEffect(() => {
-    fetchCase();
-  }, [fetchCase]);
+    // Only fetch if we don't have an error
+    if (!hasError) {
+      fetchCase();
+    }
+  }, [fetchCase, hasError]);
 
   return {
     case: state.data,
@@ -203,22 +241,28 @@ export function useCase(id: string | null) {
 
 export function useClientCases(clientId: string | null) {
   const [state, { setData, setLoading, setError }] = useApiState<Case[]>([]);
+  const [hasError, setHasError] = useState(false);
 
   const fetchClientCases = useCallback(async () => {
     if (!clientId) return;
     
     setLoading(true);
+    setHasError(false);
     try {
       const cases = await apiClient.getCasesByClient(clientId);
       setData(cases);
     } catch (error) {
       setError(handleApiError(error as ApiError));
+      setHasError(true);
     }
   }, [clientId, setData, setLoading, setError]);
 
   useEffect(() => {
-    fetchClientCases();
-  }, [fetchClientCases]);
+    // Only fetch if we don't have an error
+    if (!hasError) {
+      fetchClientCases();
+    }
+  }, [fetchClientCases, hasError]);
 
   return {
     cases: state.data,
@@ -256,20 +300,26 @@ export function useApiHealth() {
     status: string;
     timestamp: string;
   }>();
+  const [hasError, setHasError] = useState(false);
 
   const checkHealth = useCallback(async () => {
     setLoading(true);
+    setHasError(false);
     try {
       const health = await apiClient.healthCheck();
       setData(health);
     } catch (error) {
       setError(handleApiError(error as ApiError));
+      setHasError(true);
     }
   }, [setData, setLoading, setError]);
 
   useEffect(() => {
-    checkHealth();
-  }, [checkHealth]);
+    // Only fetch if we don't have an error
+    if (!hasError) {
+      checkHealth();
+    }
+  }, [checkHealth, hasError]);
 
   return {
     health: state.data,

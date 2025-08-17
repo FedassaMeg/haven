@@ -1,31 +1,33 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import Keycloak, { KeycloakInstance, KeycloakProfile } from 'keycloak-js';
-import {
-  UserRole,
-  ResourceType,
-  ActionType,
-} from './types';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import Keycloak, { KeycloakInstance, KeycloakProfile } from "keycloak-js";
+import { UserRole, ResourceType, ActionType } from "./types";
 import type {
   AuthContextType,
   AuthProviderProps,
   AuthState,
   User,
   KeycloakConfig,
-} from './types';
+} from "./types";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = 'haven-auth-token';
-const REFRESH_TOKEN_KEY = 'haven-refresh-token';
+const TOKEN_KEY = "haven-auth-token";
+const REFRESH_TOKEN_KEY = "haven-refresh-token";
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
   config,
   initOptions = {
-    onLoad: 'login-required',
+    onLoad: "login-required" as const,
     checkLoginIframe: false,
-    enableLogging: process.env.NODE_ENV === 'development',
-    pkceMethod: 'S256',
+    enableLogging: process.env.NODE_ENV === "development",
+    pkceMethod: "S256" as "S256",
   },
   onAuthSuccess,
   onAuthError,
@@ -59,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         if (authenticated) {
           const profile = await kc.loadUserProfile();
           const user = transformKeycloakUser(kc, profile);
-          
+
           setAuthState({
             user,
             isAuthenticated: true,
@@ -91,21 +93,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
         // Set up token refresh
         kc.onTokenExpired = () => {
-          kc.updateToken(30).then((refreshed) => {
-            if (refreshed) {
-              if (kc.token) {
-                sessionStorage.setItem(TOKEN_KEY, kc.token);
+          kc.updateToken(30)
+            .then((refreshed) => {
+              if (refreshed) {
+                if (kc.token) {
+                  sessionStorage.setItem(TOKEN_KEY, kc.token);
+                }
+                setAuthState((prev) => ({ ...prev, token: kc.token || null }));
               }
-              setAuthState(prev => ({ ...prev, token: kc.token || null }));
-            }
-          }).catch(() => {
-            console.error('Failed to refresh token');
-            logout();
-          });
+            })
+            .catch(() => {
+              console.error("Failed to refresh token");
+              logout();
+            });
         };
-
       } catch (error) {
-        console.error('Failed to initialize Keycloak:', error);
+        console.error("Failed to initialize Keycloak:", error);
         onAuthError?.(error);
         setAuthState({
           user: null,
@@ -120,108 +123,150 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     initKeycloak();
   }, [config, initOptions, onAuthSuccess, onAuthError]);
 
-  const transformKeycloakUser = (kc: KeycloakInstance, profile: KeycloakProfile): User => {
+  const transformKeycloakUser = (
+    kc: KeycloakInstance,
+    profile: KeycloakProfile
+  ): User => {
     const realmRoles = kc.realmAccess?.roles || [];
     const clientRoles = kc.resourceAccess?.[config.clientId]?.roles || [];
     const groups = (kc.tokenParsed as any)?.groups || [];
 
     return {
-      id: profile.id || kc.subject || '',
-      username: profile.username || '',
-      email: profile.email || '',
-      firstName: profile.firstName || '',
-      lastName: profile.lastName || '',
+      id: profile.id || kc.subject || "",
+      username: profile.username || "",
+      email: profile.email || "",
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
       roles: [...realmRoles, ...clientRoles],
       groups,
       attributes: profile.attributes,
     };
   };
 
-  const login = useCallback(async (redirectUri?: string) => {
-    if (keycloak) {
-      await keycloak.login({ redirectUri });
-    }
-  }, [keycloak]);
-
-  const logout = useCallback(async (redirectUri?: string) => {
-    if (keycloak) {
-      // Clear sessionStorage
-      sessionStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-      
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        token: null,
-        refreshToken: null,
-      });
-      
-      await keycloak.logout({ redirectUri });
-    }
-  }, [keycloak]);
-
-  const register = useCallback(async (redirectUri?: string) => {
-    if (keycloak) {
-      await keycloak.register({ redirectUri });
-    }
-  }, [keycloak]);
-
-  const updateToken = useCallback(async (minValidity = 30): Promise<boolean> => {
-    if (keycloak) {
-      try {
-        const refreshed = await keycloak.updateToken(minValidity);
-        if (refreshed && keycloak.token) {
-          sessionStorage.setItem(TOKEN_KEY, keycloak.token);
-          setAuthState(prev => ({ ...prev, token: keycloak.token || null }));
-        }
-        return refreshed;
-      } catch (error) {
-        console.error('Failed to update token:', error);
-        return false;
+  const login = useCallback(
+    async (redirectUri?: string) => {
+      if (keycloak) {
+        await keycloak.login({ redirectUri });
       }
-    }
-    return false;
-  }, [keycloak]);
+    },
+    [keycloak]
+  );
 
-  const hasRole = useCallback((role: string): boolean => {
-    return authState.user?.roles.includes(role) || false;
-  }, [authState.user]);
+  const logout = useCallback(
+    async (redirectUri?: string) => {
+      if (keycloak) {
+        // Clear sessionStorage
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(REFRESH_TOKEN_KEY);
 
-  const hasGroup = useCallback((group: string): boolean => {
-    return authState.user?.groups.includes(group) || false;
-  }, [authState.user]);
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          token: null,
+          refreshToken: null,
+        });
 
-  const hasPermission = useCallback((resource: string, action: string): boolean => {
-    if (!authState.user) return false;
+        await keycloak.logout({ redirectUri });
+      }
+    },
+    [keycloak]
+  );
 
-    // Admin has all permissions
-    if (hasRole(UserRole.ADMIN)) return true;
+  const register = useCallback(
+    async (redirectUri?: string) => {
+      if (keycloak) {
+        await keycloak.register({ redirectUri });
+      }
+    },
+    [keycloak]
+  );
 
-    // Define permission matrix
-    const permissionMatrix: Record<string, Record<string, string[]>> = {
-      [ResourceType.CLIENT]: {
-        [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
-        [ActionType.READ]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER, UserRole.SUPERVISOR, UserRole.VIEWER],
-        [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
-        [ActionType.DELETE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
-      },
-      [ResourceType.CASE]: {
-        [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
-        [ActionType.READ]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER, UserRole.SUPERVISOR, UserRole.VIEWER],
-        [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
-        [ActionType.ASSIGN]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
-        [ActionType.CLOSE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
-      },
-      [ResourceType.REPORT]: {
-        [ActionType.READ]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER, UserRole.SUPERVISOR, UserRole.VIEWER],
-        [ActionType.CREATE]: [UserRole.SUPERVISOR],
-      },
-    };
+  const updateToken = useCallback(
+    async (minValidity = 30): Promise<boolean> => {
+      if (keycloak) {
+        try {
+          const refreshed = await keycloak.updateToken(minValidity);
+          if (refreshed && keycloak.token) {
+            sessionStorage.setItem(TOKEN_KEY, keycloak.token);
+            setAuthState((prev) => ({
+              ...prev,
+              token: keycloak.token || null,
+            }));
+          }
+          return refreshed;
+        } catch (error) {
+          console.error("Failed to update token:", error);
+          return false;
+        }
+      }
+      return false;
+    },
+    [keycloak]
+  );
 
-    const allowedRoles = permissionMatrix[resource]?.[action] || [];
-    return authState.user.roles.some(role => allowedRoles.includes(role));
-  }, [authState.user, hasRole]);
+  const hasRole = useCallback(
+    (role: string): boolean => {
+      return authState.user?.roles.includes(role) || false;
+    },
+    [authState.user]
+  );
+
+  const hasGroup = useCallback(
+    (group: string): boolean => {
+      return authState.user?.groups.includes(group) || false;
+    },
+    [authState.user]
+  );
+
+  const hasPermission = useCallback(
+    (resource: string, action: string): boolean => {
+      if (!authState.user) return false;
+
+      // Admin has all permissions
+      if (hasRole(UserRole.ADMIN)) return true;
+
+      // Define permission matrix
+      const permissionMatrix: Record<string, Record<string, string[]>> = {
+        [ResourceType.CLIENT]: {
+          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.READ]: [
+            UserRole.CASE_MANAGER,
+            UserRole.SOCIAL_WORKER,
+            UserRole.SUPERVISOR,
+            UserRole.VIEWER,
+          ],
+          [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.DELETE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
+        },
+        [ResourceType.CASE]: {
+          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.READ]: [
+            UserRole.CASE_MANAGER,
+            UserRole.SOCIAL_WORKER,
+            UserRole.SUPERVISOR,
+            UserRole.VIEWER,
+          ],
+          [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.ASSIGN]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
+          [ActionType.CLOSE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
+        },
+        [ResourceType.REPORT]: {
+          [ActionType.READ]: [
+            UserRole.CASE_MANAGER,
+            UserRole.SOCIAL_WORKER,
+            UserRole.SUPERVISOR,
+            UserRole.VIEWER,
+          ],
+          [ActionType.CREATE]: [UserRole.SUPERVISOR],
+        },
+      };
+
+      const allowedRoles = permissionMatrix[resource]?.[action] || [];
+      return authState.user.roles.some((role) => allowedRoles.includes(role));
+    },
+    [authState.user, hasRole]
+  );
 
   const contextValue: AuthContextType = {
     ...authState,
@@ -240,16 +285,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   }
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
