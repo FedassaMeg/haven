@@ -1,5 +1,5 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
 
 export interface Column<T> {
   key: keyof T | 'actions';
@@ -19,6 +19,68 @@ export interface TableProps<T> {
   className?: string;
 }
 
+const tableContainerVariants = cva(
+  'card',
+  {
+    variants: {
+      overflow: {
+        true: 'overflow-hidden',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      overflow: false,
+    },
+  }
+);
+
+const tableHeaderCellVariants = cva(
+  'px-6 py-3 text-xs font-medium text-secondary-500 uppercase tracking-wider',
+  {
+    variants: {
+      align: {
+        left: 'text-left',
+        center: 'text-center',
+        right: 'text-right',
+      },
+    },
+    defaultVariants: {
+      align: 'left',
+    },
+  }
+);
+
+const tableDataCellVariants = cva(
+  'px-6 py-4 whitespace-nowrap text-sm',
+  {
+    variants: {
+      align: {
+        left: 'text-left',
+        center: 'text-center',
+        right: 'text-right',
+      },
+    },
+    defaultVariants: {
+      align: 'left',
+    },
+  }
+);
+
+const tableRowVariants = cva(
+  'transition-colors',
+  {
+    variants: {
+      clickable: {
+        true: 'cursor-pointer hover:bg-secondary-50',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      clickable: false,
+    },
+  }
+);
+
 export function Table<T extends Record<string, any>>({
   data,
   columns,
@@ -29,7 +91,7 @@ export function Table<T extends Record<string, any>>({
 }: TableProps<T>) {
   if (loading) {
     return (
-      <div className={clsx('card', className)}>
+      <div className={tableContainerVariants({ className })}>
         <div className="animate-pulse">
           <div className="h-4 bg-secondary-200 rounded w-full mb-4"></div>
           <div className="space-y-2">
@@ -44,7 +106,7 @@ export function Table<T extends Record<string, any>>({
 
   if (data.length === 0) {
     return (
-      <div className={clsx('card', className)}>
+      <div className={tableContainerVariants({ className })}>
         <div className="text-center py-12">
           <p className="text-secondary-500">{emptyMessage}</p>
         </div>
@@ -53,7 +115,7 @@ export function Table<T extends Record<string, any>>({
   }
 
   return (
-    <div className={clsx('card overflow-hidden', className)}>
+    <div className={tableContainerVariants({ overflow: true, className })}>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-secondary-200">
           <thead className="bg-secondary-50">
@@ -61,11 +123,7 @@ export function Table<T extends Record<string, any>>({
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className={clsx(
-                    'px-6 py-3 text-xs font-medium text-secondary-500 uppercase tracking-wider',
-                    column.align === 'center' && 'text-center',
-                    column.align === 'right' && 'text-right'
-                  )}
+                  className={tableHeaderCellVariants({ align: column.align })}
                   style={{ width: column.width }}
                 >
                   {column.label}
@@ -77,20 +135,13 @@ export function Table<T extends Record<string, any>>({
             {data.map((row, index) => (
               <tr
                 key={index}
-                className={clsx(
-                  onRowClick && 'cursor-pointer hover:bg-secondary-50',
-                  'transition-colors'
-                )}
+                className={tableRowVariants({ clickable: !!onRowClick })}
                 onClick={() => onRowClick?.(row, index)}
               >
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}
-                    className={clsx(
-                      'px-6 py-4 whitespace-nowrap text-sm',
-                      column.align === 'center' && 'text-center',
-                      column.align === 'right' && 'text-right'
-                    )}
+                    className={tableDataCellVariants({ align: column.align })}
                   >
                     {column.render
                       ? column.render(
@@ -119,6 +170,29 @@ export interface PaginationProps {
   className?: string;
 }
 
+const paginationContainerVariants = cva(
+  'flex items-center justify-between',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+const paginationButtonVariants = cva(
+  'px-3 py-1 text-sm rounded-md',
+  {
+    variants: {
+      active: {
+        true: 'bg-primary-600 text-white',
+        false: 'text-secondary-600 hover:bg-secondary-100',
+      },
+    },
+    defaultVariants: {
+      active: false,
+    },
+  }
+);
+
 export const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
@@ -128,7 +202,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   
   return (
-    <div className={clsx('flex items-center justify-between', className)}>
+    <div className={paginationContainerVariants({ className })}>
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
@@ -143,12 +217,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={clsx(
-                'px-3 py-1 text-sm rounded-md',
-                page === currentPage
-                  ? 'bg-primary-600 text-white'
-                  : 'text-secondary-600 hover:bg-secondary-100'
-              )}
+              className={paginationButtonVariants({ active: page === currentPage })}
             >
               {page}
             </button>

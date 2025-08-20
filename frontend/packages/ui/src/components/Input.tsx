@@ -1,7 +1,24 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+const inputVariants = cva(
+  'input',
+  {
+    variants: {
+      error: {
+        true: 'input-error',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      error: false,
+    },
+  }
+);
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement>,
+    Omit<VariantProps<typeof inputVariants>, 'error'> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -20,11 +37,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           id={inputId}
-          className={clsx(
-            'input',
-            error && 'input-error',
-            className
-          )}
+          className={inputVariants({ error: !!error, className })}
           ref={ref}
           {...props}
         />
@@ -45,7 +58,24 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+const textareaVariants = cva(
+  'input min-h-[80px] resize-y',
+  {
+    variants: {
+      error: {
+        true: 'input-error',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      error: false,
+    },
+  }
+);
+
+export interface TextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+    Omit<VariantProps<typeof textareaVariants>, 'error'> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -64,11 +94,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         <textarea
           id={inputId}
-          className={clsx(
-            'input min-h-[80px] resize-y',
-            error && 'input-error',
-            className
-          )}
+          className={textareaVariants({ error: !!error, className })}
           ref={ref}
           {...props}
         />
@@ -89,7 +115,24 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = 'Textarea';
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+const selectVariants = cva(
+  'input',
+  {
+    variants: {
+      error: {
+        true: 'input-error',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      error: false,
+    },
+  }
+);
+
+export interface SelectProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement>,
+    Omit<VariantProps<typeof selectVariants>, 'error'> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -109,11 +152,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         )}
         <select
           id={selectId}
-          className={clsx(
-            'input',
-            error && 'input-error',
-            className
-          )}
+          className={selectVariants({ error: !!error, className })}
           ref={ref}
           {...props}
         >

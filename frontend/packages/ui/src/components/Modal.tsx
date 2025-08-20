@@ -1,12 +1,28 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-export interface ModalProps {
+const modalContentVariants = cva(
+  'inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:align-middle',
+  {
+    variants: {
+      size: {
+        sm: 'max-w-md',
+        md: 'max-w-lg',
+        lg: 'max-w-2xl',
+        xl: 'max-w-4xl',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  }
+);
+
+export interface ModalProps extends VariantProps<typeof modalContentVariants> {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -38,13 +54,6 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -58,11 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
         </span>
 
         <div
-          className={clsx(
-            'inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:align-middle',
-            sizeClasses[size],
-            className
-          )}
+          className={modalContentVariants({ size, className })}
         >
           {title && (
             <div className="border-b border-secondary-200 px-6 py-4">
@@ -87,6 +92,21 @@ export interface ConfirmModalProps {
   cancelText?: string;
   variant?: 'danger' | 'primary';
 }
+
+const confirmButtonVariants = cva(
+  'btn',
+  {
+    variants: {
+      variant: {
+        danger: 'bg-error-600 text-white hover:bg-error-700',
+        primary: 'btn-primary',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+    },
+  }
+);
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
@@ -117,7 +137,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
           <button
             type="button"
-            className={variant === 'danger' ? 'btn bg-error-600 text-white hover:bg-error-700' : 'btn-primary'}
+            className={confirmButtonVariants({ variant })}
             onClick={handleConfirm}
           >
             {confirmText}

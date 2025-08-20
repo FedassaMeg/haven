@@ -1,20 +1,53 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-export interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
+const formVariants = cva(
+  'space-y-6',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface FormProps
+  extends React.FormHTMLAttributes<HTMLFormElement>,
+    VariantProps<typeof formVariants> {
   onSubmit: (e: React.FormEvent) => void;
   children: React.ReactNode;
 }
 
 export const Form: React.FC<FormProps> = ({ onSubmit, children, className, ...props }) => {
   return (
-    <form onSubmit={onSubmit} className={clsx('space-y-6', className)} {...props}>
+    <form onSubmit={onSubmit} className={formVariants({ className })} {...props}>
       {children}
     </form>
   );
 };
 
-export interface FormFieldProps {
+const formFieldVariants = cva(
+  'space-y-1',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+const labelVariants = cva(
+  'label',
+  {
+    variants: {
+      required: {
+        true: 'after:content-["*"] after:text-error-500 after:ml-1',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      required: false,
+    },
+  }
+);
+
+export interface FormFieldProps extends VariantProps<typeof formFieldVariants> {
   label?: string;
   error?: string;
   required?: boolean;
@@ -30,9 +63,9 @@ export const FormField: React.FC<FormFieldProps> = ({
   className,
 }) => {
   return (
-    <div className={clsx('space-y-1', className)}>
+    <div className={formFieldVariants({ className })}>
       {label && (
-        <label className={clsx('label', required && 'after:content-["*"] after:text-error-500 after:ml-1')}>
+        <label className={labelVariants({ required })}>
           {label}
         </label>
       )}
@@ -46,10 +79,25 @@ export const FormField: React.FC<FormFieldProps> = ({
   );
 };
 
-export interface FormActionsProps {
+const formActionsVariants = cva(
+  'flex items-center space-x-3 pt-4',
+  {
+    variants: {
+      align: {
+        left: 'justify-start',
+        center: 'justify-center',
+        right: 'justify-end',
+      },
+    },
+    defaultVariants: {
+      align: 'right',
+    },
+  }
+);
+
+export interface FormActionsProps extends VariantProps<typeof formActionsVariants> {
   children: React.ReactNode;
   className?: string;
-  align?: 'left' | 'center' | 'right';
 }
 
 export const FormActions: React.FC<FormActionsProps> = ({
@@ -59,13 +107,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
 }) => {
   return (
     <div
-      className={clsx(
-        'flex items-center space-x-3 pt-4',
-        align === 'left' && 'justify-start',
-        align === 'center' && 'justify-center',
-        align === 'right' && 'justify-end',
-        className
-      )}
+      className={formActionsVariants({ align, className })}
     >
       {children}
     </div>
