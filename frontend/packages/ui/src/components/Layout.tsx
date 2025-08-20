@@ -178,7 +178,7 @@ export const Layout: React.FC<LayoutProps> = ({
     if (!header && sidebar && !isDesktop) {
       // Mobile-only header with just menu button
       return (
-        <header className="bg-white border-b border-secondary-200 shadow-sm lg:hidden">
+        <header className="bg-white border-b border-secondary-200 lg:hidden">
           <div className="h-16 px-4 flex items-center">
             <button
               onClick={() => setSidebarOpen(true)}
