@@ -1,7 +1,7 @@
 import type { AppProps } from 'next/app';
 import { AuthProvider } from '@haven/auth';
 import { apiClient } from '@haven/api-client';
-import '@haven/ui/src/styles/globals.css';
+import '../styles/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const keycloakConfig = {
@@ -27,8 +27,6 @@ function MyApp({ Component, pageProps }: AppProps) {
         onLoad: 'login-required',
         checkLoginIframe: false,
         enableLogging: process.env.NODE_ENV === 'development',
-        pkceMethod: 'S256',
-        redirectUri: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000/',
       }}
     >
       <Component {...pageProps} />
