@@ -1,21 +1,16 @@
-@import "tailwindcss";
-@import "../../../../app.css";
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-@layer base {
+/* @layer base {
   * {
-    /* @apply border-secondary-200; */
+    @apply border-secondary-200;
   }
   
   body {
-    /* @apply bg-secondary-50 text-secondary-900; */
+    @apply bg-secondary-50 text-secondary-900;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-}
+} */
 
-@layer components {
-  /* .btn {
+/* @layer components {
+  .btn {
     @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
   
@@ -85,5 +80,5 @@
   
   .badge-error {
     @apply badge bg-error-100 text-error-800;
-  } */
-}
+  } 
+ } */
