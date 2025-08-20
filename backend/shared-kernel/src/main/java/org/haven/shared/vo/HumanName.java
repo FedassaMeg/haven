@@ -32,6 +32,14 @@ public record HumanName(
         USUAL, OFFICIAL, TEMP, NICKNAME, ANONYMOUS, OLD, MAIDEN
     }
 
+    public String getFirstName() {
+        return given.isEmpty() ? "" : given.get(0);
+    }
+    
+    public String getLastName() {
+        return family;
+    }
+    
     public String getFullName() {
         StringBuilder sb = new StringBuilder();
         if (prefix != null && !prefix.isEmpty()) {

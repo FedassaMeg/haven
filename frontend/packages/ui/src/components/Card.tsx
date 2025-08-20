@@ -1,13 +1,23 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+const cardVariants = cva(
+  'card',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('card', className)}
+      className={cardVariants({ className })}
       {...props}
     />
   )
@@ -15,13 +25,23 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card';
 
-export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+const cardHeaderVariants = cva(
+  'card-header',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardHeaderProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardHeaderVariants> {}
 
 export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('card-header', className)}
+      className={cardHeaderVariants({ className })}
       {...props}
     />
   )
@@ -29,7 +49,17 @@ export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
 
 CardHeader.displayName = 'CardHeader';
 
-export interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+const cardTitleVariants = cva(
+  'text-lg font-semibold leading-none tracking-tight',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardTitleProps
+  extends React.HTMLAttributes<HTMLHeadingElement>,
+    VariantProps<typeof cardTitleVariants> {}
 
 export const CardTitle = React.forwardRef<
   HTMLParagraphElement,
@@ -37,14 +67,24 @@ export const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={clsx('text-lg font-semibold leading-none tracking-tight', className)}
+    className={cardTitleVariants({ className })}
     {...props}
   />
 ));
 
 CardTitle.displayName = 'CardTitle';
 
-export interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {}
+const cardDescriptionVariants = cva(
+  'text-sm text-secondary-500 mt-1',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardDescriptionProps
+  extends React.HTMLAttributes<HTMLParagraphElement>,
+    VariantProps<typeof cardDescriptionVariants> {}
 
 export const CardDescription = React.forwardRef<
   HTMLParagraphElement,
@@ -52,30 +92,50 @@ export const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={clsx('text-sm text-secondary-500 mt-1', className)}
+    className={cardDescriptionVariants({ className })}
     {...props}
   />
 ));
 
 CardDescription.displayName = 'CardDescription';
 
-export interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+const cardContentVariants = cva(
+  'card-body',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardContentProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardContentVariants> {}
 
 export const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={clsx('card-body', className)} {...props} />
+    <div ref={ref} className={cardContentVariants({ className })} {...props} />
   )
 );
 
 CardContent.displayName = 'CardContent';
 
-export interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
+const cardFooterVariants = cva(
+  'px-6 py-3 border-t border-secondary-200 bg-secondary-50',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
+export interface CardFooterProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardFooterVariants> {}
 
 export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('px-6 py-3 border-t border-secondary-200 bg-secondary-50', className)}
+      className={cardFooterVariants({ className })}
       {...props}
     />
   )

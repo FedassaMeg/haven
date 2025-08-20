@@ -28,6 +28,18 @@ public class Client extends AggregateRoot<ClientId> {
         client.apply(new ClientCreated(clientId.value(), name, gender, birthDate, Instant.now()));
         return client;
     }
+    
+    public static Client create(String firstName, String lastName) {
+        HumanName name = new HumanName(
+            HumanName.NameUse.OFFICIAL,
+            lastName,
+            List.of(firstName),
+            null,
+            null,
+            firstName + " " + lastName
+        );
+        return create(name, AdministrativeGender.UNKNOWN, LocalDate.of(1900, 1, 1));
+    }
 
     public void updateDemographics(HumanName name, AdministrativeGender gender, LocalDate birthDate) {
         apply(new ClientDemographicsUpdated(id.value(), name, gender, birthDate, Instant.now()));

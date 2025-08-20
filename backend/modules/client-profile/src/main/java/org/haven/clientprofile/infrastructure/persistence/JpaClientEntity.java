@@ -40,9 +40,9 @@ public class JpaClientEntity {
     // Factory methods
     public static JpaClientEntity fromDomain(Client client) {
         return new JpaClientEntity(
-            client.id().value(),
-            client.getFirstName(),
-            client.getLastName(),
+            client.getId().value(),
+            client.getPrimaryName().getFirstName(),
+            client.getPrimaryName().getLastName(),
             client.getCreatedAt()
         );
     }

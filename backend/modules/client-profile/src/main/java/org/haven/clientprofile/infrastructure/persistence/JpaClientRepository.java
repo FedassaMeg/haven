@@ -22,9 +22,4 @@ public interface JpaClientRepository extends JpaRepository<JpaClientEntity, UUID
         return findById(id.value())
             .map(JpaClientEntity::toDomain);
     }
-    
-    @Override
-    default void delete(ClientId id) {
-        deleteById(id.value());
-    }
 }

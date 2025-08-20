@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import { clsx } from 'clsx';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../lib/utils';
 
 export interface NavigationItem {
   label: string;
@@ -13,32 +14,95 @@ export interface NavigationItem {
 
 export interface SidebarNavigationProps {
   items: NavigationItem[];
+  collapsed?: boolean;
   className?: string;
 }
 
+const sidebarNavigationVariants = cva(
+  'space-y-1',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
 export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   items,
+  collapsed = false,
   className,
 }) => {
   return (
-    <nav className={clsx('space-y-1', className)}>
+    <nav className={sidebarNavigationVariants({ className })}>
       {items.map((item, index) => (
-        <NavigationLink key={`${item.href}-${index}`} item={item} />
+        <NavigationLink key={`${item.href}-${index}`} item={item} collapsed={collapsed} />
       ))}
     </nav>
   );
 };
 
-const NavigationLink: React.FC<{ item: NavigationItem }> = ({ item }) => {
+const navigationLinkVariants = cva(
+  'group flex items-center text-sm font-medium rounded-md transition-colors',
+  {
+    variants: {
+      collapsed: {
+        true: 'px-2 py-2 justify-center',
+        false: 'px-3 py-2',
+      },
+      active: {
+        true: 'bg-primary-100 text-primary-700 border-r-2 border-primary-500',
+        false: 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900',
+      },
+      disabled: {
+        true: 'opacity-50 cursor-not-allowed',
+        false: '',
+      },
+    },
+    defaultVariants: {
+      collapsed: false,
+      active: false,
+      disabled: false,
+    },
+  }
+);
+
+const iconVariants = cva(
+  'h-5 w-5 flex-shrink-0',
+  {
+    variants: {
+      collapsed: {
+        true: '',
+        false: 'mr-3',
+      },
+    },
+    defaultVariants: {
+      collapsed: false,
+    },
+  }
+);
+
+const chevronVariants = cva(
+  'ml-auto h-5 w-5 transform transition-transform',
+  {
+    variants: {
+      open: {
+        true: 'rotate-90',
+        false: 'rotate-0',
+      },
+    },
+    defaultVariants: {
+      open: false,
+    },
+  }
+);
+
+const NavigationLink: React.FC<{ item: NavigationItem; collapsed?: boolean }> = ({ item, collapsed = false }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  const linkClasses = clsx(
-    'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-    item.active
-      ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-500'
-      : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900',
-    item.disabled && 'opacity-50 cursor-not-allowed'
-  );
+  const linkClasses = navigationLinkVariants({
+    collapsed,
+    active: item.active,
+    disabled: item.disabled,
+  });
 
   if (item.children && item.children.length > 0) {
     return (
@@ -48,24 +112,21 @@ const NavigationLink: React.FC<{ item: NavigationItem }> = ({ item }) => {
           className={linkClasses}
           disabled={item.disabled}
         >
-          {item.icon && <span className="mr-3 h-5 w-5 flex-shrink-0">{item.icon}</span>}
-          <span className="flex-1 text-left">{item.label}</span>
-          <svg
-            className={clsx(
-              'ml-auto h-5 w-5 transform transition-transform',
-              isOpen ? 'rotate-90' : 'rotate-0'
-            )}
+          {item.icon && <span className={iconVariants({ collapsed })}>{item.icon}</span>}
+          {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
+          {!collapsed && <svg
+            className={chevronVariants({ open: isOpen })}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          </svg>}
         </button>
-        {isOpen && (
+        {isOpen && !collapsed && (
           <div className="ml-6 mt-1 space-y-1">
             {item.children.map((child, childIndex) => (
-              <NavigationLink key={`${child.href}-${childIndex}`} item={child} />
+              <NavigationLink key={`${child.href}-${childIndex}`} item={child} collapsed={collapsed} />
             ))}
           </div>
         )}
@@ -74,9 +135,9 @@ const NavigationLink: React.FC<{ item: NavigationItem }> = ({ item }) => {
   }
 
   return (
-    <Link href={item.href} className={linkClasses}>
-      {item.icon && <span className="mr-3 h-5 w-5 flex-shrink-0">{item.icon}</span>}
-      <span>{item.label}</span>
+    <Link href={item.href} className={linkClasses} title={collapsed ? item.label : undefined}>
+      {item.icon && <span className={cn('h-5 w-5 flex-shrink-0', !collapsed && 'mr-3')}>{item.icon}</span>}
+      {!collapsed && <span>{item.label}</span>}
     </Link>
   );
 };
@@ -91,9 +152,17 @@ export interface BreadcrumbProps {
   className?: string;
 }
 
+const breadcrumbVariants = cva(
+  'flex',
+  {
+    variants: {},
+    defaultVariants: {},
+  }
+);
+
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
   return (
-    <nav className={clsx('flex', className)} aria-label="Breadcrumb">
+    <nav className={breadcrumbVariants({ className })} aria-label="Breadcrumb">
       <ol className="flex items-center space-x-2">
         {items.map((item, index) => (
           <li key={index} className="flex items-center">
@@ -137,6 +206,33 @@ export interface TabsProps {
   className?: string;
 }
 
+const tabButtonVariants = cva(
+  'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm',
+  {
+    variants: {
+      active: {
+        true: 'border-primary-500 text-primary-600',
+        false: 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300',
+      },
+      disabled: {
+        true: 'opacity-50 cursor-not-allowed',
+        false: '',
+      },
+    },
+    compoundVariants: [
+      {
+        active: false,
+        disabled: true,
+        class: 'hover:text-secondary-500 hover:border-transparent',
+      },
+    ],
+    defaultVariants: {
+      active: false,
+      disabled: false,
+    },
+  }
+);
+
 export const Tabs: React.FC<TabsProps> = ({ items, activeTab, onTabChange, className }) => {
   return (
     <div className={className}>
@@ -146,13 +242,10 @@ export const Tabs: React.FC<TabsProps> = ({ items, activeTab, onTabChange, class
             <button
               key={tab.value}
               onClick={() => !tab.disabled && onTabChange(tab.value)}
-              className={clsx(
-                'whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm',
-                tab.value === activeTab
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300',
-                tab.disabled && 'opacity-50 cursor-not-allowed'
-              )}
+              className={tabButtonVariants({
+                active: tab.value === activeTab,
+                disabled: tab.disabled,
+              })}
               disabled={tab.disabled}
             >
               {tab.label}
