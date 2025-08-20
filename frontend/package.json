@@ -19,5 +19,9 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.base.json --noEmit"
   },
-  "workspaces": ["packages/*", "apps/*"]
+  "workspaces": ["packages/*", "apps/*"],
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "tailwind-merge": "^3.3.1"
+  }
 }
