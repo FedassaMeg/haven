@@ -5,6 +5,7 @@ import org.haven.clientprofile.application.commands.*;
 import org.haven.clientprofile.application.queries.*;
 import org.haven.clientprofile.application.dto.ClientDto;
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.api.client.dto.CreateClientRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +20,7 @@ import java.util.UUID;
  * Following FHIR patterns for resource management
  */
 @RestController
-@RequestMapping("/api/clients")
+@RequestMapping("/clients")
 public class ClientController {
     
     private final ClientAppService clientAppService;
@@ -29,7 +30,16 @@ public class ClientController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createClient(@Valid @RequestBody CreateClientCmd cmd) {
+    public ResponseEntity<?> createClient(@Valid @RequestBody CreateClientRequest request) {
+        // Map FHIR request to internal command
+        var humanName = request.name().toValueObject();
+        var cmd = new CreateClientCmd(
+            humanName.getFirstName(),
+            humanName.getLastName(), 
+            request.gender(),
+            request.birthDate()
+        );
+        
         var clientId = clientAppService.handle(cmd);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(Map.of("id", clientId.value(), "resourceType", "Client"));
