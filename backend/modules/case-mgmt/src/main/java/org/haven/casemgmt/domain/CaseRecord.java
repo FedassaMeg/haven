@@ -4,6 +4,7 @@ import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.vo.*;
 import org.haven.casemgmt.domain.events.*;
+import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -11,8 +12,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * FHIR-inspired case management aggregate
- * Based on FHIR ServiceRequest and EpisodeOfCare resources
+ * Refactored case management aggregate
+ * Now serves as coordination layer that references program enrollments
+ * Aligns with HMIS model where case work = program enrollment + service episodes
  */
 public class CaseRecord extends AggregateRoot<CaseId> {
     
@@ -25,6 +27,11 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     private List<CaseNote> notes = new ArrayList<>();
     private List<CaseParticipant> participants = new ArrayList<>();
     private CaseAssignment assignment;
+    private List<ProgramEnrollmentId> linkedEnrollments = new ArrayList<>();
+    private List<ServiceEpisodeId> linkedServiceEpisodes = new ArrayList<>();
+    private List<SafetyPlanId> linkedSafetyPlans = new ArrayList<>();
+    private List<LegalAdvocacyId> linkedLegalAdvocacies = new ArrayList<>();
+    private List<FinancialAssistanceRequestId> linkedFinancialRequests = new ArrayList<>();
     private Instant createdAt;
     
     public static CaseRecord open(ClientId clientId, CodeableConcept caseType, 
@@ -53,6 +60,41 @@ public class CaseRecord extends AggregateRoot<CaseId> {
         }
     }
     
+    public void linkProgramEnrollment(ProgramEnrollmentId enrollmentId, String linkedBy, String reason) {
+        if (linkedEnrollments.contains(enrollmentId)) {
+            throw new IllegalStateException("Enrollment is already linked to this case");
+        }
+        apply(new ProgramEnrollmentLinked(id.value(), enrollmentId.value(), linkedBy, reason, Instant.now()));
+    }
+    
+    public void linkServiceEpisode(ServiceEpisodeId episodeId, String linkedBy, String reason) {
+        if (linkedServiceEpisodes.contains(episodeId)) {
+            throw new IllegalStateException("Service episode is already linked to this case");
+        }
+        apply(new ServiceEpisodeLinked(id.value(), episodeId.value(), linkedBy, reason, Instant.now()));
+    }
+    
+    public void linkSafetyPlan(SafetyPlanId safetyPlanId, String linkedBy, String reason) {
+        if (linkedSafetyPlans.contains(safetyPlanId)) {
+            throw new IllegalStateException("Safety plan is already linked to this case");
+        }
+        apply(new SafetyPlanLinked(id.value(), safetyPlanId.value(), linkedBy, reason, Instant.now()));
+    }
+    
+    public void linkLegalAdvocacy(LegalAdvocacyId legalAdvocacyId, String linkedBy, String reason) {
+        if (linkedLegalAdvocacies.contains(legalAdvocacyId)) {
+            throw new IllegalStateException("Legal advocacy is already linked to this case");
+        }
+        apply(new LegalAdvocacyLinked(id.value(), legalAdvocacyId.value(), linkedBy, reason, Instant.now()));
+    }
+    
+    public void linkFinancialRequest(FinancialAssistanceRequestId requestId, String linkedBy, String reason) {
+        if (linkedFinancialRequests.contains(requestId)) {
+            throw new IllegalStateException("Financial assistance request is already linked to this case");
+        }
+        apply(new FinancialRequestLinked(id.value(), requestId.value(), linkedBy, reason, Instant.now()));
+    }
+    
     public void close(String reason) {
         if (status == CaseStatus.CLOSED) {
             throw new IllegalStateException("Case is already closed");
@@ -77,6 +119,16 @@ public class CaseRecord extends AggregateRoot<CaseId> {
             this.notes.add(new CaseNote(e.noteId(), e.content(), e.authorId(), e.occurredAt()));
         } else if (event instanceof CaseStatusChanged e) {
             this.status = e.newStatus();
+        } else if (event instanceof ProgramEnrollmentLinked e) {
+            this.linkedEnrollments.add(new ProgramEnrollmentId(e.enrollmentId()));
+        } else if (event instanceof ServiceEpisodeLinked e) {
+            this.linkedServiceEpisodes.add(new ServiceEpisodeId(e.episodeId()));
+        } else if (event instanceof SafetyPlanLinked e) {
+            this.linkedSafetyPlans.add(new SafetyPlanId(e.safetyPlanId()));
+        } else if (event instanceof LegalAdvocacyLinked e) {
+            this.linkedLegalAdvocacies.add(new LegalAdvocacyId(e.legalAdvocacyId()));
+        } else if (event instanceof FinancialRequestLinked e) {
+            this.linkedFinancialRequests.add(new FinancialAssistanceRequestId(e.requestId()));
         } else if (event instanceof CaseClosed e) {
             this.status = CaseStatus.CLOSED;
             if (this.period != null) {
@@ -101,9 +153,22 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     public List<CaseNote> getNotes() { return List.copyOf(notes); }
     public List<CaseParticipant> getParticipants() { return List.copyOf(participants); }
     public CaseAssignment getAssignment() { return assignment; }
+    public List<ProgramEnrollmentId> getLinkedEnrollments() { return List.copyOf(linkedEnrollments); }
+    public List<ServiceEpisodeId> getLinkedServiceEpisodes() { return List.copyOf(linkedServiceEpisodes); }
+    public List<SafetyPlanId> getLinkedSafetyPlans() { return List.copyOf(linkedSafetyPlans); }
+    public List<LegalAdvocacyId> getLinkedLegalAdvocacies() { return List.copyOf(linkedLegalAdvocacies); }
+    public List<FinancialAssistanceRequestId> getLinkedFinancialRequests() { return List.copyOf(linkedFinancialRequests); }
     public Instant getCreatedAt() { return createdAt; }
     
     public boolean isActive() {
         return status != CaseStatus.CLOSED && status != CaseStatus.CANCELLED;
+    }
+    
+    public boolean hasLinkedEnrollments() {
+        return !linkedEnrollments.isEmpty();
+    }
+    
+    public int getLinkedEnrollmentCount() {
+        return linkedEnrollments.size();
     }
 }
