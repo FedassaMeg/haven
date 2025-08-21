@@ -22,6 +22,14 @@ public class Client extends AggregateRoot<ClientId> {
     private Instant createdAt;
     private Period activePeriod;
     
+    // Confidentiality & Privacy fields
+    private String aliasName;
+    private ContactSafetyPrefs contactSafetyPrefs;
+    private AddressConfidentiality addressConfidentiality;
+    private DataSystem dataSystem;
+    private String hmisClientKey;
+    private boolean safeAtHomeParticipant = false;
+    
     public static Client create(HumanName name, AdministrativeGender gender, LocalDate birthDate) {
         ClientId clientId = new ClientId(UUID.randomUUID());
         Client client = new Client();
@@ -68,6 +76,27 @@ public class Client extends AggregateRoot<ClientId> {
             apply(new ClientDeceasedMarked(id.value(), deceasedDate, Instant.now()));
         }
     }
+    
+    // Confidentiality & Privacy methods
+    public void updateContactSafetyPrefs(ContactSafetyPrefs prefs) {
+        apply(new ContactSafetyPrefsUpdated(id.value(), prefs, Instant.now()));
+    }
+    
+    public void setConfidentialAddress(AddressConfidentiality addressConfidentiality) {
+        apply(new ConfidentialAddressSet(id.value(), addressConfidentiality, Instant.now()));
+    }
+    
+    public void enableSafeAtHome() {
+        if (!this.safeAtHomeParticipant) {
+            apply(new SafeAtHomeEnabled(id.value(), Instant.now()));
+        }
+    }
+    
+    public void disableSafeAtHome() {
+        if (this.safeAtHomeParticipant) {
+            apply(new SafeAtHomeDisabled(id.value(), Instant.now()));
+        }
+    }
 
 
     @Override
@@ -103,6 +132,14 @@ public class Client extends AggregateRoot<ClientId> {
             if (this.activePeriod != null && this.activePeriod.end() == null) {
                 this.activePeriod = new Period(this.activePeriod.start(), ev.deceasedDate());
             }
+        } else if (e instanceof ContactSafetyPrefsUpdated ev) {
+            this.contactSafetyPrefs = ev.contactSafetyPrefs();
+        } else if (e instanceof ConfidentialAddressSet ev) {
+            this.addressConfidentiality = ev.addressConfidentiality();
+        } else if (e instanceof SafeAtHomeEnabled ev) {
+            this.safeAtHomeParticipant = true;
+        } else if (e instanceof SafeAtHomeDisabled ev) {
+            this.safeAtHomeParticipant = false;
         } else {
             throw new IllegalArgumentException("Unhandled event: " + e.getClass());
         }
@@ -131,5 +168,25 @@ public class Client extends AggregateRoot<ClientId> {
     
     public boolean isActive() {
         return status == ClientStatus.ACTIVE && (activePeriod == null || activePeriod.isActive());
+    }
+    
+    // Confidentiality & Privacy getters
+    public String getAliasName() { return aliasName; }
+    public ContactSafetyPrefs getContactSafetyPrefs() { return contactSafetyPrefs; }
+    public AddressConfidentiality getAddressConfidentiality() { return addressConfidentiality; }
+    public DataSystem getDataSystem() { return dataSystem; }
+    public String getHmisClientKey() { return hmisClientKey; }
+    public boolean isSafeAtHomeParticipant() { return safeAtHomeParticipant; }
+    
+    public void setAliasName(String aliasName) {
+        this.aliasName = aliasName;
+    }
+    
+    public void setDataSystem(DataSystem dataSystem) {
+        this.dataSystem = dataSystem;
+    }
+    
+    public void setHmisClientKey(String hmisClientKey) {
+        this.hmisClientKey = hmisClientKey;
     }
 }
