@@ -34,7 +34,7 @@ function useApiState<T>(initialData: T | null = null): [
   });
 
   const setData = useCallback((data: T | null) => {
-    setState(prev => ({ ...prev, data, error: null }));
+    setState(prev => ({ ...prev, data, error: null, loading: false }));
   }, []);
 
   const setLoading = useCallback((loading: boolean) => {
@@ -178,8 +178,8 @@ export function useCases(params?: CaseSearchParams) {
     const fetchCases = async () => {
       setLoading(true);
       try {
-        const cases = await apiClient.getCases(params);
-        setData(cases);
+        const response = await apiClient.getCases(params);
+        setData(response.data);
       } catch (error) {
         setError(handleApiError(error as ApiError));
       }
@@ -191,8 +191,8 @@ export function useCases(params?: CaseSearchParams) {
   const refetch = useCallback(async () => {
     setLoading(true);
     try {
-      const cases = await apiClient.getCases(params);
-      setData(cases);
+      const response = await apiClient.getCases(params);
+      setData(response.data);
     } catch (error) {
       setError(handleApiError(error as ApiError));
     }
@@ -249,8 +249,8 @@ export function useClientCases(clientId: string | null) {
     setLoading(true);
     setHasError(false);
     try {
-      const cases = await apiClient.getCasesByClient(clientId);
-      setData(cases);
+      const response = await apiClient.getCasesByClient(clientId);
+      setData(response.data);
     } catch (error) {
       setError(handleApiError(error as ApiError));
       setHasError(true);

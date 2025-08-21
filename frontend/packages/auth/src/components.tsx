@@ -15,7 +15,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const router = useRouter();
 
   React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Only redirect if we're certain the user is not authenticated
+    // and we've finished loading
+    if (!isLoading && !isAuthenticated && router.pathname !== redirectTo) {
+      console.log('[ProtectedRoute] Redirecting to login - not authenticated');
       router.push(redirectTo);
     }
   }, [isAuthenticated, isLoading, router, redirectTo]);

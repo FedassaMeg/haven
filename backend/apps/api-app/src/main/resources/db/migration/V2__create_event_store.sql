@@ -14,7 +14,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================================
 
 -- Domain events table
-CREATE TABLE domain_events (
+CREATE TABLE IF NOT EXISTS domain_events (
     id UUID PRIMARY KEY DEFAULT haven.uuid_generate_v4(),
     aggregate_id UUID NOT NULL,
     aggregate_type VARCHAR(255) NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE domain_events (
 );
 
 -- Event snapshots for performance
-CREATE TABLE aggregate_snapshots (
+CREATE TABLE IF NOT EXISTS aggregate_snapshots (
     id UUID PRIMARY KEY DEFAULT haven.uuid_generate_v4(),
     aggregate_id UUID NOT NULL,
     aggregate_type VARCHAR(255) NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE aggregate_snapshots (
 );
 
 -- Event projections tracking
-CREATE TABLE projection_checkpoints (
+CREATE TABLE IF NOT EXISTS projection_checkpoints (
     projection_name VARCHAR(255) PRIMARY KEY,
     last_processed_position BIGINT NOT NULL DEFAULT 0,
     last_processed_timestamp TIMESTAMP WITH TIME ZONE,
@@ -50,7 +50,7 @@ CREATE TABLE projection_checkpoints (
 );
 
 -- Command tracking for idempotency
-CREATE TABLE processed_commands (
+CREATE TABLE IF NOT EXISTS processed_commands (
     command_id UUID PRIMARY KEY,
     command_type VARCHAR(255) NOT NULL,
     aggregate_id UUID,
@@ -63,7 +63,7 @@ CREATE TABLE processed_commands (
 );
 
 -- Saga/Process Manager state
-CREATE TABLE sagas (
+CREATE TABLE IF NOT EXISTS sagas (
     id UUID PRIMARY KEY DEFAULT haven.uuid_generate_v4(),
     saga_type VARCHAR(255) NOT NULL,
     saga_data JSONB NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE sagas (
 );
 
 -- Outbox pattern for reliable messaging
-CREATE TABLE outbox_events (
+CREATE TABLE IF NOT EXISTS outbox_events (
     id UUID PRIMARY KEY DEFAULT haven.uuid_generate_v4(),
     aggregate_id UUID NOT NULL,
     event_type VARCHAR(255) NOT NULL,
@@ -96,26 +96,26 @@ CREATE TABLE outbox_events (
 -- ============================================================================
 
 -- Domain events indexes
-CREATE INDEX idx_domain_events_aggregate ON domain_events(aggregate_id, event_version);
-CREATE INDEX idx_domain_events_type ON domain_events(aggregate_type, event_type);
-CREATE INDEX idx_domain_events_occurred_at ON domain_events(occurred_at);
-CREATE INDEX idx_domain_events_sequence ON domain_events(sequence_number);
-CREATE INDEX idx_domain_events_correlation ON domain_events(correlation_id) WHERE correlation_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_domain_events_aggregate ON domain_events(aggregate_id, event_version);
+CREATE INDEX IF NOT EXISTS idx_domain_events_type ON domain_events(aggregate_type, event_type);
+CREATE INDEX IF NOT EXISTS idx_domain_events_occurred_at ON domain_events(occurred_at);
+CREATE INDEX IF NOT EXISTS idx_domain_events_sequence ON domain_events(sequence_number);
+CREATE INDEX IF NOT EXISTS idx_domain_events_correlation ON domain_events(correlation_id) WHERE correlation_id IS NOT NULL;
 
 -- Snapshots indexes
-CREATE INDEX idx_snapshots_aggregate ON aggregate_snapshots(aggregate_id, version DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_aggregate ON aggregate_snapshots(aggregate_id, version DESC);
 
 -- Commands indexes
-CREATE INDEX idx_commands_aggregate ON processed_commands(aggregate_id) WHERE aggregate_id IS NOT NULL;
-CREATE INDEX idx_commands_created_at ON processed_commands(created_at);
+CREATE INDEX IF NOT EXISTS idx_commands_aggregate ON processed_commands(aggregate_id) WHERE aggregate_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_commands_created_at ON processed_commands(created_at);
 
 -- Sagas indexes
-CREATE INDEX idx_sagas_type_status ON sagas(saga_type, status);
-CREATE INDEX idx_sagas_correlation ON sagas(correlation_id) WHERE correlation_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sagas_type_status ON sagas(saga_type, status);
+CREATE INDEX IF NOT EXISTS idx_sagas_correlation ON sagas(correlation_id) WHERE correlation_id IS NOT NULL;
 
 -- Outbox indexes
-CREATE INDEX idx_outbox_status ON outbox_events(status, next_retry_at) WHERE status IN ('PENDING', 'FAILED');
-CREATE INDEX idx_outbox_created_at ON outbox_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox_events(status, next_retry_at) WHERE status IN ('PENDING', 'FAILED');
+CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON outbox_events(created_at);
 
 -- ============================================================================
 -- Functions and Triggers
@@ -130,10 +130,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to prevent updates and deletes on domain events
+DROP TRIGGER IF EXISTS prevent_domain_events_update ON domain_events;
 CREATE TRIGGER prevent_domain_events_update
     BEFORE UPDATE ON domain_events
     FOR EACH ROW EXECUTE FUNCTION prevent_event_modification();
 
+DROP TRIGGER IF EXISTS prevent_domain_events_delete ON domain_events;
 CREATE TRIGGER prevent_domain_events_delete
     BEFORE DELETE ON domain_events
     FOR EACH ROW EXECUTE FUNCTION prevent_event_modification();
@@ -179,6 +181,7 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 
 -- View for latest aggregate states
+DROP VIEW IF EXISTS latest_aggregate_versions;
 CREATE VIEW latest_aggregate_versions AS
 SELECT
     aggregate_id,
@@ -189,12 +192,14 @@ FROM domain_events
 GROUP BY aggregate_id, aggregate_type;
 
 -- View for active sagas
+DROP VIEW IF EXISTS active_sagas;
 CREATE VIEW active_sagas AS
 SELECT *
 FROM sagas
 WHERE status IN ('ACTIVE', 'COMPENSATING');
 
 -- View for pending outbox events
+DROP VIEW IF EXISTS pending_outbox;
 CREATE VIEW pending_outbox AS
 SELECT *
 FROM outbox_events

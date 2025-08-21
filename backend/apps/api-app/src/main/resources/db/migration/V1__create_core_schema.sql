@@ -126,7 +126,7 @@ END $$;
 -- ============================================================================
 
 -- Users table (for authentication and authorization)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     keycloak_id VARCHAR(255) UNIQUE,
     username VARCHAR(100) UNIQUE NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE users (
 );
 
 -- Organizations (for multi-tenant support)
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     code VARCHAR(50) UNIQUE NOT NULL,
@@ -166,7 +166,7 @@ CREATE TABLE organizations (
 );
 
 -- Clients (people receiving services)
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_number VARCHAR(50) UNIQUE NOT NULL,
     first_name VARCHAR(100) NOT NULL,
@@ -202,7 +202,7 @@ CREATE TABLE clients (
 );
 
 -- Household members
-CREATE TABLE household_members (
+CREATE TABLE IF NOT EXISTS household_members (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     first_name VARCHAR(100) NOT NULL,
@@ -216,7 +216,7 @@ CREATE TABLE household_members (
 );
 
 -- Cases
-CREATE TABLE cases (
+CREATE TABLE IF NOT EXISTS cases (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     case_number VARCHAR(50) UNIQUE NOT NULL,
     client_id UUID NOT NULL REFERENCES clients(id),
@@ -240,7 +240,7 @@ CREATE TABLE cases (
 );
 
 -- Case notes
-CREATE TABLE case_notes (
+CREATE TABLE IF NOT EXISTS case_notes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
     note_type VARCHAR(50) NOT NULL, -- 'GENERAL', 'PROGRESS', 'INCIDENT', 'CONTACT'
@@ -254,7 +254,7 @@ CREATE TABLE case_notes (
 );
 
 -- Incidents
-CREATE TABLE incidents (
+CREATE TABLE IF NOT EXISTS incidents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     incident_number VARCHAR(50) UNIQUE NOT NULL,
     client_id UUID NOT NULL REFERENCES clients(id),
@@ -279,7 +279,7 @@ CREATE TABLE incidents (
 );
 
 -- Programs
-CREATE TABLE programs (
+CREATE TABLE IF NOT EXISTS programs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     program_code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -300,7 +300,7 @@ CREATE TABLE programs (
 );
 
 -- Program enrollments
-CREATE TABLE program_enrollments (
+CREATE TABLE IF NOT EXISTS program_enrollments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_id UUID NOT NULL REFERENCES clients(id),
     program_id UUID NOT NULL REFERENCES programs(id),
@@ -319,7 +319,7 @@ CREATE TABLE program_enrollments (
 );
 
 -- Documents/Files
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     file_name VARCHAR(255) NOT NULL,
     file_type VARCHAR(50),
@@ -339,7 +339,7 @@ CREATE TABLE documents (
 );
 
 -- Appointments/Meetings
-CREATE TABLE appointments (
+CREATE TABLE IF NOT EXISTS appointments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_id UUID NOT NULL REFERENCES clients(id),
     case_id UUID REFERENCES cases(id),
@@ -364,7 +364,7 @@ CREATE TABLE appointments (
 -- ============================================================================
 
 -- Audit log for tracking all changes
-CREATE TABLE audit.audit_log (
+CREATE TABLE IF NOT EXISTS audit.audit_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     table_name VARCHAR(100) NOT NULL,
     record_id UUID NOT NULL,
@@ -380,7 +380,7 @@ CREATE TABLE audit.audit_log (
 );
 
 -- Login audit
-CREATE TABLE audit.login_audit (
+CREATE TABLE IF NOT EXISTS audit.login_audit (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID,
     username VARCHAR(100),
@@ -396,44 +396,44 @@ CREATE TABLE audit.login_audit (
 -- ============================================================================
 
 -- Users indexes
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_keycloak_id ON users(keycloak_id);
-CREATE INDEX idx_users_active ON users(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_keycloak_id ON users(keycloak_id);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active) WHERE is_active = true;
 
 -- Clients indexes
-CREATE INDEX idx_clients_client_number ON clients(client_number);
-CREATE INDEX idx_clients_name ON clients(last_name, first_name);
-CREATE INDEX idx_clients_status ON clients(status);
-CREATE INDEX idx_clients_case_manager ON clients(assigned_case_manager_id);
-CREATE INDEX idx_clients_organization ON clients(organization_id);
+CREATE INDEX IF NOT EXISTS idx_clients_client_number ON clients(client_number);
+CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(last_name, first_name);
+CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status);
+CREATE INDEX IF NOT EXISTS idx_clients_case_manager ON clients(assigned_case_manager_id);
+CREATE INDEX IF NOT EXISTS idx_clients_organization ON clients(organization_id);
 
 -- Cases indexes
-CREATE INDEX idx_cases_case_number ON cases(case_number);
-CREATE INDEX idx_cases_client ON cases(client_id);
-CREATE INDEX idx_cases_status ON cases(status);
-CREATE INDEX idx_cases_assigned_to ON cases(assigned_to);
-CREATE INDEX idx_cases_opened_date ON cases(opened_date);
+CREATE INDEX IF NOT EXISTS idx_cases_case_number ON cases(case_number);
+CREATE INDEX IF NOT EXISTS idx_cases_client ON cases(client_id);
+CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
+CREATE INDEX IF NOT EXISTS idx_cases_assigned_to ON cases(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_cases_opened_date ON cases(opened_date);
 
 -- Incidents indexes
-CREATE INDEX idx_incidents_client ON incidents(client_id);
-CREATE INDEX idx_incidents_case ON incidents(case_id);
-CREATE INDEX idx_incidents_date ON incidents(incident_date);
-CREATE INDEX idx_incidents_severity ON incidents(severity);
+CREATE INDEX IF NOT EXISTS idx_incidents_client ON incidents(client_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_case ON incidents(case_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_date ON incidents(incident_date);
+CREATE INDEX IF NOT EXISTS idx_incidents_severity ON incidents(severity);
 
 -- Program enrollments indexes
-CREATE INDEX idx_enrollments_client ON program_enrollments(client_id);
-CREATE INDEX idx_enrollments_program ON program_enrollments(program_id);
-CREATE INDEX idx_enrollments_status ON program_enrollments(status);
+CREATE INDEX IF NOT EXISTS idx_enrollments_client ON program_enrollments(client_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_program ON program_enrollments(program_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_status ON program_enrollments(status);
 
 -- Documents indexes
-CREATE INDEX idx_documents_entity ON documents(entity_type, entity_id);
-CREATE INDEX idx_documents_uploaded_by ON documents(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_documents_uploaded_by ON documents(uploaded_by);
 
 -- Audit indexes
-CREATE INDEX idx_audit_log_table_record ON audit.audit_log(table_name, record_id);
-CREATE INDEX idx_audit_log_created_at ON audit.audit_log(created_at);
-CREATE INDEX idx_audit_log_user ON audit.audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_table_record ON audit.audit_log(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit.audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit.audit_log(user_id);
 
 -- ============================================================================
 -- Functions and Triggers
@@ -449,15 +449,19 @@ END;
 $$ language 'plpgsql';
 
 -- Apply updated_at trigger to all relevant tables
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_clients_updated_at ON clients;
 CREATE TRIGGER update_clients_updated_at BEFORE UPDATE ON clients
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_cases_updated_at ON cases;
 CREATE TRIGGER update_cases_updated_at BEFORE UPDATE ON cases
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_incidents_updated_at ON incidents;
 CREATE TRIGGER update_incidents_updated_at BEFORE UPDATE ON incidents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -474,15 +478,16 @@ END;
 $$ language 'plpgsql';
 
 -- Sequence for client numbers
-CREATE SEQUENCE client_number_seq START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS client_number_seq START WITH 1;
 
 -- Trigger for client number generation
+DROP TRIGGER IF EXISTS generate_client_number_trigger ON clients;
 CREATE TRIGGER generate_client_number_trigger BEFORE INSERT ON clients
     FOR EACH ROW EXECUTE FUNCTION generate_client_number();
 
 -- Similar sequences and triggers for case numbers and incident numbers
-CREATE SEQUENCE case_number_seq START WITH 1;
-CREATE SEQUENCE incident_number_seq START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS case_number_seq START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS incident_number_seq START WITH 1;
 
 -- ============================================================================
 -- Initial Data
@@ -495,7 +500,8 @@ VALUES (
     'Haven DV Services',
     'HAVEN',
     'Primary organization for Haven DV Case Management System'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Insert system admin user (password will be managed by Keycloak)
 INSERT INTO users (id, username, email, first_name, last_name, role)
@@ -506,19 +512,32 @@ VALUES (
     'System',
     'Administrator',
     'ADMIN'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Permissions and Security
 -- ============================================================================
 
 -- Create read-only role for reporting
-CREATE ROLE haven_readonly;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'haven_readonly') THEN
+        CREATE ROLE haven_readonly;
+    END IF;
+END
+$$;
 GRANT USAGE ON SCHEMA haven TO haven_readonly;
 GRANT SELECT ON ALL TABLES IN SCHEMA haven TO haven_readonly;
 
 -- Create application role with full access
-CREATE ROLE haven_app;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'haven_app') THEN
+        CREATE ROLE haven_app;
+    END IF;
+END
+$$;
 GRANT ALL ON SCHEMA haven TO haven_app;
 GRANT ALL ON ALL TABLES IN SCHEMA haven TO haven_app;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA haven TO haven_app;

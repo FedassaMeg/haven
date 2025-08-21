@@ -42,8 +42,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   });
   const [keycloak, setKeycloak] = useState<KeycloakInstance | null>(null);
 
-  // Initialize Keycloak
+  // Define transformKeycloakUser before useEffect
+  const transformKeycloakUser = useCallback(
+    (kc: KeycloakInstance, profile: KeycloakProfile): User => {
+      const realmRoles = kc.realmAccess?.roles || [];
+      const clientRoles = kc.resourceAccess?.[config.clientId]?.roles || [];
+      const groups = (kc.tokenParsed as any)?.groups || [];
+
+      return {
+        id: profile.id || kc.subject || "",
+        username: profile.username || "",
+        email: profile.email || "",
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        roles: [...realmRoles, ...clientRoles],
+        groups,
+        attributes: profile.attributes,
+      };
+    },
+    [config.clientId]
+  );
+
+  // Initialize Keycloak - only once on mount
   useEffect(() => {
+    let mounted = true;
+    
     const initKeycloak = async () => {
       try {
         const kc = new Keycloak({
@@ -52,15 +75,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           clientId: config.clientId,
         });
 
-        const authenticated = await kc.init({
-          ...initOptions,
-          token: sessionStorage.getItem(TOKEN_KEY) || undefined,
-          refreshToken: sessionStorage.getItem(REFRESH_TOKEN_KEY) || undefined,
+        console.log('[AuthProvider] Initializing Keycloak with config:', {
+          url: config.url,
+          realm: config.realm,
+          clientId: config.clientId,
         });
 
+        const authenticated = await kc.init({
+          onLoad: initOptions.onLoad,
+          checkLoginIframe: false, // Disable iframe check to prevent redirect loops
+          enableLogging: initOptions.enableLogging,
+          pkceMethod: initOptions.pkceMethod,
+          token: sessionStorage.getItem(TOKEN_KEY) || undefined,
+          refreshToken: sessionStorage.getItem(REFRESH_TOKEN_KEY) || undefined,
+          silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+        });
+
+        console.log('[AuthProvider] Keycloak init result:', authenticated);
+
+        if (!mounted) return;
+
         if (authenticated) {
+          console.log('[AuthProvider] User is authenticated, loading profile...');
           const profile = await kc.loadUserProfile();
           const user = transformKeycloakUser(kc, profile);
+          console.log('[AuthProvider] User profile loaded:', user);
 
           setAuthState({
             user,
@@ -108,6 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             });
         };
       } catch (error) {
+        if (!mounted) return;
         console.error("Failed to initialize Keycloak:", error);
         onAuthError?.(error);
         setAuthState({
@@ -121,27 +161,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     };
 
     initKeycloak();
-  }, [config, initOptions, onAuthSuccess, onAuthError]);
-
-  const transformKeycloakUser = (
-    kc: KeycloakInstance,
-    profile: KeycloakProfile
-  ): User => {
-    const realmRoles = kc.realmAccess?.roles || [];
-    const clientRoles = kc.resourceAccess?.[config.clientId]?.roles || [];
-    const groups = (kc.tokenParsed as any)?.groups || [];
-
-    return {
-      id: profile.id || kc.subject || "",
-      username: profile.username || "",
-      email: profile.email || "",
-      firstName: profile.firstName || "",
-      lastName: profile.lastName || "",
-      roles: [...realmRoles, ...clientRoles],
-      groups,
-      attributes: profile.attributes,
+    
+    return () => {
+      mounted = false;
     };
-  };
+  }, [config.url, config.realm, config.clientId, transformKeycloakUser]); // Include transformKeycloakUser in deps
 
   const login = useCallback(
     async (redirectUri?: string) => {

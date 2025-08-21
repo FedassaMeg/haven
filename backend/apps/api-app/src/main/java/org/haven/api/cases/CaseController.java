@@ -20,7 +20,7 @@ import java.util.UUID;
  * Following FHIR patterns for resource management
  */
 @RestController
-@RequestMapping("/api/cases")
+@RequestMapping("/cases")
 public class CaseController {
     
     private final CaseAppService caseAppService;
@@ -98,7 +98,7 @@ public class CaseController {
         }
         caseAppService.handle(cmd);
         return ResponseEntity.created(
-            URI.create("/api/cases/" + id + "/notes")).build();
+            URI.create("/cases/" + id + "/notes")).build();
     }
     
     @PutMapping("/{id}/status")

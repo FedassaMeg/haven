@@ -16,6 +16,7 @@ dependencyManagement {
 
 dependencies {
     api(project(":shared-kernel"))
+    api(project(":modules:client-profile"))
     
     // Spring Framework
     implementation("org.springframework:spring-context")
