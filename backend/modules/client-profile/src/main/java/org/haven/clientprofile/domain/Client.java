@@ -62,7 +62,19 @@ public class Client extends AggregateRoot<ClientId> {
     }
 
     public void addHouseholdMember(HouseholdMember member) {
-        apply(new HouseholdMemberAdded(id.value(), member.getId().value(), member.getRelationship(), Instant.now()));
+        // Legacy method - for backward compatibility
+        // New household management should use HouseholdComposition aggregate
+        apply(new HouseholdMemberAdded(
+            id.value(), // compositionId (using client ID for backward compatibility)
+            member.getId().value(), // membershipId
+            id.value(), // memberId (self-reference for backward compatibility)
+            member.getRelationship(),
+            java.time.LocalDate.now(), // effectiveFrom
+            null, // effectiveTo
+            "system", // recordedBy
+            "Legacy household member addition", // reason
+            Instant.now()
+        ));
     }
 
     public void updateStatus(ClientStatus newStatus) {
@@ -188,5 +200,9 @@ public class Client extends AggregateRoot<ClientId> {
     
     public void setHmisClientKey(String hmisClientKey) {
         this.hmisClientKey = hmisClientKey;
+    }
+    
+    public void updateAddressConfidentiality(AddressConfidentiality addressConfidentiality) {
+        this.addressConfidentiality = addressConfidentiality;
     }
 }
