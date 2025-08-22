@@ -14,6 +14,8 @@ include("modules:reporting")
 include("modules:financial-assistance")
 include("modules:housing-assistance")
 include("modules:safety-assessment")
+include("modules:read-models")
+include("modules:document-mgmt")
 
 // applications
 include("apps:api-app")

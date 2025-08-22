@@ -76,10 +76,74 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
         },
       ],
     },
+    {
+      label: 'Triage Center',
+      href: '/triage',
+      active: router.pathname.startsWith('/triage'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Caseload',
+      href: '/caseload',
+      active: router.pathname.startsWith('/caseload'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+      children: [
+        {
+          label: 'My Caseload',
+          href: '/caseload/my-cases',
+          active: router.pathname === '/caseload/my-cases',
+        },
+        {
+          label: 'Team Overview',
+          href: '/caseload/team',
+          active: router.pathname === '/caseload/team',
+        },
+        {
+          label: 'High Risk',
+          href: '/caseload/high-risk',
+          active: router.pathname === '/caseload/high-risk',
+        },
+      ],
+    },
   ];
 
   // Admin-only navigation items
   const adminNavigationItems: NavigationItem[] = [
+    {
+      label: 'Compliance',
+      href: '/compliance',
+      active: router.pathname.startsWith('/compliance'),
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      children: [
+        {
+          label: 'Funding Overview',
+          href: '/compliance/funding',
+          active: router.pathname === '/compliance/funding',
+        },
+        {
+          label: 'Documentation',
+          href: '/compliance/documentation',
+          active: router.pathname === '/compliance/documentation',
+        },
+        {
+          label: 'Export Reports',
+          href: '/compliance/exports',
+          active: router.pathname === '/compliance/exports',
+        },
+      ],
+    },
     {
       label: 'Reports',
       href: '/reports',
@@ -119,13 +183,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
   const getVisibleNavigationItems = () => {
     const items = [...navigationItems];
     
-    // Add admin items if user has permission
-    return items.concat(
-      adminNavigationItems.filter(() => {
-        // This would use permission guard, but for now just check if user is admin
-        return user?.roles.includes('admin');
-      })
-    );
+    // Add admin/supervisor items if user has permission
+    const hasAdminAccess = user?.roles.includes('admin') || user?.roles.includes('supervisor');
+    
+    if (hasAdminAccess) {
+      items.push(...adminNavigationItems);
+    }
+    
+    return items;
   };
 
   const logo = (

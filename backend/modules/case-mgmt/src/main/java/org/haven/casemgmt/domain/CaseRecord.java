@@ -9,6 +9,7 @@ import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -26,7 +27,7 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     private String description;
     private List<CaseNote> notes = new ArrayList<>();
     private List<CaseParticipant> participants = new ArrayList<>();
-    private CaseAssignment assignment;
+    private List<CaseAssignment> assignmentHistory = new ArrayList<>();
     private List<ProgramEnrollmentId> linkedEnrollments = new ArrayList<>();
     private List<ServiceEpisodeId> linkedServiceEpisodes = new ArrayList<>();
     private List<SafetyPlanId> linkedSafetyPlans = new ArrayList<>();
@@ -43,11 +44,37 @@ public class CaseRecord extends AggregateRoot<CaseId> {
         return caseRecord;
     }
     
-    public void assignTo(String assigneeId, CodeableConcept role) {
+    public void assignTo(String assigneeId, String assigneeName, CodeableConcept role, 
+                      CaseAssignment.AssignmentType assignmentType, String reason, String assignedBy) {
         if (status == CaseStatus.CLOSED) {
             throw new IllegalStateException("Cannot assign closed case");
         }
-        apply(new CaseAssigned(id.value(), assigneeId, role, Instant.now()));
+        
+        // End current primary assignment if assigning a new primary
+        if (assignmentType == CaseAssignment.AssignmentType.PRIMARY) {
+            getCurrentPrimaryAssignment().ifPresent(currentAssignment -> {
+                endAssignment(currentAssignment.getAssignmentId(), 
+                            "Replaced by new primary assignment", assignedBy);
+            });
+        }
+        
+        UUID assignmentId = UUID.randomUUID();
+        boolean isPrimary = assignmentType == CaseAssignment.AssignmentType.PRIMARY;
+        
+        apply(new CaseAssigned(id.value(), assignmentId, assigneeId, assigneeName, role, 
+                             assignmentType, reason, assignedBy, isPrimary, Instant.now()));
+    }
+    
+    public void endAssignment(UUID assignmentId, String reason, String endedBy) {
+        CaseAssignment assignment = findAssignmentById(assignmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Assignment not found: " + assignmentId));
+        
+        if (!assignment.isActive()) {
+            throw new IllegalStateException("Assignment is already ended");
+        }
+        
+        apply(new CaseAssignmentEnded(id.value(), assignmentId, assignment.getAssigneeId(), 
+                                    reason, endedBy, Instant.now(), Instant.now()));
     }
     
     public void addNote(String content, String authorId) {
@@ -114,7 +141,22 @@ public class CaseRecord extends AggregateRoot<CaseId> {
             this.period = new Period(e.occurredAt(), null);
             this.createdAt = e.occurredAt();
         } else if (event instanceof CaseAssigned e) {
-            this.assignment = new CaseAssignment(e.assigneeId(), e.role(), e.occurredAt());
+            CaseAssignment newAssignment = new CaseAssignment(
+                e.assignmentId(), e.assigneeId(), e.assigneeName(), e.role(),
+                new Period(e.occurredAt(), null), e.assignmentType(), 
+                e.reason(), e.assignedBy(), e.isPrimary()
+            );
+            this.assignmentHistory.add(newAssignment);
+        } else if (event instanceof CaseAssignmentEnded e) {
+            // Find and replace the assignment with ended version
+            for (int i = 0; i < assignmentHistory.size(); i++) {
+                CaseAssignment assignment = assignmentHistory.get(i);
+                if (assignment.getAssignmentId().equals(e.assignmentId())) {
+                    CaseAssignment endedAssignment = assignment.endAssignment(e.endedAt(), e.endReason());
+                    assignmentHistory.set(i, endedAssignment);
+                    break;
+                }
+            }
         } else if (event instanceof CaseNoteAdded e) {
             this.notes.add(new CaseNote(e.noteId(), e.content(), e.authorId(), e.occurredAt()));
         } else if (event instanceof CaseStatusChanged e) {
@@ -152,7 +194,7 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     public String getDescription() { return description; }
     public List<CaseNote> getNotes() { return List.copyOf(notes); }
     public List<CaseParticipant> getParticipants() { return List.copyOf(participants); }
-    public CaseAssignment getAssignment() { return assignment; }
+    public List<CaseAssignment> getAssignmentHistory() { return List.copyOf(assignmentHistory); }
     public List<ProgramEnrollmentId> getLinkedEnrollments() { return List.copyOf(linkedEnrollments); }
     public List<ServiceEpisodeId> getLinkedServiceEpisodes() { return List.copyOf(linkedServiceEpisodes); }
     public List<SafetyPlanId> getLinkedSafetyPlans() { return List.copyOf(linkedSafetyPlans); }
@@ -170,5 +212,54 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     
     public int getLinkedEnrollmentCount() {
         return linkedEnrollments.size();
+    }
+    
+    // Assignment helper methods
+    public Optional<CaseAssignment> getCurrentPrimaryAssignment() {
+        return assignmentHistory.stream()
+            .filter(a -> a.isActive() && a.isPrimary())
+            .findFirst();
+    }
+    
+    public List<CaseAssignment> getActiveAssignments() {
+        return assignmentHistory.stream()
+            .filter(CaseAssignment::isActive)
+            .toList();
+    }
+    
+    public List<CaseAssignment> getActiveAssignments(CaseAssignment.AssignmentType type) {
+        return assignmentHistory.stream()
+            .filter(a -> a.isActive() && a.getAssignmentType() == type)
+            .toList();
+    }
+    
+    public Optional<CaseAssignment> findAssignmentById(UUID assignmentId) {
+        return assignmentHistory.stream()
+            .filter(a -> a.getAssignmentId().equals(assignmentId))
+            .findFirst();
+    }
+    
+    public boolean hasActiveAssignments() {
+        return assignmentHistory.stream().anyMatch(CaseAssignment::isActive);
+    }
+    
+    public boolean hasActivePrimaryAssignment() {
+        return getCurrentPrimaryAssignment().isPresent();
+    }
+    
+    public List<CaseAssignment> getAssignmentsForWorker(String workerId) {
+        return assignmentHistory.stream()
+            .filter(a -> a.getAssigneeId().equals(workerId))
+            .toList();
+    }
+    
+    public List<CaseAssignment> getAssignmentHistory(String workerId) {
+        return getAssignmentsForWorker(workerId);
+    }
+    
+    public Optional<CaseAssignment> getAssignmentOn(Instant dateTime) {
+        return assignmentHistory.stream()
+            .filter(a -> a.isActiveOn(dateTime) && a.isPrimary())
+            .findFirst();
     }
 }

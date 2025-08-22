@@ -255,6 +255,88 @@ export class ApiClient {
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return this.get<{ status: string; timestamp: string }>('/actuator/health');
   }
+
+  // Triage Dashboard API methods
+  async getTriageDashboard(params?: {
+    workerId?: string;
+    daysAhead?: number;
+  }): Promise<TriageDashboardData> {
+    const queryParams = new URLSearchParams();
+    if (params?.workerId) queryParams.append('workerId', params.workerId);
+    if (params?.daysAhead) queryParams.append('daysAhead', params.daysAhead.toString());
+    
+    const query = queryParams.toString();
+    return this.get<TriageDashboardData>(`/triage/dashboard${query ? '?' + query : ''}`);
+  }
+
+  async getTriageAlerts(params?: {
+    severity?: string;
+    type?: string;
+    status?: string;
+    workerId?: string;
+  }): Promise<TriageAlert[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.severity) queryParams.append('severity', params.severity);
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.workerId) queryParams.append('workerId', params.workerId);
+    
+    const query = queryParams.toString();
+    return this.get<TriageAlert[]>(`/triage/alerts${query ? '?' + query : ''}`);
+  }
+
+  async acknowledgeAlert(alertId: string): Promise<void> {
+    return this.put<void>(`/triage/alerts/${alertId}/acknowledge`);
+  }
+
+  async resolveAlert(alertId: string): Promise<void> {
+    return this.put<void>(`/triage/alerts/${alertId}/resolve`);
+  }
+
+  // Caseload API methods
+  async getCaseload(params?: {
+    workerId?: string;
+    stage?: string;
+    riskLevel?: string;
+    programId?: string;
+    requiresAttention?: boolean;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Promise<CaseloadResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.workerId) queryParams.append('workerId', params.workerId);
+    if (params?.stage) queryParams.append('stage', params.stage);
+    if (params?.riskLevel) queryParams.append('riskLevel', params.riskLevel);
+    if (params?.programId) queryParams.append('programId', params.programId);
+    if (params?.requiresAttention !== undefined) queryParams.append('requiresAttention', params.requiresAttention.toString());
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.size !== undefined) queryParams.append('size', params.size.toString());
+    if (params?.sort) queryParams.append('sort', params.sort);
+    
+    const query = queryParams.toString();
+    return this.get<CaseloadResponse>(`/caseload${query ? '?' + query : ''}`);
+  }
+
+  async getMyCaseload(params?: {
+    page?: number;
+    size?: number;
+  }): Promise<CaseloadResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+    if (params?.size !== undefined) queryParams.append('size', params.size.toString());
+    
+    const query = queryParams.toString();
+    return this.get<CaseloadResponse>(`/caseload/my-cases${query ? '?' + query : ''}`);
+  }
+
+  async getTeamOverview(): Promise<TeamOverview> {
+    return this.get<TeamOverview>('/caseload/team-overview');
+  }
+
+  async getConfidentialCases(): Promise<CaseloadItem[]> {
+    return this.get<CaseloadItem[]>('/caseload/confidential');
+  }
 }
 
 // Default instance - can be customized with token refresh and auth handlers
@@ -286,3 +368,12 @@ export const handleApiError = (error: ApiError): string => {
 
 // Export error class for instanceof checks
 export { ApiError } from './types';
+
+// Export new types for triage and caseload
+export type {
+  TriageDashboardData,
+  TriageAlert,
+  CaseloadResponse,
+  CaseloadItem,
+  TeamOverview,
+} from './types';

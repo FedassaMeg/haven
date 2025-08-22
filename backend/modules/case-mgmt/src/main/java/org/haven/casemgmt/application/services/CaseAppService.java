@@ -45,7 +45,8 @@ public class CaseAppService {
         CaseRecord caseRecord = caseRepository.findById(cmd.caseId())
             .orElseThrow(() -> new IllegalArgumentException("Case not found: " + cmd.caseId()));
             
-        caseRecord.assignTo(cmd.assigneeId(), cmd.role());
+        caseRecord.assignTo(cmd.assigneeId(), cmd.assigneeName(), cmd.role(), 
+                           cmd.assignmentType(), cmd.reason(), cmd.assignedBy());
         caseRepository.save(caseRecord);
     }
     
@@ -110,7 +111,7 @@ public class CaseAppService {
             caseRecord.getPriority(),
             caseRecord.getStatus(),
             caseRecord.getDescription(),
-            caseRecord.getAssignment(),
+            caseRecord.getCurrentPrimaryAssignment().orElse(null),
             caseRecord.getNotes().size(),
             caseRecord.getCreatedAt(),
             caseRecord.getPeriod()

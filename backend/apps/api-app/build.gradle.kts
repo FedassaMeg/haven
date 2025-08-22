@@ -22,6 +22,7 @@ dependencies {
   implementation(project(":modules:incident-tracking"))
   implementation(project(":modules:user-access"))
   implementation(project(":modules:reporting"))
+  implementation(project(":modules:read-models"))
   implementation(project(":shared-kernel"))
   implementation(project(":event-store"))
 

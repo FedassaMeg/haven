@@ -182,3 +182,178 @@ export interface CaseSearchParams {
   page?: number;
   limit?: number;
 }
+
+// Triage Dashboard types
+export interface TriageAlert {
+  id: string;
+  clientId: string;
+  clientName: string;
+  alertType: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  description: string;
+  dueDate: string;
+  status: 'ACTIVE' | 'ACKNOWLEDGED' | 'IN_PROGRESS' | 'RESOLVED' | 'EXPIRED';
+  caseNumber?: string;
+  assignedWorkerId?: string;
+  assignedWorkerName?: string;
+  isOverdue: boolean;
+  daysUntilDue: number;
+}
+
+export interface TriageDashboardData {
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+  overdueCount: number;
+  upcomingAlerts: TriageAlert[];
+  overdueAlerts: TriageAlert[];
+}
+
+// Caseload types
+export interface CaseloadItem {
+  caseId: string;
+  caseNumber: string;
+  clientId: string;
+  clientName: string;
+  workerId?: string;
+  workerName?: string;
+  stage: 'INTAKE' | 'ACTIVE' | 'HOUSING_SEARCH' | 'STABILIZATION' | 'EXIT_PLANNING' | 'FOLLOW_UP' | 'CLOSED';
+  stageDescription: string;
+  riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'STABLE';
+  programName?: string;
+  enrollmentDate: string;
+  lastServiceDate?: string;
+  serviceCount: number;
+  daysSinceLastContact?: number;
+  activeAlerts: string[];
+  status: string;
+  requiresAttention: boolean;
+  needsUrgentAttention: boolean;
+  isOverdue: boolean;
+  isSafeAtHome?: boolean;
+  isConfidentialLocation?: boolean;
+  dataSystem?: 'HMIS' | 'COMPARABLE_DB';
+}
+
+export interface CaseloadResponse {
+  cases: CaseloadItem[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  stageCounts: Record<string, number>;
+  riskCounts: Record<string, number>;
+  highRiskCount: number;
+  overdueCount: number;
+}
+
+export interface WorkerCaseload {
+  workerId: string;
+  workerName?: string;
+  totalCases: number;
+  intakeCases: number;
+  activeCases: number;
+  housingSearchCases: number;
+  highRiskCases: number;
+  requiringAttention: number;
+}
+
+export interface TeamOverview {
+  workerCaseloads: WorkerCaseload[];
+  totalActiveCases: number;
+  averageCaseload: number;
+}
+
+// Funding Compliance types
+export interface FundingComplianceView {
+  fundingSourceId: string;
+  fundingSourceName: string;
+  fundingType: string;
+  totalBudget: number;
+  amountSpent: number;
+  amountCommitted: number;
+  amountAvailable: number;
+  utilizationPercentage: number;
+  fundingPeriodStart: string;
+  fundingPeriodEnd: string;
+  daysRemaining: number;
+  complianceStatus: 'COMPLIANT' | 'ATTENTION_NEEDED' | 'AT_RISK' | 'NON_COMPLIANT' | 'UNDER_REVIEW';
+  documentationGaps: DocumentationGap[];
+  pendingPayments: PendingPayment[];
+  spendDownTracking: SpendDownTracking;
+  lastAuditDate?: string;
+  grantNumber: string;
+  programArea: string;
+}
+
+export interface DocumentationGap {
+  clientId: string;
+  clientName: string;
+  missingDocument: string;
+  dueDate: string;
+  daysOverdue?: number;
+  caseNumber: string;
+}
+
+export interface PendingPayment {
+  paymentId: string;
+  clientId: string;
+  clientName: string;
+  amount: number;
+  paymentType: string;
+  requestDate: string;
+  dueDate: string;
+  approvalStatus: string;
+  vendorName?: string;
+}
+
+export interface SpendDownTracking {
+  quarterlyTarget: number;
+  quarterlySpent: number;
+  monthlyTarget: number;
+  monthlySpent: number;
+  dailyBurnRate: number;
+  projectedYearEndSpend: number;
+  spendVelocity: number;
+  isUnderspending: boolean;
+  isOverspending: boolean;
+  daysToTargetReached?: number;
+}
+
+// Confidentiality types
+export interface ConfidentialityGuardrails {
+  clientId: string;
+  clientName: string;
+  isSafeAtHome: boolean;
+  isComparableDbOnly: boolean;
+  hasConfidentialLocation: boolean;
+  hasRestrictedData: boolean;
+  dataSystem: string;
+  visibilityLevel: 'PUBLIC' | 'RESTRICTED' | 'CONFIDENTIAL' | 'PRIVILEGED';
+  lastUpdated: string;
+  bannerWarningText?: string;
+  bannerSeverity?: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+// Restricted Notes types
+export interface RestrictedNote {
+  noteId: string;
+  clientId: string;
+  clientName: string;
+  caseId?: string;
+  caseNumber?: string;
+  noteType: 'STANDARD' | 'COUNSELING' | 'PRIVILEGED_COUNSELING' | 'LEGAL_ADVOCACY' | 'ATTORNEY_CLIENT' | 'SAFETY_PLAN' | 'MEDICAL' | 'THERAPEUTIC' | 'INTERNAL_ADMIN';
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  lastModified: string;
+  authorizedViewers?: string[];
+  visibilityScope: 'PUBLIC' | 'CASE_TEAM' | 'CLINICAL_ONLY' | 'LEGAL_TEAM' | 'SAFETY_TEAM' | 'MEDICAL_TEAM' | 'ADMIN_ONLY' | 'AUTHOR_ONLY' | 'ATTORNEY_CLIENT' | 'CUSTOM';
+  isSealed: boolean;
+  sealReason?: string;
+  sealedAt?: string;
+  sealedBy?: string;
+  visibilityWarning?: string;
+  requiresSpecialHandling: boolean;
+}

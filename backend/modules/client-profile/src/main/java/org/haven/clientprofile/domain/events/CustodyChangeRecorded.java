@@ -7,15 +7,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record HouseholdMemberAdded(
+public record CustodyChangeRecorded(
     UUID compositionId,
-    UUID membershipId,
-    UUID memberId,
-    CodeableConcept relationship,
-    LocalDate effectiveFrom,
-    LocalDate effectiveTo,
+    UUID childId,
+    CodeableConcept newCustodyRelationship,
+    LocalDate effectiveDate,
+    String courtOrder,
     String recordedBy,
-    String reason,
     Instant occurredAt
 ) implements DomainEvent {
     
@@ -26,6 +24,6 @@ public record HouseholdMemberAdded(
     
     @Override
     public String eventType() {
-        return "HouseholdMemberAdded";
+        return "CustodyChangeRecorded";
     }
 }

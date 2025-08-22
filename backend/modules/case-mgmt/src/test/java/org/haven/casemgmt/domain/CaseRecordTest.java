@@ -43,12 +43,15 @@ class CaseRecordTest {
         var role = createRole("case-manager", "Case Manager");
 
         // Act
-        caseRecord.assignTo("user123", role);
+        caseRecord.assignTo("user123", "John Doe", role, 
+                           CaseAssignment.AssignmentType.PRIMARY, "Initial assignment", "admin");
 
         // Assert
-        assertNotNull(caseRecord.getAssignment());
-        assertEquals("user123", caseRecord.getAssignment().assigneeId());
-        assertEquals(role, caseRecord.getAssignment().role());
+        assertTrue(caseRecord.hasActivePrimaryAssignment());
+        var assignment = caseRecord.getCurrentPrimaryAssignment().orElseThrow();
+        assertEquals("user123", assignment.getAssigneeId());
+        assertEquals("John Doe", assignment.getAssigneeName());
+        assertEquals(role, assignment.getRole());
         assertEquals(1, caseRecord.getPendingEvents().size());
     }
 
@@ -119,7 +122,8 @@ class CaseRecordTest {
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () -> {
-            caseRecord.assignTo("user123", role);
+            caseRecord.assignTo("user123", "John Doe", role, 
+                               CaseAssignment.AssignmentType.PRIMARY, "Initial assignment", "admin");
         });
     }
 

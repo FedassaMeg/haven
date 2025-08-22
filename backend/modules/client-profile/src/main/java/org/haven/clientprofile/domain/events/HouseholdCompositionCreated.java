@@ -1,21 +1,18 @@
 package org.haven.clientprofile.domain.events;
 
+import org.haven.clientprofile.domain.HouseholdComposition.HouseholdType;
 import org.haven.shared.events.DomainEvent;
-import org.haven.shared.vo.CodeableConcept;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record HouseholdMemberAdded(
+public record HouseholdCompositionCreated(
     UUID compositionId,
-    UUID membershipId,
-    UUID memberId,
-    CodeableConcept relationship,
-    LocalDate effectiveFrom,
-    LocalDate effectiveTo,
+    UUID headOfHouseholdId,
+    LocalDate effectiveDate,
+    HouseholdType householdType,
     String recordedBy,
-    String reason,
     Instant occurredAt
 ) implements DomainEvent {
     
@@ -26,6 +23,6 @@ public record HouseholdMemberAdded(
     
     @Override
     public String eventType() {
-        return "HouseholdMemberAdded";
+        return "HouseholdCompositionCreated";
     }
 }

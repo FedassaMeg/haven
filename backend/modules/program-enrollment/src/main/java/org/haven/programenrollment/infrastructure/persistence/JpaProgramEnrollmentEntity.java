@@ -27,22 +27,22 @@ public class JpaProgramEnrollmentEntity {
     private LocalDate enrollmentDate;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "relationship_to_head")
+    @Column(name = "relationship_to_head", columnDefinition = "hmis_relationship_to_head")
     private HmisRelationshipToHead relationshipToHead;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "residence_prior_to_entry")
+    @Column(name = "residence_prior_to_entry", columnDefinition = "hmis_residence_prior")
     private HmisResidencePrior residencePriorToEntry;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "length_of_stay_prior_to_entry")
+    @Column(name = "length_of_stay_prior_to_entry", columnDefinition = "hmis_length_of_stay")
     private HmisLengthOfStay lengthOfStayPriorToEntry;
     
     @Column(name = "entry_from_street_outreach")
     private Boolean entryFromStreetOutreach;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", columnDefinition = "enrollment_status")
     private EnrollmentStatus status;
     
     @Column(name = "enrollment_period_start")

@@ -1,19 +1,16 @@
 package org.haven.clientprofile.domain.events;
 
 import org.haven.shared.events.DomainEvent;
-import org.haven.shared.vo.CodeableConcept;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-public record HouseholdMemberAdded(
+public record HouseholdMemberRemoved(
     UUID compositionId,
     UUID membershipId,
     UUID memberId,
-    CodeableConcept relationship,
-    LocalDate effectiveFrom,
-    LocalDate effectiveTo,
+    LocalDate effectiveDate,
     String recordedBy,
     String reason,
     Instant occurredAt
@@ -26,6 +23,6 @@ public record HouseholdMemberAdded(
     
     @Override
     public String eventType() {
-        return "HouseholdMemberAdded";
+        return "HouseholdMemberRemoved";
     }
 }

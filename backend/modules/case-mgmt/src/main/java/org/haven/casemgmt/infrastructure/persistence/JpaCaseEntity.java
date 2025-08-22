@@ -86,7 +86,7 @@ public class JpaCaseEntity {
             caseRecord.getStatus(),
             caseRecord.getDescription(),
             caseRecord.getPeriod() != null ? caseRecord.getPeriod().start() : null,
-            caseRecord.getAssignment() != null ? caseRecord.getAssignment().assigneeId() : null,
+            caseRecord.getCurrentPrimaryAssignment().map(a -> a.getAssigneeId()).orElse(null),
             caseRecord.getCreatedAt()
         );
     }

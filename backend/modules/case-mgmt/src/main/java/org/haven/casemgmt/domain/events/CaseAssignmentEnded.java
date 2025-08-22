@@ -1,21 +1,16 @@
 package org.haven.casemgmt.domain.events;
 
-import org.haven.casemgmt.domain.CaseAssignment.AssignmentType;
 import org.haven.shared.events.DomainEvent;
-import org.haven.shared.vo.CodeableConcept;
 import java.time.Instant;
 import java.util.UUID;
 
-public record CaseAssigned(
+public record CaseAssignmentEnded(
     UUID caseId,
     UUID assignmentId,
     String assigneeId,
-    String assigneeName,
-    CodeableConcept role,
-    AssignmentType assignmentType,
-    String reason,
-    String assignedBy,
-    boolean isPrimary,
+    String endReason,
+    String endedBy,
+    Instant endedAt,
     Instant occurredAt
 ) implements DomainEvent {
     
@@ -26,6 +21,6 @@ public record CaseAssigned(
     
     @Override
     public String eventType() {
-        return "CaseAssigned";
+        return "CaseAssignmentEnded";
     }
 }
