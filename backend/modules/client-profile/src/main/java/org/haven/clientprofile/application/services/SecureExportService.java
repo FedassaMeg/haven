@@ -4,6 +4,8 @@ import org.haven.clientprofile.domain.pii.PIIAccessContext;
 import org.haven.clientprofile.infrastructure.security.PIIRedactionService;
 import org.haven.clientprofile.infrastructure.security.VSPDataAccessService;
 import org.haven.clientprofile.infrastructure.security.DataSystemBoundaryEnforcer;
+import org.haven.clientprofile.infrastructure.security.ConsentEnforcementAspect.RequiresConsent;
+import org.haven.clientprofile.domain.consent.ConsentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +38,12 @@ public class SecureExportService {
         allowedSystems = {org.haven.clientprofile.domain.DataSystem.HMIS},
         requiresPIIAccess = true
     )
-    public Map<String, Object> createHMISExport(Object clientData, PIIAccessContext context) {
+    @RequiresConsent(
+        operation = "hmis_export",
+        recipientOrganization = "HMIS",
+        requiredConsentTypes = {ConsentType.HMIS_PARTICIPATION, ConsentType.INFORMATION_SHARING}
+    )
+    public Map<String, Object> createHMISExport(UUID clientId, Object clientData, PIIAccessContext context) {
         
         // Validate user can access HMIS data
         if (isVSPUser(context.getUserRoles())) {
