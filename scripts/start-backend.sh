@@ -71,10 +71,44 @@ else
     print_success "PostgreSQL is running"
 fi
 
-# Check Keycloak
+# Check Keycloak (required for OAuth2)
+print_info "Checking Keycloak availability..."
 if ! curl -s http://localhost:8081/health/ready >/dev/null 2>&1; then
     print_warning "Keycloak is not accessible at http://localhost:8081"
-    print_info "Make sure Keycloak is properly configured"
+    print_info "Attempting to start Keycloak with Docker..."
+    
+    # Try to start Keycloak if it's not running
+    if docker ps | grep -q keycloak; then
+        print_info "Keycloak container exists but may not be ready"
+    elif docker ps -a | grep -q keycloak; then
+        print_info "Starting existing Keycloak container..."
+        docker start keycloak
+    else
+        print_info "Creating and starting Keycloak container..."
+        docker run -d --name keycloak \
+            -p 8081:8080 \
+            -e KEYCLOAK_ADMIN=admin \
+            -e KEYCLOAK_ADMIN_PASSWORD=admin \
+            quay.io/keycloak/keycloak:latest start-dev
+    fi
+    
+    # Wait for Keycloak to be ready
+    print_info "Waiting for Keycloak to be ready..."
+    max_attempts=60
+    attempt=0
+    while [ $attempt -lt $max_attempts ]; do
+        if curl -s http://localhost:8081/health/ready >/dev/null 2>&1; then
+            print_success "Keycloak is ready!"
+            break
+        fi
+        attempt=$((attempt + 1))
+        if [ $attempt -eq $max_attempts ]; then
+            print_error "Keycloak failed to start within timeout"
+            print_info "Please start Keycloak manually and try again"
+            exit 1
+        fi
+        sleep 2
+    done
 else
     print_success "Keycloak is running"
 fi
@@ -119,6 +153,7 @@ echo ""
 echo "External Services:"
 echo "PostgreSQL:          localhost:5432"
 echo "Keycloak:           http://localhost:8081"
+echo "Keycloak Admin:     http://localhost:8081/admin (admin/admin)"
 echo "============================================"
 echo ""
 
