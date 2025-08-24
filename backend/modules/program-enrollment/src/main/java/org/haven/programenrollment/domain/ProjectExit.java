@@ -1,6 +1,7 @@
 package org.haven.programenrollment.domain;
 
 import org.haven.shared.vo.CodeableConcept;
+import org.haven.shared.vo.hmis.ProjectExitDestination;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -19,6 +20,9 @@ public class ProjectExit {
     private Boolean exitedToPermanentHousing;
     private String recordedBy;
     private Instant recordedAt;
+    
+    // HMIS 2024 Comparable Database fields
+    private ProjectExitDestination hmisExitDestination;
     
     public ProjectExit(LocalDate exitDate, CodeableConcept exitReason, 
                       CodeableConcept destination, String recordedBy) {
@@ -88,4 +92,46 @@ public class ProjectExit {
     public Boolean getExitedToPermanentHousing() { return exitedToPermanentHousing; }
     public String getRecordedBy() { return recordedBy; }
     public Instant getRecordedAt() { return recordedAt; }
+    
+    // HMIS Comparable Database methods
+    public void updateHmisExitDestination(ProjectExitDestination destination) {
+        this.hmisExitDestination = destination;
+    }
+    
+    public ProjectExitDestination getHmisExitDestination() {
+        return hmisExitDestination != null ? hmisExitDestination : ProjectExitDestination.DATA_NOT_COLLECTED;
+    }
+    
+    /**
+     * Determine if this exit represents a positive housing outcome
+     */
+    public boolean isPositiveHousingOutcome() {
+        return hmisExitDestination != null && hmisExitDestination.isPositiveHousingOutcome();
+    }
+    
+    /**
+     * Determine if client returned to homelessness
+     */
+    public boolean isReturnToHomelessness() {
+        return hmisExitDestination != null && hmisExitDestination.isReturnToHomelessness();
+    }
+    
+    /**
+     * Get destination category for reporting
+     */
+    public String getDestinationCategory() {
+        if (hmisExitDestination == null) return "Unknown";
+        
+        if (hmisExitDestination.isPermanentDestination()) {
+            return "Permanent";
+        } else if (hmisExitDestination.isTemporaryDestination()) {
+            return "Temporary";
+        } else if (hmisExitDestination.isInstitutionalDestination()) {
+            return "Institutional";
+        } else if (hmisExitDestination.isReturnToHomelessness()) {
+            return "Homeless";
+        } else {
+            return "Other";
+        }
+    }
 }

@@ -49,6 +49,7 @@ public interface ProgramEnrollmentRepository extends Repository<ProgramEnrollmen
      */
     EnrollmentStatistics getStatistics(UUID programId, LocalDate startDate, LocalDate endDate);
     
+    
     record EnrollmentStatistics(
         long totalEnrollments,
         long activeEnrollments, 

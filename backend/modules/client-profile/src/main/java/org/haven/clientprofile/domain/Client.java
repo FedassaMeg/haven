@@ -3,11 +3,14 @@ package org.haven.clientprofile.domain;
 import org.haven.shared.events.DomainEvent;
 import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.vo.*;
+import org.haven.shared.vo.hmis.*;
 import org.haven.clientprofile.domain.events.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 public class Client extends AggregateRoot<ClientId> {
@@ -29,6 +32,17 @@ public class Client extends AggregateRoot<ClientId> {
     private DataSystem dataSystem;
     private String hmisClientKey;
     private boolean safeAtHomeParticipant = false;
+    
+    // HMIS 2024 Comparable Database fields
+    private HmisPersonalId hmisPersonalId;
+    private Set<HmisRace> hmisRace = new HashSet<>();
+    private Set<HmisGender> hmisGender = new HashSet<>();
+    private VeteranStatus veteranStatus = VeteranStatus.DATA_NOT_COLLECTED;
+    private DisablingCondition disablingCondition = DisablingCondition.DATA_NOT_COLLECTED;
+    private String socialSecurityNumber;
+    private Integer nameDataQuality;
+    private Integer ssnDataQuality;
+    private Integer dobDataQuality;
     
     public static Client create(HumanName name, AdministrativeGender gender, LocalDate birthDate) {
         ClientId clientId = new ClientId(UUID.randomUUID());
@@ -204,5 +218,86 @@ public class Client extends AggregateRoot<ClientId> {
     
     public void updateAddressConfidentiality(AddressConfidentiality addressConfidentiality) {
         this.addressConfidentiality = addressConfidentiality;
+    }
+    
+    // HMIS Comparable Database methods
+    public void assignHmisPersonalId(HmisPersonalId hmisPersonalId) {
+        this.hmisPersonalId = hmisPersonalId;
+    }
+    
+    public void updateHmisRace(Set<HmisRace> race) {
+        this.hmisRace = new HashSet<>(race);
+    }
+    
+    public void updateHmisGender(Set<HmisGender> gender) {
+        this.hmisGender = new HashSet<>(gender);
+    }
+    
+    public void updateVeteranStatus(VeteranStatus veteranStatus) {
+        this.veteranStatus = veteranStatus;
+    }
+    
+    public void updateDisablingCondition(DisablingCondition disablingCondition) {
+        this.disablingCondition = disablingCondition;
+    }
+    
+    public void updateSocialSecurityNumber(String ssn) {
+        this.socialSecurityNumber = ssn;
+        this.ssnDataQuality = calculateSsnDataQuality(ssn);
+    }
+    
+    private Integer calculateSsnDataQuality(String ssn) {
+        if (ssn == null || ssn.trim().isEmpty()) {
+            return 9; // Data not collected
+        }
+        String digitsOnly = ssn.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() == 9 && !digitsOnly.equals("000000000")) {
+            return 1; // Full SSN reported
+        }
+        return 2; // Approximate or partial SSN reported
+    }
+    
+    // HMIS getters
+    public HmisPersonalId getHmisPersonalId() { 
+        return hmisPersonalId != null ? hmisPersonalId : HmisPersonalId.fromClientId(id.value()); 
+    }
+    public Set<HmisRace> getHmisRace() { return Set.copyOf(hmisRace); }
+    public Set<HmisGender> getHmisGender() { 
+        if (hmisGender.isEmpty()) {
+            // Map legacy gender to HMIS gender
+            return Set.of(HmisGender.fromLegacyGender(gender.name()));
+        }
+        return Set.copyOf(hmisGender); 
+    }
+    public VeteranStatus getVeteranStatus() { return veteranStatus; }
+    public DisablingCondition getDisablingCondition() { return disablingCondition; }
+    public String getSocialSecurityNumber() { return socialSecurityNumber; }
+    public Integer getNameDataQuality() { return nameDataQuality; }
+    public Integer getSsnDataQuality() { return ssnDataQuality; }
+    public Integer getDobDataQuality() { return dobDataQuality; }
+    
+    /**
+     * Check if this client meets HMIS Comparable Database standards
+     */
+    public boolean isHmisCompliant() {
+        return hmisPersonalId != null &&
+               !hmisRace.isEmpty() &&
+               !hmisGender.isEmpty() &&
+               veteranStatus != null &&
+               disablingCondition != null;
+    }
+    
+    /**
+     * Calculate overall HMIS data quality score
+     */
+    public Double getHmisDataQualityScore() {
+        int validFields = 0;
+        int totalFields = 3;
+        
+        if (nameDataQuality != null && nameDataQuality == 1) validFields++;
+        if (ssnDataQuality != null && ssnDataQuality == 1) validFields++;
+        if (dobDataQuality != null && dobDataQuality == 1) validFields++;
+        
+        return (double) validFields / totalFields * 100.0;
     }
 }
