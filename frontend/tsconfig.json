@@ -14,7 +14,8 @@
     "paths": {
       "@haven/ui": ["packages/ui/src"],
       "@haven/api-client": ["packages/api-client/src"],
-      "@haven/auth": ["packages/auth/src"]
+      "@haven/auth": ["packages/auth/src"],
+      "@/*": ["@/*"]
     },
     "types": ["node"]
   },

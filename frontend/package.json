@@ -1,27 +1,36 @@
 {
   "name": "haven-frontend",
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.12",
-    "@types/node": "^24.2.1",
-    "@types/react": "^19.1.1",
-    "@types/react-dom": "^19.1.1",
-    "autoprefixer": "^10.4.21",
-    "eslint": "^9.33.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.12",
-    "typescript": "5.8.2"
-  },
   "private": true,
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "build": "bun run build:all",
     "build:all": "bun run --filter='./apps/*' build",
     "dev": "bun run --filter=cm-portal dev",
     "lint": "eslint .",
-    "typecheck": "tsc -p tsconfig.base.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "workspaces": ["packages/*", "apps/*"],
   "dependencies": {
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.541.0",
     "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.11",
+    "@types/react-dom": "^19.1.7",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.34.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
+    "typescript": "5.8.2"
   }
 }
