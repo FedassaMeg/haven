@@ -19,6 +19,7 @@ dependencies {
   implementation(project(":modules:client-profile"))
   implementation(project(":modules:case-mgmt"))
   implementation(project(":modules:program-enrollment"))
+  implementation(project(":modules:service-delivery"))
   implementation(project(":modules:incident-tracking"))
   implementation(project(":modules:user-access"))
   implementation(project(":modules:reporting"))
