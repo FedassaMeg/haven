@@ -14,6 +14,17 @@ import type {
   CaseloadResponse,
   CaseloadItem,
   TeamOverview,
+  ServiceEpisode,
+  CreateServiceEpisodeRequest,
+  StartServiceRequest,
+  CompleteServiceRequest,
+  ServiceSearchCriteria,
+  ServiceStatistics,
+  ServiceTypeResponse,
+  ServiceDeliveryModeResponse,
+  FundingSource,
+  CaseNote,
+  AddCaseNoteRequest,
 } from './types';
 
 // Generic API state hook
@@ -543,6 +554,417 @@ export function useConfidentialCases() {
 }
 
 // Utility hooks
+// ServiceEpisode hooks
+export function useServiceEpisodes(criteria?: ServiceSearchCriteria) {
+  const [state, { setData, setLoading, setError }] = useApiState<{
+    episodes: ServiceEpisode[];
+    totalElements: number;
+    totalPages: number;
+  }>({ episodes: [], totalElements: 0, totalPages: 0 });
+  const paramsKey = JSON.stringify(criteria || {});
+
+  useEffect(() => {
+    const fetchServiceEpisodes = async () => {
+      setLoading(true);
+      try {
+        const episodes = await apiClient.searchServiceEpisodes(criteria);
+        // For now, simulate pagination response - in real API this would be handled server-side
+        setData({
+          episodes,
+          totalElements: episodes.length,
+          totalPages: Math.ceil(episodes.length / (criteria?.size || 20))
+        });
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchServiceEpisodes();
+  }, [paramsKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const episodes = await apiClient.searchServiceEpisodes(criteria);
+      setData({
+        episodes,
+        totalElements: episodes.length,
+        totalPages: Math.ceil(episodes.length / (criteria?.size || 20))
+      });
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [criteria, setData, setLoading, setError]);
+
+  return {
+    serviceEpisodes: state.data?.episodes,
+    totalElements: state.data?.totalElements,
+    totalPages: state.data?.totalPages,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useServiceEpisode(id: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceEpisode>();
+  const [hasError, setHasError] = useState(false);
+
+  const fetchServiceEpisode = useCallback(async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const episode = await apiClient.getServiceEpisode(id);
+      setData(episode);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [id, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchServiceEpisode();
+    }
+  }, [fetchServiceEpisode, hasError]);
+
+  return {
+    serviceEpisode: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchServiceEpisode,
+  };
+}
+
+export function useClientServiceEpisodes(clientId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceEpisode[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchClientServiceEpisodes = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const episodes = await apiClient.getServiceEpisodesByClient(clientId);
+      setData(episodes);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [clientId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchClientServiceEpisodes();
+    }
+  }, [fetchClientServiceEpisodes, hasError]);
+
+  return {
+    serviceEpisodes: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchClientServiceEpisodes,
+  };
+}
+
+export function useEnrollmentServiceEpisodes(enrollmentId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceEpisode[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchEnrollmentServiceEpisodes = useCallback(async () => {
+    if (!enrollmentId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const episodes = await apiClient.getServiceEpisodesByEnrollment(enrollmentId);
+      setData(episodes);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchEnrollmentServiceEpisodes();
+    }
+  }, [fetchEnrollmentServiceEpisodes, hasError]);
+
+  return {
+    serviceEpisodes: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchEnrollmentServiceEpisodes,
+  };
+}
+
+export function useActiveServiceEpisodes(providerId?: string) {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceEpisode[]>([]);
+
+  useEffect(() => {
+    const fetchActiveEpisodes = async () => {
+      setLoading(true);
+      try {
+        const criteria: ServiceSearchCriteria = {
+          status: 'IN_PROGRESS',
+          ...(providerId && { providerId }),
+        };
+        const episodes = await apiClient.searchServiceEpisodes(criteria);
+        setData(episodes);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchActiveEpisodes();
+  }, [providerId, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const criteria: ServiceSearchCriteria = {
+        status: 'IN_PROGRESS',
+        ...(providerId && { providerId }),
+      };
+      const episodes = await apiClient.searchServiceEpisodes(criteria);
+      setData(episodes);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [providerId, setData, setLoading, setError]);
+
+  return {
+    activeServices: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useCreateServiceEpisode() {
+  const [state, { setLoading, setError, reset }] = useApiState();
+
+  const createServiceEpisode = useCallback(async (data: CreateServiceEpisodeRequest) => {
+    setLoading(true);
+    try {
+      const result = await apiClient.createServiceEpisode(data);
+      reset();
+      return result;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    createServiceEpisode,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useStartService() {
+  const [state, { setLoading, setError, reset }] = useApiState();
+
+  const startService = useCallback(async (episodeId: string, data: StartServiceRequest) => {
+    setLoading(true);
+    try {
+      await apiClient.startService(episodeId, data);
+      reset();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    startService,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useCompleteService() {
+  const [state, { setLoading, setError, reset }] = useApiState();
+
+  const completeService = useCallback(async (episodeId: string, data: CompleteServiceRequest) => {
+    setLoading(true);
+    try {
+      await apiClient.completeService(episodeId, data);
+      reset();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    completeService,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useServiceStatistics(params?: { 
+  providerId?: string; 
+  dateRange?: { start: Date; end: Date }; 
+}) {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceStatistics>();
+  const paramsKey = JSON.stringify(params || {});
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      setLoading(true);
+      try {
+        const statistics = await apiClient.getServiceStatistics(params);
+        setData(statistics);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchStatistics();
+  }, [paramsKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const statistics = await apiClient.getServiceStatistics(params);
+      setData(statistics);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [params, setData, setLoading, setError]);
+
+  return {
+    statistics: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useServiceTypes() {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceTypeResponse[]>([]);
+
+  useEffect(() => {
+    const fetchServiceTypes = async () => {
+      setLoading(true);
+      try {
+        const types = await apiClient.getServiceTypes();
+        setData(types);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchServiceTypes();
+  }, [setData, setLoading, setError]);
+
+  return {
+    serviceTypes: state.data,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useServiceDeliveryModes() {
+  const [state, { setData, setLoading, setError }] = useApiState<ServiceDeliveryModeResponse[]>([]);
+
+  useEffect(() => {
+    const fetchDeliveryModes = async () => {
+      setLoading(true);
+      try {
+        const modes = await apiClient.getServiceDeliveryModes();
+        setData(modes);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchDeliveryModes();
+  }, [setData, setLoading, setError]);
+
+  return {
+    deliveryModes: state.data,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useFundingSources() {
+  const [state, { setData, setLoading, setError }] = useApiState<FundingSource[]>([]);
+
+  useEffect(() => {
+    const fetchFundingSources = async () => {
+      setLoading(true);
+      try {
+        const sources = await apiClient.getFundingSources();
+        setData(sources);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchFundingSources();
+  }, [setData, setLoading, setError]);
+
+  return {
+    fundingSources: state.data,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+// Case Notes hooks
+export function useCaseNotes(caseId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<CaseNote[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchCaseNotes = useCallback(async () => {
+    if (!caseId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const notes = await apiClient.getCaseNotes(caseId);
+      setData(notes);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [caseId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchCaseNotes();
+    }
+  }, [fetchCaseNotes, hasError]);
+
+  const addNote = useCallback(async (noteData: AddCaseNoteRequest) => {
+    try {
+      await apiClient.addCaseNote(noteData);
+      // Refetch notes after adding
+      await fetchCaseNotes();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [fetchCaseNotes, setError]);
+
+  return {
+    notes: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchCaseNotes,
+    addNote,
+  };
+}
+
 export function useApiHealth() {
   const [state, { setData, setLoading, setError }] = useApiState<{
     status: string;

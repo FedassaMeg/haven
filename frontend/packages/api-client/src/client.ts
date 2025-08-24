@@ -16,6 +16,19 @@ import type {
   CloseCaseRequest,
   ClientSearchParams,
   CaseSearchParams,
+  ServiceEpisode,
+  CreateServiceEpisodeRequest,
+  StartServiceRequest,
+  CompleteServiceRequest,
+  QuickCrisisServiceRequest,
+  QuickCounselingServiceRequest,
+  QuickCaseManagementServiceRequest,
+  UpdateOutcomeRequest,
+  ServiceSearchCriteria,
+  ServiceStatistics,
+  ServiceTypeResponse,
+  ServiceDeliveryModeResponse,
+  FundingSource,
 } from './types';
 
 export class ApiClient {
@@ -336,6 +349,120 @@ export class ApiClient {
 
   async getConfidentialCases(): Promise<CaseloadItem[]> {
     return this.get<CaseloadItem[]>('/caseload/confidential');
+  }
+
+  // =====================================
+  // Service Episodes
+  // =====================================
+
+  async createServiceEpisode(request: CreateServiceEpisodeRequest): Promise<{episodeId: string}> {
+    return this.post<{episodeId: string}>('/v1/service-episodes', request);
+  }
+
+  async startService(episodeId: string, request: StartServiceRequest): Promise<void> {
+    return this.post<void>(`/v1/service-episodes/${episodeId}/start`, request);
+  }
+
+  async completeService(episodeId: string, request: CompleteServiceRequest): Promise<void> {
+    return this.post<void>(`/v1/service-episodes/${episodeId}/complete`, request);
+  }
+
+  async getServiceEpisode(episodeId: string): Promise<ServiceEpisode> {
+    return this.get<ServiceEpisode>(`/v1/service-episodes/${episodeId}`);
+  }
+
+  async getServicesForClient(clientId: string): Promise<ServiceEpisode[]> {
+    return this.get<ServiceEpisode[]>(`/v1/service-episodes/client/${clientId}`);
+  }
+
+  async getServicesForEnrollment(enrollmentId: string): Promise<ServiceEpisode[]> {
+    return this.get<ServiceEpisode[]>(`/v1/service-episodes/enrollment/${enrollmentId}`);
+  }
+
+  async searchServices(criteria: ServiceSearchCriteria): Promise<ServiceEpisode[]> {
+    const queryParams = new URLSearchParams();
+    
+    if (criteria.clientId) queryParams.append('clientId', criteria.clientId);
+    if (criteria.enrollmentId) queryParams.append('enrollmentId', criteria.enrollmentId);
+    if (criteria.programId) queryParams.append('programId', criteria.programId);
+    if (criteria.serviceType) queryParams.append('serviceType', criteria.serviceType);
+    if (criteria.serviceCategory) queryParams.append('serviceCategory', criteria.serviceCategory);
+    if (criteria.deliveryMode) queryParams.append('deliveryMode', criteria.deliveryMode);
+    if (criteria.startDate) queryParams.append('startDate', criteria.startDate);
+    if (criteria.endDate) queryParams.append('endDate', criteria.endDate);
+    if (criteria.providerId) queryParams.append('providerId', criteria.providerId);
+    if (criteria.confidentialOnly) queryParams.append('confidentialOnly', 'true');
+    if (criteria.courtOrderedOnly) queryParams.append('courtOrderedOnly', 'true');
+    if (criteria.followUpRequired) queryParams.append('followUpRequired', 'true');
+
+    const query = queryParams.toString();
+    return this.get<ServiceEpisode[]>(`/v1/service-episodes/search${query ? '?' + query : ''}`);
+  }
+
+  async getServicesRequiringFollowUp(): Promise<ServiceEpisode[]> {
+    return this.get<ServiceEpisode[]>('/v1/service-episodes/follow-up');
+  }
+
+  async updateServiceOutcome(episodeId: string, request: UpdateOutcomeRequest): Promise<void> {
+    return this.put<void>(`/v1/service-episodes/${episodeId}/outcome`, request);
+  }
+
+  async addProviderToService(episodeId: string, request: {
+    providerId: string;
+    providerName: string;
+    role?: string;
+  }): Promise<void> {
+    return this.post<void>(`/v1/service-episodes/${episodeId}/providers`, request);
+  }
+
+  async addFundingSourceToService(episodeId: string, request: {
+    funderId: string;
+    funderName?: string;
+    grantNumber?: string;
+    programName?: string;
+    allocationPercentage: number;
+  }): Promise<void> {
+    return this.post<void>(`/v1/service-episodes/${episodeId}/funding`, request);
+  }
+
+  async markServiceAsCourtOrdered(episodeId: string, request: {
+    courtOrderNumber: string;
+  }): Promise<void> {
+    return this.post<void>(`/v1/service-episodes/${episodeId}/court-order`, request);
+  }
+
+  async getServiceStatistics(startDate: string, endDate: string): Promise<ServiceStatistics> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('startDate', startDate);
+    queryParams.append('endDate', endDate);
+    
+    return this.get<ServiceStatistics>(`/v1/service-episodes/statistics?${queryParams.toString()}`);
+  }
+
+  // Quick service creation methods
+  async createCrisisIntervention(request: QuickCrisisServiceRequest): Promise<{episodeId: string}> {
+    return this.post<{episodeId: string}>('/v1/service-episodes/quick/crisis-intervention', request);
+  }
+
+  async createCounselingSession(request: QuickCounselingServiceRequest): Promise<{episodeId: string}> {
+    return this.post<{episodeId: string}>('/v1/service-episodes/quick/counseling', request);
+  }
+
+  async createCaseManagementContact(request: QuickCaseManagementServiceRequest): Promise<{episodeId: string}> {
+    return this.post<{episodeId: string}>('/v1/service-episodes/quick/case-management', request);
+  }
+
+  // Service configuration lookups
+  async getServiceTypes(): Promise<ServiceTypeResponse[]> {
+    return this.get<ServiceTypeResponse[]>('/v1/service-episodes/service-types');
+  }
+
+  async getDeliveryModes(): Promise<ServiceDeliveryModeResponse[]> {
+    return this.get<ServiceDeliveryModeResponse[]>('/v1/service-episodes/delivery-modes');
+  }
+
+  async getFundingSources(): Promise<FundingSource[]> {
+    return this.get<FundingSource[]>('/v1/service-episodes/funding-sources');
   }
 }
 

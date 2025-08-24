@@ -147,6 +147,288 @@ export const AddCaseNoteRequestSchema = z.object({
   authorId: z.string().min(1),
 });
 
+// Service Episode Types
+export const ServiceTypeSchema = z.enum([
+  // Housing Services
+  'EMERGENCY_SHELTER', 'TRANSITIONAL_HOUSING', 'RAPID_REHOUSING', 'PERMANENT_SUPPORTIVE_HOUSING',
+  'HOUSING_SEARCH_ASSISTANCE', 'HOUSING_STABILITY_CASE_MANAGEMENT', 'RENT_ASSISTANCE', 'UTILITY_ASSISTANCE',
+  'SECURITY_DEPOSIT_ASSISTANCE',
+  
+  // Crisis Intervention & Safety
+  'CRISIS_INTERVENTION', 'SAFETY_PLANNING', 'RISK_ASSESSMENT', 'EMERGENCY_RESPONSE',
+  'MOBILE_CRISIS_RESPONSE', 'HOTLINE_CRISIS_CALL',
+  
+  // Counseling & Mental Health
+  'INDIVIDUAL_COUNSELING', 'GROUP_COUNSELING', 'FAMILY_COUNSELING', 'TRAUMA_COUNSELING',
+  'SUBSTANCE_ABUSE_COUNSELING', 'MENTAL_HEALTH_SERVICES', 'PSYCHIATRIC_EVALUATION',
+  'THERAPY_SESSION', 'SUPPORT_GROUP',
+  
+  // Legal Services
+  'LEGAL_ADVOCACY', 'COURT_ACCOMPANIMENT', 'PROTECTION_ORDER_ASSISTANCE',
+  'IMMIGRATION_LEGAL_SERVICES', 'FAMILY_LAW_ASSISTANCE', 'LEGAL_CLINIC',
+  'LEGAL_CONSULTATION', 'DOCUMENT_PREPARATION',
+  
+  // Case Management
+  'CASE_MANAGEMENT', 'SERVICE_PLANNING', 'RESOURCE_COORDINATION', 'FOLLOW_UP_CONTACT',
+  'DISCHARGE_PLANNING', 'INTAKE_ASSESSMENT', 'COMPREHENSIVE_ASSESSMENT',
+  
+  // Financial Assistance
+  'EMERGENCY_FINANCIAL_ASSISTANCE', 'BENEFIT_ASSISTANCE', 'EMPLOYMENT_ASSISTANCE',
+  'FINANCIAL_LITERACY', 'BUDGET_COUNSELING',
+  
+  // Healthcare & Medical
+  'MEDICAL_ADVOCACY', 'HEALTHCARE_COORDINATION', 'MEDICAL_ACCOMPANIMENT',
+  'HEALTH_EDUCATION', 'REPRODUCTIVE_HEALTH_SERVICES',
+  
+  // Children & Family Services
+  'CHILDCARE', 'CHILDREN_COUNSELING', 'PARENTING_SUPPORT', 'FAMILY_REUNIFICATION',
+  'SUPERVISED_VISITATION',
+  
+  // Education & Life Skills
+  'EDUCATION_SERVICES', 'GED_PREPARATION', 'LIFE_SKILLS_TRAINING', 'JOB_TRAINING',
+  'COMPUTER_LITERACY',
+  
+  // Transportation & Support
+  'TRANSPORTATION', 'INTERPRETATION_SERVICES', 'CHILDCARE_DURING_SERVICES',
+  'FOOD_ASSISTANCE', 'CLOTHING_ASSISTANCE',
+  
+  // Information & Referral
+  'INFORMATION_AND_REFERRAL', 'RESOURCE_REFERRAL', 'COMMUNITY_EDUCATION',
+  'PREVENTION_EDUCATION',
+  
+  // Specialized DV Services
+  'DV_COUNSELING', 'DV_SUPPORT_GROUP', 'DV_SAFETY_PLANNING', 'STALKING_ADVOCACY',
+  
+  // Sexual Assault Services
+  'SA_COUNSELING', 'SA_CRISIS_INTERVENTION', 'SANE_ACCOMPANIMENT', 'SA_SUPPORT_GROUP',
+  
+  // Other
+  'OTHER'
+]);
+
+export const ServiceCategorySchema = z.enum([
+  'HOUSING', 'CRISIS_RESPONSE', 'COUNSELING', 'LEGAL', 'CASE_MANAGEMENT',
+  'FINANCIAL', 'HEALTHCARE', 'CHILDREN_FAMILY', 'EDUCATION', 'SUPPORT_SERVICES',
+  'INFORMATION', 'DV_SPECIFIC', 'SA_SPECIFIC', 'OTHER'
+]);
+
+export const ServiceDeliveryModeSchema = z.enum([
+  'IN_PERSON', 'PHONE', 'VIDEO_CONFERENCE', 'TEXT_MESSAGE', 'EMAIL', 'CHAT',
+  'GROUP_IN_PERSON', 'GROUP_VIRTUAL', 'OUTREACH', 'ACCOMPANIMENT', 'RESIDENTIAL', 'OTHER'
+]);
+
+export const ServiceCompletionStatusSchema = z.enum([
+  'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'PARTIALLY_COMPLETED',
+  'CANCELLED', 'NO_SHOW', 'POSTPONED'
+]);
+
+export const FunderTypeSchema = z.enum([
+  'FEDERAL', 'STATE', 'LOCAL', 'PRIVATE', 'CORPORATE', 'UNFUNDED'
+]);
+
+export const BillingRateCategorySchema = z.enum([
+  'FEDERAL_RATE', 'STATE_RATE', 'LOCAL_RATE', 'PRIVATE_RATE', 'NO_BILLING'
+]);
+
+export const FundingSourceSchema = z.object({
+  funderId: z.string(),
+  funderName: z.string(),
+  grantNumber: z.string().optional(),
+  funderType: FunderTypeSchema,
+  programName: z.string(),
+  requiresOutcomeTracking: z.boolean(),
+  allowsConfidentialServices: z.boolean(),
+  billingRateCategory: BillingRateCategorySchema,
+});
+
+export const ServiceTypeResponseSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  category: ServiceCategorySchema,
+  requiresConfidentialHandling: z.boolean(),
+  isBillableService: z.boolean(),
+  typicalMinDuration: z.number(),
+  typicalMaxDuration: z.number(),
+});
+
+export const ServiceDeliveryModeResponseSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  allowsConfidentialServices: z.boolean(),
+  hasReducedBillingRate: z.boolean(),
+  isRemoteDelivery: z.boolean(),
+  billingMultiplier: z.number(),
+});
+
+export const ServiceEpisodeSchema = z.object({
+  id: z.string().uuid(),
+  clientId: z.string().uuid(),
+  enrollmentId: z.string(),
+  programId: z.string(),
+  programName: z.string(),
+  serviceType: ServiceTypeSchema,
+  serviceCategory: ServiceCategorySchema,
+  deliveryMode: ServiceDeliveryModeSchema,
+  serviceDate: z.string(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  plannedDurationMinutes: z.number().optional(),
+  actualDurationMinutes: z.number().optional(),
+  primaryProviderId: z.string(),
+  primaryProviderName: z.string(),
+  additionalProviderIds: z.array(z.string()),
+  primaryFundingSource: FundingSourceSchema,
+  additionalFundingSources: z.array(FundingSourceSchema),
+  onBehalfOfOrganization: z.string().optional(),
+  isBillable: z.boolean(),
+  billingCode: z.string().optional(),
+  billingRate: z.number().optional(),
+  totalBillableAmount: z.number().optional(),
+  serviceDescription: z.string().optional(),
+  serviceGoals: z.string().optional(),
+  serviceOutcome: z.string().optional(),
+  completionStatus: ServiceCompletionStatusSchema,
+  followUpRequired: z.string().optional(),
+  followUpDate: z.string().optional(),
+  notes: z.string().optional(),
+  isConfidential: z.boolean(),
+  confidentialityReason: z.string().optional(),
+  isRestrictedAccess: z.boolean(),
+  authorizedViewerIds: z.array(z.string()),
+  serviceLocation: z.string().optional(),
+  serviceLocationAddress: z.string().optional(),
+  isOffSite: z.boolean(),
+  contextNotes: z.string().optional(),
+  isCourtOrdered: z.boolean(),
+  courtOrderNumber: z.string().optional(),
+  requiresDocumentation: z.boolean(),
+  attachedDocumentIds: z.array(z.string()),
+  qualityAssuranceNotes: z.string().optional(),
+  createdAt: z.string(),
+  lastModifiedAt: z.string(),
+  createdBy: z.string(),
+  lastModifiedBy: z.string(),
+});
+
+// Service Episode Request Schemas
+export const CreateServiceEpisodeRequestSchema = z.object({
+  clientId: z.string().uuid(),
+  enrollmentId: z.string().min(1),
+  programId: z.string().min(1),
+  programName: z.string().min(1),
+  serviceType: ServiceTypeSchema,
+  deliveryMode: ServiceDeliveryModeSchema,
+  serviceDate: z.string(),
+  plannedDurationMinutes: z.number().positive().optional(),
+  primaryProviderId: z.string().min(1),
+  primaryProviderName: z.string().min(1),
+  funderId: z.string().min(1),
+  funderName: z.string().optional(),
+  grantNumber: z.string().optional(),
+  serviceDescription: z.string().max(1000).optional(),
+  isConfidential: z.boolean(),
+});
+
+export const StartServiceRequestSchema = z.object({
+  startTime: z.string(),
+  location: z.string().optional(),
+});
+
+export const CompleteServiceRequestSchema = z.object({
+  endTime: z.string(),
+  outcome: z.string().max(1000).optional(),
+  status: ServiceCompletionStatusSchema,
+  notes: z.string().max(2000).optional(),
+});
+
+export const QuickCrisisServiceRequestSchema = z.object({
+  clientId: z.string().uuid(),
+  enrollmentId: z.string().min(1),
+  programId: z.string().min(1),
+  providerId: z.string().min(1),
+  providerName: z.string().min(1),
+  isConfidential: z.boolean(),
+});
+
+export const QuickCounselingServiceRequestSchema = z.object({
+  clientId: z.string().uuid(),
+  enrollmentId: z.string().min(1),
+  programId: z.string().min(1),
+  serviceType: ServiceTypeSchema,
+  providerId: z.string().min(1),
+  providerName: z.string().min(1),
+});
+
+export const QuickCaseManagementServiceRequestSchema = z.object({
+  clientId: z.string().uuid(),
+  enrollmentId: z.string().min(1),
+  programId: z.string().min(1),
+  deliveryMode: ServiceDeliveryModeSchema,
+  providerId: z.string().min(1),
+  providerName: z.string().min(1),
+  description: z.string().max(500).optional(),
+});
+
+export const UpdateOutcomeRequestSchema = z.object({
+  outcome: z.string().max(1000).optional(),
+  followUpRequired: z.string().max(500).optional(),
+  followUpDate: z.string().optional(),
+});
+
+export const ServiceSearchCriteriaSchema = z.object({
+  clientId: z.string().uuid().optional(),
+  enrollmentId: z.string().optional(),
+  programId: z.string().optional(),
+  serviceType: ServiceTypeSchema.optional(),
+  serviceCategory: ServiceCategorySchema.optional(),
+  deliveryMode: ServiceDeliveryModeSchema.optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  providerId: z.string().optional(),
+  confidentialOnly: z.boolean().default(false),
+  courtOrderedOnly: z.boolean().default(false),
+  followUpRequired: z.boolean().default(false),
+});
+
+export const ServiceStatisticsSchema = z.object({
+  totalServices: z.number(),
+  completedServices: z.number(),
+  inProgressServices: z.number(),
+  confidentialServices: z.number(),
+  courtOrderedServices: z.number(),
+  servicesRequiringFollowUp: z.number(),
+  overdueServices: z.number(),
+  totalHours: z.number(),
+  averageDurationMinutes: z.number(),
+  serviceTypeBreakdown: z.record(z.number()),
+  serviceCategoryBreakdown: z.record(z.number()),
+  deliveryModeBreakdown: z.record(z.number()),
+  fundingSourceBreakdown: z.record(z.number()),
+  programBreakdown: z.record(z.number()),
+});
+
+// Inferred types
+export type ServiceType = z.infer<typeof ServiceTypeSchema>;
+export type ServiceCategory = z.infer<typeof ServiceCategorySchema>;
+export type ServiceDeliveryMode = z.infer<typeof ServiceDeliveryModeSchema>;
+export type ServiceCompletionStatus = z.infer<typeof ServiceCompletionStatusSchema>;
+export type FunderType = z.infer<typeof FunderTypeSchema>;
+export type BillingRateCategory = z.infer<typeof BillingRateCategorySchema>;
+export type FundingSource = z.infer<typeof FundingSourceSchema>;
+export type ServiceTypeResponse = z.infer<typeof ServiceTypeResponseSchema>;
+export type ServiceDeliveryModeResponse = z.infer<typeof ServiceDeliveryModeResponseSchema>;
+export type ServiceEpisode = z.infer<typeof ServiceEpisodeSchema>;
+
+export type CreateServiceEpisodeRequest = z.infer<typeof CreateServiceEpisodeRequestSchema>;
+export type StartServiceRequest = z.infer<typeof StartServiceRequestSchema>;
+export type CompleteServiceRequest = z.infer<typeof CompleteServiceRequestSchema>;
+export type QuickCrisisServiceRequest = z.infer<typeof QuickCrisisServiceRequestSchema>;
+export type QuickCounselingServiceRequest = z.infer<typeof QuickCounselingServiceRequestSchema>;
+export type QuickCaseManagementServiceRequest = z.infer<typeof QuickCaseManagementServiceRequestSchema>;
+export type UpdateOutcomeRequest = z.infer<typeof UpdateOutcomeRequestSchema>;
+export type ServiceSearchCriteria = z.infer<typeof ServiceSearchCriteriaSchema>;
+export type ServiceStatistics = z.infer<typeof ServiceStatisticsSchema>;
+
 export const UpdateCaseStatusRequestSchema = z.object({
   newStatus: z.enum(['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED', 'CANCELLED']),
 });
