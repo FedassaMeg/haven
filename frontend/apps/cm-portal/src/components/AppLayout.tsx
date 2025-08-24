@@ -3,6 +3,21 @@ import { useRouter } from 'next/router';
 import { Layout, type NavigationItem } from '@haven/ui';
 import { UserProfileDropdown, useCurrentUser, PermissionGuard } from '@haven/auth';
 import { ResourceType, ActionType } from '@haven/auth';
+import { 
+  Home, 
+  Users, 
+  FileText, 
+  Zap, 
+  AlertTriangle, 
+  DollarSign, 
+  Archive, 
+  Shield, 
+  BarChart3, 
+  Settings,
+  FileBarChart,
+  Search,
+  Bell
+} from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -21,21 +36,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
       label: 'Dashboard',
       href: '/dashboard',
       active: router.pathname === '/dashboard',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
+      icon: <Home className="w-5 h-5" />,
     },
     {
       label: 'Clients',
       href: '/clients',
       active: router.pathname.startsWith('/clients'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-        </svg>
-      ),
+      icon: <Users className="w-5 h-5" />,
       children: [
         {
           label: 'All Clients',
@@ -43,9 +50,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
           active: router.pathname === '/clients',
         },
         {
-          label: 'Add Client',
-          href: '/clients/new',
-          active: router.pathname === '/clients/new',
+          label: 'New Intake',
+          href: '/intake',
+          active: router.pathname === '/intake',
         },
       ],
     },
@@ -53,11 +60,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
       label: 'Cases',
       href: '/cases',
       active: router.pathname.startsWith('/cases'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
+      icon: <FileText className="w-5 h-5" />,
       children: [
         {
           label: 'Active Cases',
@@ -77,24 +80,90 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
       ],
     },
     {
+      label: 'Services',
+      href: '/services',
+      active: router.pathname.startsWith('/services'),
+      icon: <Zap className="w-5 h-5" />,
+      children: [
+        {
+          label: 'All Services',
+          href: '/services',
+          active: router.pathname === '/services',
+        },
+        {
+          label: 'Active Services',
+          href: '/services?status=IN_PROGRESS',
+          active: router.pathname === '/services' && router.query.status === 'IN_PROGRESS',
+        },
+        {
+          label: 'Create Service',
+          href: '/services/new',
+          active: router.pathname === '/services/new',
+        },
+        {
+          label: 'My Services',
+          href: '/services?providerId=' + user?.id,
+          active: router.pathname === '/services' && router.query.providerId === user?.id,
+        },
+      ],
+    },
+    {
+      label: 'Mandated Reports',
+      href: '/mandated-reports',
+      active: router.pathname.startsWith('/mandated-reports'),
+      icon: <FileBarChart className="w-5 h-5" />,
+      children: [
+        {
+          label: 'All Reports',
+          href: '/mandated-reports',
+          active: router.pathname === '/mandated-reports',
+        },
+        {
+          label: 'Create Report',
+          href: '/mandated-reports/new',
+          active: router.pathname === '/mandated-reports/new',
+        },
+        {
+          label: 'Pending Review',
+          href: '/mandated-reports?status=PENDING_REVIEW',
+          active: router.pathname === '/mandated-reports' && router.query.status === 'PENDING_REVIEW',
+        },
+      ],
+    },
+    {
+      label: 'Billing',
+      href: '/billing',
+      active: router.pathname.startsWith('/billing'),
+      icon: <DollarSign className="w-5 h-5" />,
+      children: [
+        {
+          label: 'Billing Dashboard',
+          href: '/billing',
+          active: router.pathname === '/billing',
+        },
+        {
+          label: 'Reports & Analytics',
+          href: '/billing/reports',
+          active: router.pathname === '/billing/reports',
+        },
+        {
+          label: 'Export Data',
+          href: '/billing/export',
+          active: router.pathname === '/billing/export',
+        },
+      ],
+    },
+    {
       label: 'Triage Center',
       href: '/triage',
       active: router.pathname.startsWith('/triage'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-      ),
+      icon: <AlertTriangle className="w-5 h-5" />,
     },
     {
       label: 'Caseload',
       href: '/caseload',
       active: router.pathname.startsWith('/caseload'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-      ),
+      icon: <Archive className="w-5 h-5" />,
       children: [
         {
           label: 'My Caseload',
@@ -121,11 +190,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
       label: 'Compliance',
       href: '/compliance',
       active: router.pathname.startsWith('/compliance'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
+      icon: <Shield className="w-5 h-5" />,
       children: [
         {
           label: 'Funding Overview',
@@ -148,22 +213,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
       label: 'Reports',
       href: '/reports',
       active: router.pathname.startsWith('/reports'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: <BarChart3 className="w-5 h-5" />,
     },
     {
       label: 'Administration',
       href: '/admin',
       active: router.pathname.startsWith('/admin'),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
+      icon: <Settings className="w-5 h-5" />,
       children: [
         {
           label: 'User Management',
@@ -194,11 +250,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
   };
 
   const logo = (
-    <div className="flex items-center space-x-2">
-      <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center">
-        <span className="text-white font-bold text-lg">H</span>
+    <div className="flex items-center gap-2 px-2 py-2">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+        H
       </div>
-      <span className="text-xl font-bold text-secondary-900">Haven</span>
+      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden transition-all">
+        <span className="truncate font-semibold">Haven</span>
+        <span className="truncate text-xs text-muted-foreground">Case Management</span>
+      </div>
     </div>
   );
 
@@ -223,9 +282,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
           <div className="flex items-center space-x-4">
             {/* Search */}
             <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search..."
@@ -237,9 +294,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, breadcrum
             
             {/* Notifications */}
             <button className="p-2 text-secondary-400 hover:text-secondary-500 relative">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
+              <Bell className="w-6 h-6" />
               <span className="absolute top-0 right-0 block h-2 w-2 bg-error-500 rounded-full"></span>
             </button>
 

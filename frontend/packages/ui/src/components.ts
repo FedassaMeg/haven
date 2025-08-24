@@ -7,3 +7,5 @@ export * from './components/Form';
 export * from './components/Table';
 export * from './components/Navigation';
 export * from './components/Layout';
+export * from './components/Checkbox';
+export * from './components/Tabs';

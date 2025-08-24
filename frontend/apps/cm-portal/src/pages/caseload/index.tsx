@@ -1,21 +1,26 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { ProtectedRoute, useCurrentUser } from '@haven/auth';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Table, Input } from '@haven/ui';
+import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Table, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@haven/ui';
 import { useCaseload, type CaseloadItem } from '@haven/api-client';
 import AppLayout from '../../components/AppLayout';
 
 function CaseloadContent() {
   const { user } = useCurrentUser();
+  const [activeTab, setActiveTab] = useState('my-cases');
   const [filters, setFilters] = useState({
     stage: '',
     riskLevel: '',
     requiresAttention: false,
-    workerId: '',
+    workerId: user?.id || '',
     page: 0,
     size: 20,
   });
 
-  const { caseload, loading, refetch } = useCaseload(filters);
+  const { caseload, loading, refetch } = useCaseload({
+    ...filters,
+    workerId: activeTab === 'my-cases' ? user?.id : filters.workerId
+  });
 
   const stageColors = {
     INTAKE: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -157,10 +162,10 @@ function CaseloadContent() {
       width: '120px',
       render: (value: any, item: CaseloadItem) => (
         <div className="flex space-x-2">
-          <Button size="sm" variant="outline">
-            View
-          </Button>
-          <Button size="sm" variant="ghost">
+          <Link href={`/cases/${item.caseId}`}>
+            <Button size="sm" variant="outline">View</Button>
+          </Link>
+          <Button size="sm" variant="ghost" onClick={() => {/* TODO: Open update modal */}}>
             Update
           </Button>
         </div>
@@ -183,8 +188,22 @@ function CaseloadContent() {
             </svg>
             Refresh
           </Button>
+          <Link href="/caseload/team">
+            <Button variant="outline">Team Overview</Button>
+          </Link>
         </div>
       </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="my-cases">My Caseload</TabsTrigger>
+          <TabsTrigger value="all-cases">All Cases</TabsTrigger>
+          <TabsTrigger value="high-risk">High Risk</TabsTrigger>
+          <TabsTrigger value="confidential">Confidential</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-6">
 
       {/* Summary Stats */}
       {caseload && (
@@ -361,6 +380,9 @@ function CaseloadContent() {
           )}
         </CardContent>
       </Card>
+
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

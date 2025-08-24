@@ -34,6 +34,18 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   rows?: number;
 }
 
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label?: string;
+  helperText?: string;
+  error?: string;
+}
+
+export interface FormCheckboxProps extends CheckboxProps {
+  label?: string;
+  helperText?: string;
+  error?: string;
+}
+
 export interface CardProps {
   title?: string;
   subtitle?: string;
@@ -119,7 +131,7 @@ export interface PaginationProps {
 
 export interface NavigationItem {
   label: string;
-  href?: string;
+  href: string;
   icon?: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
@@ -148,7 +160,7 @@ export interface TabItem {
   disabled?: boolean;
 }
 
-export interface TabsProps {
+export interface LegacyTabsProps {
   items: TabItem[];
   activeTab: string;
   onTabChange: (tab: string) => void;

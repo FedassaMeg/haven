@@ -1,14 +1,54 @@
-import React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { SidebarNavigation, type NavigationItem, Breadcrumb, type BreadcrumbItem } from './Navigation';
-import { SearchBar, NotificationsDropdown, UserProfileDropdown, type NotificationItem, type UserProfile } from './Header';
-import { useBreakpoint } from '../hooks/useMediaQuery';
-import { twMerge } from 'tailwind-merge';
+import React from "react";
+import { twMerge } from "tailwind-merge";
+import { cn } from "../lib/utils";
+import {
+  NotificationsDropdown,
+  SearchBar,
+  UserProfileDropdown,
+  type NotificationItem,
+  type UserProfile,
+} from "./Header";
+import {
+  Breadcrumb,
+  type BreadcrumbItem,
+  type NavigationItem,
+} from "./Navigation";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "../../../../@/components/sidebar";
+import Link from "next/link";
+import { ChevronRight, Home, Users, FileText, Settings, BarChart3, Calendar, Bell, Search, UserPlus, Briefcase, Shield, FileBarChart } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./Collapsible";
+
+export interface NavigationGroup {
+  label?: string;
+  items: NavigationItem[];
+}
+
+// NOTE: This Layout component contains an inline sidebar implementation
+// There's also a standalone AppSidebar component at apps/cm-portal/src/components/AppSidebar.tsx
+// The inline version here supports grouped navigation and submenus and is currently being used
+// Future refactoring could move to use the standalone AppSidebar component exclusively
 
 export interface LayoutProps {
   children: React.ReactNode;
   sidebar?: {
-    navigation?: NavigationItem[];
+    navigation?: NavigationItem[] | NavigationGroup[];
     logo?: React.ReactNode;
     footer?: React.ReactNode;
   };
@@ -29,217 +69,187 @@ export interface LayoutProps {
   className?: string;
 }
 
-const layoutVariants = cva(
-  'min-h-screen bg-gray-50 grid',
-  {
-    variants: {
-      layout: {
-        sidebarWithHeader: 'grid-cols-1 grid-rows-[auto_1fr] [grid-template-areas:"header"_"content"] lg:grid-cols-[min-content_minmax(0,1fr)_auto] lg:grid-rows-[auto_1fr] lg:[grid-template-areas:"sidebar_header_header"_"sidebar_content_content"]',
-        sidebarOnly: 'grid-cols-1 grid-rows-[auto_1fr] [grid-template-areas:"header"_"content"] lg:grid-cols-[min-content_minmax(0,1fr)_auto] lg:grid-rows-1 lg:[grid-template-areas:"sidebar_content_content"]',
-        headerOnly: 'grid-cols-1 grid-rows-[auto_1fr] [grid-template-areas:"header"_"content"] lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:[grid-template-areas:"header_header_header"_"._content_."]',
-        contentOnly: 'grid-cols-1 grid-rows-1 [grid-template-areas:"content"] lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:[grid-template-areas:"._content_."]',
-      },
-    },
-    defaultVariants: {
-      layout: 'contentOnly',
-    },
-  }
-);
-
-const sidebarVariants = cva(
-  'bg-white border-r border-gray-200 transition-all duration-300',
-  {
-    variants: {
-      collapsed: {
-        true: '',
-        false: '',
-      },
-    },
-    defaultVariants: {
-      collapsed: false,
-    },
-  }
-);
-
-const sidebarContentVariants = cva(
-  'flex-1 overflow-y-auto',
-  {
-    variants: {
-      collapsed: {
-        true: 'px-3 py-4',
-        false: 'px-4 py-6',
-      },
-    },
-    defaultVariants: {
-      collapsed: false,
-    },
-  }
-);
-
-const mobileOverlayVariants = cva(
-  'fixed inset-0 z-50 lg:hidden',
-  {
-    variants: {
-      open: {
-        true: 'block',
-        false: 'hidden',
-      },
-    },
-    defaultVariants: {
-      open: false,
-    },
-  }
-);
-
 export const Layout: React.FC<LayoutProps> = ({
   children,
   sidebar,
   header,
   className,
 }) => {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
-  const { isDesktop } = useBreakpoint();
+  const renderNavigationItem = (item: NavigationItem) => {
+    if (item.children && item.children.length > 0) {
+      return (
+        <Collapsible key={item.href} asChild defaultOpen={item.active}>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip={item.label}>
+              <CollapsibleTrigger>
+                {item.icon}
+                <span>{item.label}</span>
+                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              </CollapsibleTrigger>
+            </SidebarMenuButton>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                {item.children.map((child) => (
+                  <SidebarMenuSubItem key={child.href}>
+                    <SidebarMenuSubButton asChild isActive={child.active}>
+                      <Link href={child.href}>
+                        <span>{child.label}</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </SidebarMenuItem>
+        </Collapsible>
+      );
+    }
 
-  // Determine layout type based on props
-  const getLayoutType = () => {
-    if (sidebar && header) return 'sidebarWithHeader';
-    if (sidebar && !header) return 'sidebarOnly';
-    if (!sidebar && header) return 'headerOnly';
-    return 'contentOnly';
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton asChild isActive={item.active} tooltip={item.label}>
+          <Link href={item.href}>
+            {item.icon}
+            <span>{item.label}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
   };
 
-  // Default navigation items
-  const defaultNavigation: NavigationItem[] = [
+  // Default navigation with groups and submenus
+  const defaultNavigation: NavigationGroup[] = [
     {
-      label: 'Home',
-      href: '/',
-      icon: (
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
+      label: "Main",
+      items: [
+        {
+          label: "Dashboard",
+          href: "/",
+          icon: <Home className="h-4 w-4" />,
+        },
+        {
+          label: "Triage",
+          href: "/triage",
+          icon: <Bell className="h-4 w-4" />,
+        },
+      ],
     },
     {
-      label: 'Clients',
-      href: '/clients',
-      icon: (
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
+      label: "Client Management",
+      items: [
+        {
+          label: "Clients",
+          href: "/clients",
+          icon: <Users className="h-4 w-4" />,
+          children: [
+            {
+              label: "All Clients",
+              href: "/clients",
+            },
+            {
+              label: "Add Client",
+              href: "/intake",
+            },
+            {
+              label: "Client Search",
+              href: "/clients/search",
+            },
+          ],
+        },
+        {
+          label: "Caseload",
+          href: "/caseload",
+          icon: <Briefcase className="h-4 w-4" />,
+          children: [
+            {
+              label: "My Caseload",
+              href: "/caseload",
+            },
+            {
+              label: "Team Caseload",
+              href: "/caseload/team",
+            },
+          ],
+        },
+        {
+          label: "Cases",
+          href: "/cases",
+          icon: <FileText className="h-4 w-4" />,
+        },
+      ],
     },
     {
-      label: 'Cases',
-      href: '/cases',
-      icon: (
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
+      label: "Services",
+      items: [
+        {
+          label: "Services",
+          href: "/services",
+          icon: <Calendar className="h-4 w-4" />,
+        },
+        {
+          label: "Billing",
+          href: "/billing",
+          icon: <BarChart3 className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "Compliance",
+      items: [
+        {
+          label: "Compliance",
+          href: "/compliance",
+          icon: <Shield className="h-4 w-4" />,
+        },
+        {
+          label: "Mandated Reports",
+          href: "/mandated-reports",
+          icon: <FileBarChart className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        {
+          label: "Settings",
+          href: "/settings",
+          icon: <Settings className="h-4 w-4" />,
+        },
+      ],
     },
   ];
 
   const navigationItems = sidebar?.navigation || defaultNavigation;
 
-  const renderMobileSidebarContent = () => (
-    <>
-      <div className="flex items-center justify-between h-16 px-4 border-b border-secondary-200">
-        {sidebar?.logo || (
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-md bg-primary-600 flex items-center justify-center text-white font-bold text-lg mr-2">
-              H
-            </div>
-            <span className="text-xl font-semibold text-secondary-900">Haven</span>
-          </div>
-        )}
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="text-secondary-400 hover:text-secondary-600"
-        >
-          <span className="sr-only">Close sidebar</span>
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div className={sidebarContentVariants({ collapsed: false })}>
-        <SidebarNavigation items={navigationItems} collapsed={false} />
-      </div>
-      {sidebar?.footer && (
-        <div className="flex-shrink-0 p-4 border-t border-secondary-200">
-          {sidebar.footer}
-        </div>
-      )}
-    </>
-  );
-
   const renderHeader = () => {
-    if (!header && sidebar && !isDesktop) {
-      // Mobile-only header with just menu button
-      return (
-        <header className="bg-white border-b border-secondary-200 lg:hidden">
-          <div className="h-16 px-4 flex items-center">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="text-secondary-400 hover:text-secondary-600"
-            >
-              <span className="sr-only">Open sidebar</span>
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </header>
-      );
-    }
-
-    if (!header) return null;
+    if (!header && !sidebar) return null;
 
     return (
-      <header className="bg-white border-b border-secondary-200 shadow-sm">
-        <div className="h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Left side */}
-          <div className="flex items-center flex-1">
-            {/* Mobile menu button */}
-            {sidebar && !isDesktop && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="text-secondary-400 hover:text-secondary-600 mr-4"
-              >
-                <span className="sr-only">Open sidebar</span>
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            )}
-            
-            {/* Title and breadcrumbs */}
-            <div className="flex-1">
-              {header?.breadcrumbs && <Breadcrumb items={header.breadcrumbs} className="mb-1" />}
-              {header?.title && (
-                <h1 className="text-2xl font-semibold text-secondary-900">{header.title}</h1>
-              )}
-            </div>
-
+      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <div className="flex items-center gap-2 px-4">
+          {sidebar && <SidebarTrigger className="-ml-1" />}
+          {header?.breadcrumbs && <Breadcrumb items={header.breadcrumbs} />}
+        </div>
+        <div className="flex-1">
+          {header?.title && (
+            <h1 className="text-2xl font-semibold text-foreground">
+              {header.title}
+            </h1>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-4">
           {/* Search Bar */}
           {header?.showSearch && (
             <SearchBar
               onSearch={header.onSearch}
-              className="ml-4 max-w-md flex-1 hidden md:block"
+              className="max-w-md flex-1 hidden md:block"
             />
           )}
-        </div>
-        
-        {/* Right side */}
-        <div className="flex items-center space-x-4 ml-4">
           {/* Custom Actions */}
           {header?.actions && (
-            <div className="flex items-center space-x-2">
-              {header.actions}
-            </div>
+            <div className="flex items-center gap-2">{header.actions}</div>
           )}
-
           {/* Notifications */}
           {header?.notifications && (
             <NotificationsDropdown
@@ -248,7 +258,6 @@ export const Layout: React.FC<LayoutProps> = ({
               onMarkAllAsRead={header.onMarkAllAsRead}
             />
           )}
-
           {/* User Profile */}
           {header?.user && (
             <UserProfileDropdown
@@ -259,93 +268,93 @@ export const Layout: React.FC<LayoutProps> = ({
             />
           )}
         </div>
-      </div>
-    </header>
+      </header>
     );
   };
 
-  return (
-    <div className={layoutVariants({ layout: getLayoutType(), className })}>
-      {/* Mobile sidebar overlay */}
-      {sidebar && !isDesktop && (
-        <div
-          className={mobileOverlayVariants({ open: sidebarOpen })}
-        >
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-gray-600 bg-opacity-75" 
-            onClick={() => setSidebarOpen(false)} 
-          />
-          
-          {/* Sidebar panel */}
-          <div className="fixed inset-y-0 left-0 flex flex-col w-64 max-w-xs bg-white">
-            {/* Sidebar content with flex column layout */}
-            {renderMobileSidebarContent()}
-          </div>
-        </div>
-      )}
+  if (!sidebar) {
+    // Layout without sidebar
+    return (
+      <div className={cn("min-h-screen bg-background", className)}>
+        {header && <div className="border-b">{renderHeader()}</div>}
+        <main className="flex-1 overflow-auto px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
-      {/* Desktop sidebar */}
-      {sidebar && isDesktop && (
-        <aside className={`${sidebarVariants({ collapsed: sidebarCollapsed })} [grid-area:sidebar] ${header ? 'grid grid-rows-subgrid' : ''}`}>
-          {/* Logo section - aligns with header row */}
-          {header && (
-            <div className="flex items-center justify-between px-3 border-b border-secondary-200 bg-white">
-            {sidebarCollapsed && isDesktop ? (
-              <div className="w-10 h-10 rounded-md bg-primary-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+  // Layout with sidebar
+  return (
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          {sidebar.logo || (
+            <div className="flex items-center gap-2 px-2 py-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
                 H
               </div>
-            ) : (
-              sidebar?.logo || (
-                <div className="flex items-center">
-                  <div className="w-8 h-8 rounded-md bg-primary-600 flex items-center justify-center text-white font-bold text-lg mr-2 flex-shrink-0">
-                    H
-                  </div>
-                  <span className="text-xl font-semibold text-secondary-900 whitespace-nowrap">Haven</span>
-                </div>
-              )
-            )}
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="text-secondary-400 hover:text-secondary-600 p-1 flex-shrink-0"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {sidebarCollapsed ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                )}
-              </svg>
-            </button>
-          </div>
-          )}
-          
-          {/* Navigation section - spans remaining height */}
-          <div className={`flex flex-col overflow-hidden bg-white ${!header ? 'h-full' : ''}`}>
-            <div className={sidebarContentVariants({ collapsed: sidebarCollapsed && isDesktop })}>
-              <SidebarNavigation items={navigationItems} collapsed={sidebarCollapsed && isDesktop} />
-            </div>
-            {sidebar?.footer && (!sidebarCollapsed || !isDesktop) && (
-              <div className="flex-shrink-0 p-4 border-t border-secondary-200">
-                {sidebar.footer}
+              <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden transition-all">
+                <span className="truncate font-semibold">Haven</span>
+                <span className="truncate text-xs text-muted-foreground">Case Management</span>
               </div>
-            )}
+            </div>
+          )}
+        </SidebarHeader>
+        <SidebarContent className="overflow-x-hidden">
+          {(() => {
+            const items = navigationItems;
+            if (!items || items.length === 0) {
+              return null;
+            }
+            
+            const isGroupedNavigation = (items: NavigationItem[] | NavigationGroup[]): items is NavigationGroup[] => {
+              return items.length > 0 && 'items' in items[0];
+            };
+
+            if (isGroupedNavigation(items)) {
+              return items.map((group, index) => (
+                <SidebarGroup key={group.label || index}>
+                  {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {group.items && group.items.length > 0 ? group.items.map(renderNavigationItem) : null}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              ));
+            }
+
+            return (
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {(items as NavigationItem[]).map(renderNavigationItem)}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })()}
+        </SidebarContent>
+        {sidebar.footer && (
+          <SidebarFooter>
+            {sidebar.footer}
+          </SidebarFooter>
+        )}
+      </Sidebar>
+      <SidebarInset>
+        {(header || sidebar) && (
+          <div className="border-b bg-background">
+            {renderHeader()}
           </div>
-        </aside>
-      )}
-
-      {/* Header */}
-      {(header || (sidebar && !isDesktop)) && (
-        <div className="[grid-area:header]">
-          {renderHeader()}
-        </div>
-      )}
-
-      {/* Main content area - single div with max-width constraint */}
-      <main className="[grid-area:content] overflow-auto bg-gray-50 min-h-0 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl justify-self-center w-full">
-        {children}
-      </main>
-    </div>
+        )}
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="space-y-4">
+            {children}
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 
@@ -365,11 +374,13 @@ export const Page: React.FC<PageProps> = ({
   className,
 }) => {
   return (
-    <div className={twMerge('grid gap-8', className)}>
+    <div className={twMerge("grid gap-8", className)}>
       {(title || description || actions) && (
         <header className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
-            {title && <h1 className="text-3xl font-bold text-secondary-900">{title}</h1>}
+            {title && (
+              <h1 className="text-3xl font-bold text-secondary-900">{title}</h1>
+            )}
             {description && (
               <p className="mt-2 text-secondary-600">{description}</p>
             )}
@@ -401,9 +412,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div className="text-center py-12">
       {icon && (
-        <div className="mx-auto h-12 w-12 text-secondary-400 mb-4">
-          {icon}
-        </div>
+        <div className="mx-auto h-12 w-12 text-secondary-400 mb-4">{icon}</div>
       )}
       <h3 className="text-lg font-medium text-secondary-900 mb-2">{title}</h3>
       <p className="text-secondary-500 mb-6">{description}</p>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ProtectedRoute, useCurrentUser } from '@haven/auth';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Table } from '@haven/ui';
+import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Table, Tabs, TabsList, TabsTrigger, TabsContent } from '@haven/ui';
 import { useTriageDashboard, useTriageAlerts } from '@haven/api-client';
 import AppLayout from '../components/AppLayout';
 
 function TriageDashboardContent() {
   const { user } = useCurrentUser();
+  const [activeTab, setActiveTab] = useState('alerts');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   
@@ -296,20 +297,106 @@ function TriageDashboardContent() {
         </CardContent>
       </Card>
 
-      {/* Alerts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Alerts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table
-            data={alerts || []}
-            columns={alertColumns}
-            loading={alertsLoading}
-            emptyMessage="No alerts found"
-          />
-        </CardContent>
-      </Card>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="alerts">System Alerts</TabsTrigger>
+          <TabsTrigger value="protocols">Crisis Protocols</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="alerts" className="mt-6">
+          {/* Alerts Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Alerts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table
+                data={alerts || []}
+                columns={alertColumns}
+                loading={alertsLoading}
+                emptyMessage="No alerts found"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="protocols" className="mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-red-700">Emergency Protocols</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h4 className="font-medium text-red-900 mb-2">🚨 Immediate Danger</h4>
+                    <p className="text-sm text-red-700 mb-3">
+                      Client reports immediate physical danger or threat to life
+                    </p>
+                    <Button className="bg-red-600 hover:bg-red-700 text-white w-full">
+                      Call 911 / Emergency Services
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <h4 className="font-medium text-orange-900 mb-2">⚠️ Safety Concerns</h4>
+                    <p className="text-sm text-orange-700 mb-3">
+                      Escalating threats, stalking, or violation of protection orders
+                    </p>
+                    <Button variant="outline" className="border-orange-300 text-orange-700 w-full">
+                      Crisis Hotline: 1-800-799-7233
+                    </Button>
+                  </div>
+
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <h4 className="font-medium text-purple-900 mb-2">🏠 Housing Crisis</h4>
+                    <p className="text-sm text-purple-700 mb-3">
+                      Immediate shelter needed, eviction, or unsafe housing
+                    </p>
+                    <Button variant="outline" className="border-purple-300 text-purple-700 w-full">
+                      Emergency Shelter Network
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-blue-700">Support Resources</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">📞 24/7 Crisis Line</h4>
+                    <p className="text-sm text-blue-700 mb-2">National DV Hotline</p>
+                    <p className="font-mono text-lg text-blue-900">1-800-799-7233</p>
+                  </div>
+
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-medium text-green-900 mb-2">🏥 Medical Emergency</h4>
+                    <p className="text-sm text-green-700 mb-2">Injury, medical crisis, or immediate medical needs</p>
+                    <p className="font-mono text-lg text-green-900">911 or Emergency Room</p>
+                  </div>
+
+                  <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <h4 className="font-medium text-indigo-900 mb-2">⚖️ Legal Emergency</h4>
+                    <p className="text-sm text-indigo-700 mb-2">Protection order violations, court issues</p>
+                    <p className="font-mono text-lg text-indigo-900">Legal Aid: 1-800-LAW-HELP</p>
+                  </div>
+
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">🧠 Mental Health Crisis</h4>
+                    <p className="text-sm text-gray-700 mb-2">Suicide risk, severe mental health episode</p>
+                    <p className="font-mono text-lg text-gray-900">988 Suicide & Crisis Lifeline</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

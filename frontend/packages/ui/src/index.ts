@@ -6,6 +6,8 @@ export type {
   InputProps,
   SelectProps,
   TextAreaProps,
+  CheckboxProps,
+  FormCheckboxProps,
   CardProps,
   BadgeProps,
   ModalProps,
@@ -20,7 +22,7 @@ export type {
   SidebarProps,
   NavbarProps,
   TabItem,
-  TabsProps,
+  LegacyTabsProps,
   PageHeaderProps,
   StatCardProps,
   EmptyStateProps

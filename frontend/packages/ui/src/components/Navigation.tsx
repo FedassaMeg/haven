@@ -199,7 +199,7 @@ export interface TabItem {
   disabled?: boolean;
 }
 
-export interface TabsProps {
+export interface LegacyTabsProps {
   items: TabItem[];
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -233,7 +233,7 @@ const tabButtonVariants = cva(
   }
 );
 
-export const Tabs: React.FC<TabsProps> = ({ items, activeTab, onTabChange, className }) => {
+export const LegacyTabs: React.FC<LegacyTabsProps> = ({ items, activeTab, onTabChange, className }) => {
   return (
     <div className={className}>
       <div className="border-b border-secondary-200">

@@ -197,6 +197,147 @@ function ClientDetailContent({ client }: { client: Client }) {
             </CardContent>
           </Card>
 
+          {/* Household Members */}
+          {client.householdMembers && client.householdMembers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Household Members</CardTitle>
+                  <Button size="sm" variant="outline">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Member
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {client.householdMembers.map((member, index) => (
+                    <div key={index} className="border border-secondary-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium text-secondary-900">
+                            {member.name?.family ? 
+                              `${member.name.given?.join(' ') || ''} ${member.name.family}`.trim() :
+                              'Household Member'
+                            }
+                          </h4>
+                          <p className="text-sm text-secondary-600">
+                            {member.birthDate && `Born: ${new Date(member.birthDate).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">
+                            {member.relationship || 'Member'}
+                          </Badge>
+                          {member.gender && (
+                            <Badge variant="ghost" size="sm">
+                              {member.gender}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {member.notes && (
+                        <div className="mt-3 pt-3 border-t border-secondary-200">
+                          <p className="text-sm text-secondary-700">{member.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Consent Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Consent & Privacy</CardTitle>
+                <Button size="sm" variant="outline">
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Manage Consent
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Active Consents */}
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-green-900">General Services</p>
+                        <p className="text-sm text-green-700">Active until Dec 2024</p>
+                      </div>
+                    </div>
+                    <Badge variant="success">Active</Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-green-900">Housing Services</p>
+                        <p className="text-sm text-green-700">Active until Mar 2025</p>
+                      </div>
+                    </div>
+                    <Badge variant="success">Active</Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium text-amber-900">Legal Services</p>
+                        <p className="text-sm text-amber-700">Expires in 30 days</p>
+                      </div>
+                    </div>
+                    <Badge variant="warning">Expiring</Badge>
+                  </div>
+                </div>
+
+                {/* Safety & Confidentiality Settings */}
+                <div className="mt-6 pt-4 border-t border-secondary-200">
+                  <h4 className="text-sm font-medium text-secondary-700 mb-3">Safety & Confidentiality</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2V7" />
+                        </svg>
+                        <span className="text-sm text-secondary-900">Safe at Home Participant</span>
+                      </div>
+                      <Badge variant="primary">Enrolled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        <span className="text-sm text-secondary-900">Confidential Location</span>
+                      </div>
+                      <Badge variant="destructive">Restricted</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                        </svg>
+                        <span className="text-sm text-secondary-900">Data Sharing Restricted</span>
+                      </div>
+                      <Badge variant="secondary">Limited</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Emergency Contact */}
           {client.contact && client.contact.length > 0 && (
             <Card>
@@ -312,12 +453,30 @@ function ClientDetailContent({ client }: { client: Client }) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  View Cases
-                </Button>
+                <Link href={`/cases?clientId=${client.id}`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    View Cases
+                  </Button>
+                </Link>
+                <Link href={`/services?clientId=${client.id}`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    View Services
+                  </Button>
+                </Link>
+                <Link href={`/services/new?clientId=${client.id}`}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Create Service
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full justify-start">
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
