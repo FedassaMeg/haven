@@ -1,6 +1,9 @@
+import { BarChart3, Bell, Briefcase, Calendar, ChevronRight, FileBarChart, FileText, Home, Settings, Shield, Users } from "lucide-react";
+import Link from "next/link";
 import React from "react";
 import { twMerge } from "tailwind-merge";
 import { cn } from "../lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 import {
   NotificationsDropdown,
   SearchBar,
@@ -30,10 +33,7 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
-} from "../../../../@/components/sidebar";
-import Link from "next/link";
-import { ChevronRight, Home, Users, FileText, Settings, BarChart3, Calendar, Bell, Search, UserPlus, Briefcase, Shield, FileBarChart } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./Collapsible";
+} from "./sidebar";
 
 export interface NavigationGroup {
   label?: string;
