@@ -639,3 +639,204 @@ export interface RestrictedNote {
   visibilityWarning?: string;
   requiresSpecialHandling: boolean;
 }
+
+// Compliance & Audit types
+export interface ComplianceMetric {
+  name: string;
+  description: string;
+  target: number;
+  achieved: number;
+  unit?: string;
+  category?: string;
+  lastUpdated?: string;
+}
+
+export interface ComplianceOverview {
+  overallScore: number;
+  metrics?: ComplianceMetric[];
+  lastAuditDate?: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  userId?: string;
+  userName?: string;
+  action: string;
+  resource: string;
+  timestamp: string;
+  details: string;
+  result: 'SUCCESS' | 'FAILURE' | 'WARNING';
+  metadata?: Record<string, any>;
+}
+
+export interface AuditLogFilters {
+  action?: string;
+  resource?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+// Mandated Reports types
+export interface MandatedReport {
+  id: string;
+  title: string;
+  description: string;
+  type: 'FEDERAL' | 'STATE' | 'LOCAL' | 'FUNDER';
+  frequency: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'ON_DEMAND';
+  dueDate: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'REVIEW' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  assignedTo?: string;
+  assignedToName?: string;
+  submissionDeadline: string;
+  lastSubmissionDate?: string;
+  isOverdue: boolean;
+  daysUntilDue: number;
+  completionPercentage: number;
+  requiredSections: string[];
+  completedSections: string[];
+  fundingSource?: string;
+  regulatoryBody: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMandatedReportRequest {
+  title: string;
+  description: string;
+  type: 'FEDERAL' | 'STATE' | 'LOCAL' | 'FUNDER';
+  frequency: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | 'ON_DEMAND';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  submissionDeadline: string;
+  assignedTo?: string;
+  requiredSections: string[];
+  fundingSource?: string;
+  regulatoryBody: string;
+}
+
+// Billing types
+export interface BillingRecord {
+  id: string;
+  episodeId: string;
+  clientId: string;
+  clientName: string;
+  serviceType: string;
+  providerId: string;
+  providerName: string;
+  serviceDate: string;
+  startTime?: string;
+  endTime?: string;
+  duration: number;
+  billableAmount: number;
+  fundingSource: string;
+  billingCode?: string;
+  status: 'PENDING' | 'SUBMITTED' | 'PAID' | 'REJECTED' | 'PROCESSING';
+  submittedAt?: string;
+  paidAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  processingNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BillingStatistics {
+  totalBillable: number;
+  totalPaid: number;
+  totalPending: number;
+  totalSubmitted: number;
+  totalRejected: number;
+  totalProcessing: number;
+  averageRate: number;
+  totalHours: number;
+  reimbursementRate: number;
+  averageProcessingDays: number;
+  rejectionRate: number;
+  monthlyRevenue: number;
+  yearToDateRevenue: number;
+  fundingSourceBreakdown: Record<string, {
+    amount: number;
+    count: number;
+    percentage: number;
+  }>;
+  statusBreakdown: Record<string, {
+    amount: number;
+    count: number;
+    percentage: number;
+  }>;
+  monthlyTrends: Array<{
+    month: string;
+    billable: number;
+    paid: number;
+    submitted: number;
+    rejected: number;
+  }>;
+}
+
+export interface BillingExportRequest {
+  format: 'csv' | 'excel' | 'pdf';
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  filters?: {
+    status?: string[];
+    fundingSource?: string[];
+    providerId?: string;
+    clientId?: string;
+  };
+  includeDetails?: boolean;
+  includeSummary?: boolean;
+  groupBy?: 'provider' | 'funding_source' | 'client' | 'service_type';
+}
+
+export interface BillingExportResponse {
+  exportId: string;
+  filename: string;
+  downloadUrl?: string;
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface GeneratedReport {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'BILLING_SUMMARY' | 'REVENUE_ANALYSIS' | 'FUNDING_UTILIZATION' | 'PROVIDER_PERFORMANCE' | 'COMPLIANCE_REPORT';
+  format: 'pdf' | 'excel' | 'csv';
+  parameters: Record<string, any>;
+  status: 'GENERATING' | 'COMPLETED' | 'FAILED' | 'QUEUED';
+  downloadUrl?: string;
+  filename?: string;
+  fileSize?: number;
+  generatedAt?: string;
+  expiresAt?: string;
+  createdBy: string;
+  createdAt: string;
+  error?: string;
+}
+
+export interface GenerateReportRequest {
+  title: string;
+  description?: string;
+  type: 'BILLING_SUMMARY' | 'REVENUE_ANALYSIS' | 'FUNDING_UTILIZATION' | 'PROVIDER_PERFORMANCE' | 'COMPLIANCE_REPORT';
+  format: 'pdf' | 'excel' | 'csv';
+  parameters: {
+    dateRange: {
+      startDate: string;
+      endDate: string;
+    };
+    filters?: {
+      fundingSource?: string[];
+      providerId?: string[];
+      clientId?: string[];
+      serviceType?: string[];
+    };
+    includeCharts?: boolean;
+    includeTrends?: boolean;
+    groupBy?: string[];
+  };
+}

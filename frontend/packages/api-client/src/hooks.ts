@@ -25,6 +25,18 @@ import type {
   FundingSource,
   CaseNote,
   AddCaseNoteRequest,
+  ComplianceOverview,
+  ComplianceMetric,
+  AuditEntry,
+  AuditLogFilters,
+  MandatedReport,
+  CreateMandatedReportRequest,
+  BillingRecord,
+  BillingStatistics,
+  BillingExportRequest,
+  BillingExportResponse,
+  GeneratedReport,
+  GenerateReportRequest,
 } from './types';
 
 // Generic API state hook
@@ -996,5 +1008,686 @@ export function useApiHealth() {
     loading: state.loading,
     error: state.error,
     refetch: checkHealth,
+  };
+}
+
+// Compliance hooks
+export function useComplianceOverview() {
+  const [state, { setData, setLoading, setError }] = useApiState<ComplianceOverview>();
+
+  useEffect(() => {
+    const fetchOverview = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call - replace with actual API call when available
+        const mockOverview: ComplianceOverview = {
+          overallScore: 87,
+          metrics: [
+            {
+              name: "Documentation Completeness",
+              description: "Percentage of cases with complete documentation",
+              target: 95,
+              achieved: 92,
+              unit: "%",
+              category: "Documentation"
+            },
+            {
+              name: "Service Frequency",
+              description: "Clients receiving services within required timeframes",
+              target: 90,
+              achieved: 85,
+              unit: "%",
+              category: "Service Delivery"
+            },
+            {
+              name: "Consent Forms",
+              description: "Valid consent forms on file",
+              target: 100,
+              achieved: 98,
+              unit: "%",
+              category: "Legal Compliance"
+            }
+          ],
+          lastAuditDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        };
+        setData(mockOverview);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchOverview();
+  }, [setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Replace with actual API call
+      const mockOverview: ComplianceOverview = {
+        overallScore: 87,
+        metrics: [],
+        lastAuditDate: new Date().toISOString()
+      };
+      setData(mockOverview);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [setData, setLoading, setError]);
+
+  return {
+    overview: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+// Audit Log hooks
+export function useAuditLog(filters?: AuditLogFilters) {
+  const [state, { setData, setLoading, setError }] = useApiState<AuditEntry[]>([]);
+  const filtersKey = JSON.stringify(filters || {});
+
+  useEffect(() => {
+    const fetchAuditLog = async () => {
+      setLoading(true);
+      try {
+        // Simulate API call - replace with actual API call when available
+        const mockAuditLog: AuditEntry[] = [
+          {
+            id: '1',
+            userId: 'user-123',
+            userName: 'John Smith',
+            action: 'CREATE',
+            resource: 'CLIENT',
+            timestamp: new Date().toISOString(),
+            details: 'Created new client record',
+            result: 'SUCCESS',
+            metadata: { clientId: 'client-456' }
+          },
+          {
+            id: '2',
+            userId: 'user-456',
+            userName: 'Jane Doe',
+            action: 'UPDATE',
+            resource: 'CASE',
+            timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+            details: 'Updated case status',
+            result: 'SUCCESS',
+            metadata: { caseId: 'case-789' }
+          }
+        ];
+        setData(mockAuditLog);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchAuditLog();
+  }, [filtersKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Replace with actual API call
+      const mockAuditLog: AuditEntry[] = [];
+      setData(mockAuditLog);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [filters, setData, setLoading, setError]);
+
+  return {
+    auditLog: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+// Mandated Reports hooks
+export function useMandatedReports(filters?: {
+  type?: string;
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+  dueWithinDays?: number;
+}) {
+  const [state, { setData, setLoading, setError }] = useApiState<MandatedReport[]>([]);
+  const filtersKey = JSON.stringify(filters || {});
+
+  useEffect(() => {
+    const fetchMandatedReports = async () => {
+      setLoading(true);
+      try {
+        const currentDate = new Date();
+        const mockReports: MandatedReport[] = [
+          {
+            id: '1',
+            title: 'HUD Annual Progress Report',
+            description: 'Annual report on housing outcomes and service delivery metrics for HUD CoC funding',
+            type: 'FEDERAL',
+            frequency: 'ANNUAL',
+            dueDate: new Date(currentDate.getFullYear(), 11, 31).toISOString(),
+            status: 'IN_PROGRESS',
+            priority: 'HIGH',
+            assignedTo: 'user-123',
+            assignedToName: 'Sarah Johnson',
+            submissionDeadline: new Date(currentDate.getFullYear(), 11, 31).toISOString(),
+            lastSubmissionDate: new Date(currentDate.getFullYear() - 1, 11, 15).toISOString(),
+            isOverdue: false,
+            daysUntilDue: Math.ceil((new Date(currentDate.getFullYear(), 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+            completionPercentage: 65,
+            requiredSections: ['Demographics', 'Service Delivery', 'Housing Outcomes', 'Financial Summary'],
+            completedSections: ['Demographics', 'Service Delivery', 'Housing Outcomes'],
+            fundingSource: 'HUD CoC PSH',
+            regulatoryBody: 'U.S. Department of Housing and Urban Development',
+            createdAt: new Date(currentDate.getFullYear(), 9, 1).toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: '2',
+            title: 'State DV Services Quarterly Report',
+            description: 'Quarterly domestic violence services report including safety outcomes and client demographics',
+            type: 'STATE',
+            frequency: 'QUARTERLY',
+            dueDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 15).toISOString(),
+            status: 'NOT_STARTED',
+            priority: 'CRITICAL',
+            assignedTo: 'user-456',
+            assignedToName: 'Michael Chen',
+            submissionDeadline: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 15).toISOString(),
+            lastSubmissionDate: new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 10).toISOString(),
+            isOverdue: false,
+            daysUntilDue: Math.ceil((new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 15).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+            completionPercentage: 0,
+            requiredSections: ['Client Demographics', 'Service Statistics', 'Safety Outcomes', 'Financial Data'],
+            completedSections: [],
+            fundingSource: 'State VOCA Funds',
+            regulatoryBody: 'State Coalition Against Domestic Violence',
+            createdAt: new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1).toISOString(),
+            updatedAt: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 15).toISOString()
+          },
+          {
+            id: '3',
+            title: 'HMIS Data Quality Report',
+            description: 'Monthly data quality assessment and completeness report for HMIS participation',
+            type: 'LOCAL',
+            frequency: 'MONTHLY',
+            dueDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 5).toISOString(),
+            status: 'OVERDUE',
+            priority: 'HIGH',
+            assignedTo: 'user-789',
+            assignedToName: 'Lisa Rodriguez',
+            submissionDeadline: new Date(currentDate.getFullYear(), currentDate.getMonth(), 5).toISOString(),
+            lastSubmissionDate: new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 3).toISOString(),
+            isOverdue: true,
+            daysUntilDue: Math.ceil((new Date(currentDate.getFullYear(), currentDate.getMonth(), 5).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+            completionPercentage: 30,
+            requiredSections: ['Data Completeness', 'Data Quality Metrics', 'Error Resolution'],
+            completedSections: ['Data Completeness'],
+            fundingSource: 'CoC HMIS',
+            regulatoryBody: 'Regional CoC Board',
+            createdAt: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString(),
+            updatedAt: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 20).toISOString()
+          },
+          {
+            id: '4',
+            title: 'Foundation Grant Impact Report',
+            description: 'Semi-annual impact assessment for private foundation funding including client outcomes',
+            type: 'FUNDER',
+            frequency: 'SEMI_ANNUAL',
+            dueDate: new Date(currentDate.getFullYear(), 5, 30).toISOString(),
+            status: 'SUBMITTED',
+            priority: 'MEDIUM',
+            assignedTo: 'user-321',
+            assignedToName: 'David Park',
+            submissionDeadline: new Date(currentDate.getFullYear(), 5, 30).toISOString(),
+            lastSubmissionDate: new Date(currentDate.getFullYear(), 5, 25).toISOString(),
+            isOverdue: false,
+            daysUntilDue: Math.ceil((new Date(currentDate.getFullYear() + 1, 5, 30).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+            completionPercentage: 100,
+            requiredSections: ['Program Impact', 'Client Outcomes', 'Budget Utilization', 'Success Stories'],
+            completedSections: ['Program Impact', 'Client Outcomes', 'Budget Utilization', 'Success Stories'],
+            fundingSource: 'ABC Family Foundation',
+            regulatoryBody: 'ABC Family Foundation',
+            createdAt: new Date(currentDate.getFullYear(), 3, 1).toISOString(),
+            updatedAt: new Date(currentDate.getFullYear(), 5, 25).toISOString()
+          },
+          {
+            id: '5',
+            title: 'Federal VAWA Grant Compliance Report',
+            description: 'Annual Violence Against Women Act grant compliance and performance report',
+            type: 'FEDERAL',
+            frequency: 'ANNUAL',
+            dueDate: new Date(currentDate.getFullYear(), 8, 30).toISOString(),
+            status: 'REVIEW',
+            priority: 'CRITICAL',
+            assignedTo: 'user-654',
+            assignedToName: 'Jennifer Adams',
+            submissionDeadline: new Date(currentDate.getFullYear(), 8, 30).toISOString(),
+            lastSubmissionDate: new Date(currentDate.getFullYear() - 1, 8, 28).toISOString(),
+            isOverdue: currentDate > new Date(currentDate.getFullYear(), 8, 30),
+            daysUntilDue: Math.ceil((new Date(currentDate.getFullYear(), 8, 30).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+            completionPercentage: 85,
+            requiredSections: ['Grant Performance', 'Legal Advocacy Metrics', 'Training Requirements', 'Financial Report'],
+            completedSections: ['Grant Performance', 'Legal Advocacy Metrics', 'Training Requirements'],
+            fundingSource: 'DOJ VAWA',
+            regulatoryBody: 'U.S. Department of Justice',
+            createdAt: new Date(currentDate.getFullYear(), 6, 1).toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ];
+
+        let filteredReports = mockReports;
+
+        if (filters?.type) {
+          filteredReports = filteredReports.filter(report => report.type === filters.type);
+        }
+        if (filters?.status) {
+          filteredReports = filteredReports.filter(report => report.status === filters.status);
+        }
+        if (filters?.priority) {
+          filteredReports = filteredReports.filter(report => report.priority === filters.priority);
+        }
+        if (filters?.assignedTo) {
+          filteredReports = filteredReports.filter(report => report.assignedTo === filters.assignedTo);
+        }
+        if (filters?.dueWithinDays) {
+          filteredReports = filteredReports.filter(report => report.daysUntilDue <= filters.dueWithinDays!);
+        }
+
+        setData(filteredReports);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchMandatedReports();
+  }, [filtersKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const mockReports: MandatedReport[] = [];
+      setData(mockReports);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [filters, setData, setLoading, setError]);
+
+  const updateReportStatus = useCallback(async (reportId: string, status: MandatedReport['status']) => {
+    try {
+      if (state.data) {
+        const updatedReports = state.data.map(report => 
+          report.id === reportId 
+            ? { ...report, status, updatedAt: new Date().toISOString() }
+            : report
+        );
+        setData(updatedReports);
+      }
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [state.data, setData, setError]);
+
+  const updateReportProgress = useCallback(async (reportId: string, completedSections: string[]) => {
+    try {
+      if (state.data) {
+        const updatedReports = state.data.map(report => {
+          if (report.id === reportId) {
+            const completionPercentage = Math.round((completedSections.length / report.requiredSections.length) * 100);
+            return { 
+              ...report, 
+              completedSections,
+              completionPercentage,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return report;
+        });
+        setData(updatedReports);
+      }
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [state.data, setData, setError]);
+
+  return {
+    reports: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+    updateReportStatus,
+    updateReportProgress,
+  };
+}
+
+export function useCreateMandatedReport() {
+  const [state, { setLoading, setError, reset }] = useApiState();
+
+  const createMandatedReport = useCallback(async (data: CreateMandatedReportRequest): Promise<MandatedReport> => {
+    setLoading(true);
+    try {
+      const currentDate = new Date();
+      const dueDate = new Date(data.submissionDeadline);
+      const daysUntilDue = Math.ceil((dueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const newReport: MandatedReport = {
+        id: `report-${Date.now()}`,
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        frequency: data.frequency,
+        dueDate: data.submissionDeadline,
+        status: 'NOT_STARTED',
+        priority: data.priority,
+        assignedTo: data.assignedTo,
+        assignedToName: data.assignedTo ? `User ${data.assignedTo}` : undefined,
+        submissionDeadline: data.submissionDeadline,
+        isOverdue: daysUntilDue < 0,
+        daysUntilDue,
+        completionPercentage: 0,
+        requiredSections: data.requiredSections,
+        completedSections: [],
+        fundingSource: data.fundingSource,
+        regulatoryBody: data.regulatoryBody,
+        createdAt: currentDate.toISOString(),
+        updatedAt: currentDate.toISOString(),
+      };
+
+      reset();
+      return newReport;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    createMandatedReport,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+// Billing hooks
+export function useBillingStatistics(params?: {
+  dateRange?: { startDate: string; endDate: string };
+  providerId?: string;
+  fundingSource?: string;
+}) {
+  const [state, { setData, setLoading, setError }] = useApiState<BillingStatistics>();
+  const paramsKey = JSON.stringify(params || {});
+
+  useEffect(() => {
+    const fetchBillingStatistics = async () => {
+      setLoading(true);
+      try {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth();
+
+        const mockStatistics: BillingStatistics = {
+          totalBillable: 125780.50,
+          totalPaid: 98450.25,
+          totalPending: 18230.75,
+          totalSubmitted: 7850.00,
+          totalRejected: 1249.50,
+          totalProcessing: 0,
+          averageRate: 85.50,
+          totalHours: 1471.2,
+          reimbursementRate: 78.3,
+          averageProcessingDays: 12.5,
+          rejectionRate: 0.99,
+          monthlyRevenue: 18230.75,
+          yearToDateRevenue: 125780.50,
+          fundingSourceBreakdown: {
+            'HUD CoC': {
+              amount: 45250.25,
+              count: 145,
+              percentage: 36.0
+            },
+            'VAWA': {
+              amount: 32180.75,
+              count: 98,
+              percentage: 25.6
+            },
+            'State VOCA': {
+              amount: 28430.00,
+              count: 112,
+              percentage: 22.6
+            },
+            'Cal OES': {
+              amount: 14920.50,
+              count: 67,
+              percentage: 11.9
+            },
+            'Foundation': {
+              amount: 4999.00,
+              count: 23,
+              percentage: 4.0
+            }
+          },
+          statusBreakdown: {
+            'PAID': {
+              amount: 98450.25,
+              count: 324,
+              percentage: 78.3
+            },
+            'PENDING': {
+              amount: 18230.75,
+              count: 67,
+              percentage: 14.5
+            },
+            'SUBMITTED': {
+              amount: 7850.00,
+              count: 28,
+              percentage: 6.2
+            },
+            'REJECTED': {
+              amount: 1249.50,
+              count: 8,
+              percentage: 0.99
+            }
+          },
+          monthlyTrends: [
+            {
+              month: `${currentYear - 1}-12`,
+              billable: 14250.00,
+              paid: 11200.00,
+              submitted: 2400.00,
+              rejected: 650.00
+            },
+            {
+              month: `${currentYear}-01`,
+              billable: 15680.50,
+              paid: 12340.25,
+              submitted: 2890.25,
+              rejected: 450.00
+            },
+            {
+              month: `${currentYear}-02`,
+              billable: 13920.75,
+              paid: 10850.50,
+              submitted: 2670.25,
+              rejected: 400.00
+            },
+            {
+              month: `${currentYear}-03`,
+              billable: 16450.25,
+              paid: 13250.00,
+              submitted: 2800.25,
+              rejected: 400.00
+            },
+            {
+              month: `${currentYear}-04`,
+              billable: 14780.00,
+              paid: 11450.75,
+              submitted: 2929.25,
+              rejected: 400.00
+            },
+            {
+              month: `${currentYear}-05`,
+              billable: 15230.75,
+              paid: 12180.50,
+              submitted: 2650.25,
+              rejected: 400.00
+            }
+          ]
+        };
+
+        if (params?.providerId) {
+          mockStatistics.totalBillable *= 0.3;
+          mockStatistics.totalPaid *= 0.3;
+          mockStatistics.totalPending *= 0.3;
+          mockStatistics.totalSubmitted *= 0.3;
+          mockStatistics.totalRejected *= 0.3;
+        }
+
+        setData(mockStatistics);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchBillingStatistics();
+  }, [paramsKey, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const mockStatistics: BillingStatistics = {
+        totalBillable: 125780.50,
+        totalPaid: 98450.25,
+        totalPending: 18230.75,
+        totalSubmitted: 7850.00,
+        totalRejected: 1249.50,
+        totalProcessing: 0,
+        averageRate: 85.50,
+        totalHours: 1471.2,
+        reimbursementRate: 78.3,
+        averageProcessingDays: 12.5,
+        rejectionRate: 0.99,
+        monthlyRevenue: 18230.75,
+        yearToDateRevenue: 125780.50,
+        fundingSourceBreakdown: {},
+        statusBreakdown: {},
+        monthlyTrends: []
+      };
+      setData(mockStatistics);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [params, setData, setLoading, setError]);
+
+  return {
+    billingStats: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useExportBilling() {
+  const [state, { setLoading, setError, reset }] = useApiState<BillingExportResponse>();
+
+  const exportBilling = useCallback(async (request: BillingExportRequest): Promise<BillingExportResponse> => {
+    setLoading(true);
+    try {
+      const exportResponse: BillingExportResponse = {
+        exportId: `export-${Date.now()}`,
+        filename: `billing-export-${new Date().toISOString().split('T')[0]}.${request.format}`,
+        status: 'PROCESSING',
+        createdAt: new Date().toISOString(),
+      };
+
+      setTimeout(async () => {
+        exportResponse.status = 'COMPLETED';
+        exportResponse.completedAt = new Date().toISOString();
+        exportResponse.downloadUrl = `/api/exports/${exportResponse.exportId}/download`;
+        
+        if (typeof window !== 'undefined') {
+          const blob = new Blob(['Mock billing export data'], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = exportResponse.filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }, 1500);
+
+      reset();
+      return exportResponse;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    exportBilling,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useGenerateReport() {
+  const [state, { setLoading, setError, reset }] = useApiState<GeneratedReport>();
+
+  const generateReport = useCallback(async (request: GenerateReportRequest): Promise<GeneratedReport> => {
+    setLoading(true);
+    try {
+      const reportResponse: GeneratedReport = {
+        id: `report-${Date.now()}`,
+        title: request.title,
+        description: request.description,
+        type: request.type,
+        format: request.format,
+        parameters: request.parameters,
+        status: 'GENERATING',
+        createdBy: 'current-user-id',
+        createdAt: new Date().toISOString(),
+      };
+
+      setTimeout(async () => {
+        reportResponse.status = 'COMPLETED';
+        reportResponse.generatedAt = new Date().toISOString();
+        reportResponse.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        reportResponse.downloadUrl = `/api/reports/${reportResponse.id}/download`;
+        reportResponse.filename = `${request.title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.${request.format}`;
+        reportResponse.fileSize = 1024 * 250;
+
+        if (typeof window !== 'undefined') {
+          const blob = new Blob(['Mock generated report data'], { 
+            type: request.format === 'pdf' ? 'application/pdf' : 'text/csv' 
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = reportResponse.filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      }, 2000);
+
+      reset();
+      return reportResponse;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    generateReport,
+    loading: state.loading,
+    error: state.error,
   };
 }
