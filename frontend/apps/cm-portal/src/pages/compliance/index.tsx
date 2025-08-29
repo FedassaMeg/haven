@@ -15,7 +15,7 @@ function ComplianceContent() {
     endDate: '',
   });
 
-  const { overview, loading: overviewLoading, refetch } = useComplianceOverview();
+  const { overview, refetch } = useComplianceOverview();
   const { auditLog, loading: auditLoading } = useAuditLog(auditFilters);
 
   const getComplianceStatus = (metric: ComplianceMetric) => {
@@ -79,7 +79,7 @@ function ComplianceContent() {
       label: 'Result',
       width: '100px',
       render: (value: string) => (
-        <Badge variant={value === 'SUCCESS' ? 'success' : value === 'FAILURE' ? 'destructive' : 'secondary'}>
+        <Badge variant={value === 'SUCCESS' ? 'success' : value === 'FAILURE' ? 'error' : 'secondary'}>
           {value}
         </Badge>
       ),
@@ -169,7 +169,7 @@ function ComplianceContent() {
                       <div className="ml-4">
                         <p className="text-sm font-medium text-secondary-600">Needs Attention</p>
                         <p className="text-2xl font-bold text-secondary-900">
-                          {overview.metrics?.filter(m => getComplianceStatus(m).status === 'warning' || getComplianceStatus(m).status === 'critical').length || 0}
+                          {overview.metrics?.filter((m: ComplianceMetric) => getComplianceStatus(m).status === 'warning' || getComplianceStatus(m).status === 'critical').length || 0}
                         </p>
                       </div>
                     </div>
@@ -203,7 +203,7 @@ function ComplianceContent() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {overview.metrics?.map((metric, index) => {
+                      {overview.metrics?.map((metric: ComplianceMetric, index: number) => {
                         const status = getComplianceStatus(metric);
                         const percentage = (metric.achieved / metric.target) * 100;
                         
@@ -246,7 +246,7 @@ function ComplianceContent() {
                       <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium text-red-900">Missing Documentation</h4>
-                          <Badge variant="destructive">Critical</Badge>
+                          <Badge variant="error">Critical</Badge>
                         </div>
                         <p className="text-sm text-red-700 mt-1">
                           3 cases missing required intake documentation
@@ -300,7 +300,7 @@ function ComplianceContent() {
                 <Select
                   label="Action"
                   value={auditFilters.action}
-                  onChange={(value) => setAuditFilters(prev => ({ ...prev, action: value }))}
+                  onChange={(value: string) => setAuditFilters(prev => ({ ...prev, action: value }))}
                   options={[
                     { value: '', label: 'All Actions' },
                     { value: 'CREATE', label: 'Create' },
@@ -315,7 +315,7 @@ function ComplianceContent() {
                 <Select
                   label="Resource"
                   value={auditFilters.resource}
-                  onChange={(value) => setAuditFilters(prev => ({ ...prev, resource: value }))}
+                  onChange={(value: string) => setAuditFilters(prev => ({ ...prev, resource: value }))}
                   options={[
                     { value: '', label: 'All Resources' },
                     { value: 'CLIENT', label: 'Client' },

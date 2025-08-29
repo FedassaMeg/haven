@@ -10,10 +10,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger
-} from "@/components/sidebar";
-import {
-  Alert
-} from "@/components/alert";
+} from "@haven/ui/src/components/sidebar";
 import { Calendar, Home, Inbox, Search, Settings } from "lucide-react";
 
 const items = [
