@@ -105,10 +105,11 @@ public class PIIRedactionService {
             return PIICategory.DIRECT_IDENTIFIER;
         }
         
-        // Quasi-identifiers
+        // Quasi-identifiers (including race and ethnicity)
         if (lowerField.contains("birth") || lowerField.contains("dob") ||
             lowerField.contains("age") || lowerField.contains("address") ||
-            lowerField.contains("phone") || lowerField.contains("zip")) {
+            lowerField.contains("phone") || lowerField.contains("zip") ||
+            lowerField.contains("race") || lowerField.contains("ethnicity")) {
             return PIICategory.QUASI_IDENTIFIER;
         }
         

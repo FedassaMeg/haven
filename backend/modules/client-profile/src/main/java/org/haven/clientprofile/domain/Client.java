@@ -5,6 +5,12 @@ import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.vo.*;
 import org.haven.shared.vo.hmis.*;
 import org.haven.clientprofile.domain.events.*;
+import org.haven.clientprofile.domain.privacy.*;
+import org.haven.clientprofile.domain.pii.PIIAccessContext;
+import org.haven.clientprofile.domain.privacy.UniversalDataElementPrivacyPolicy.DataAccessPurpose;
+import org.haven.clientprofile.domain.privacy.RacePrivacyControl.RaceRedactionStrategy;
+import org.haven.shared.vo.hmis.HmisEthnicity;
+import org.haven.shared.vo.hmis.HmisEthnicity.EthnicityPrecision;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -12,6 +18,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Client extends AggregateRoot<ClientId> {
     private List<HumanName> names = new ArrayList<>();
@@ -36,6 +44,7 @@ public class Client extends AggregateRoot<ClientId> {
     // HMIS 2024 Comparable Database fields
     private HmisPersonalId hmisPersonalId;
     private Set<HmisRace> hmisRace = new HashSet<>();
+    private HmisEthnicity hmisEthnicity = HmisEthnicity.DATA_NOT_COLLECTED;
     private Set<HmisGender> hmisGender = new HashSet<>();
     private VeteranStatus veteranStatus = VeteranStatus.DATA_NOT_COLLECTED;
     private DisablingCondition disablingCondition = DisablingCondition.DATA_NOT_COLLECTED;
@@ -43,6 +52,10 @@ public class Client extends AggregateRoot<ClientId> {
     private Integer nameDataQuality;
     private Integer ssnDataQuality;
     private Integer dobDataQuality;
+    
+    // Privacy control settings
+    private RaceRedactionStrategy defaultRaceStrategy = RaceRedactionStrategy.FULL_DISCLOSURE;
+    private EthnicityPrecision defaultEthnicityPrecision = EthnicityPrecision.FULL;
     
     public static Client create(HumanName name, AdministrativeGender gender, LocalDate birthDate) {
         ClientId clientId = new ClientId(UUID.randomUUID());
@@ -123,7 +136,104 @@ public class Client extends AggregateRoot<ClientId> {
             apply(new SafeAtHomeDisabled(id.value(), Instant.now()));
         }
     }
-
+    
+    // Universal Data Element Privacy Methods
+    
+    /**
+     * Updates the race data with privacy controls
+     */
+    public void updateRace(Set<HmisRace> races, RaceRedactionStrategy defaultStrategy) {
+        this.hmisRace = races != null ? new HashSet<>(races) : new HashSet<>();
+        this.defaultRaceStrategy = defaultStrategy != null ? defaultStrategy : RaceRedactionStrategy.FULL_DISCLOSURE;
+    }
+    
+    /**
+     * Updates the ethnicity data with privacy controls
+     */
+    public void updateEthnicity(HmisEthnicity ethnicity, EthnicityPrecision defaultPrecision) {
+        this.hmisEthnicity = ethnicity != null ? ethnicity : HmisEthnicity.DATA_NOT_COLLECTED;
+        this.defaultEthnicityPrecision = defaultPrecision != null ? defaultPrecision : EthnicityPrecision.FULL;
+    }
+    
+    /**
+     * Gets race data with privacy controls applied
+     */
+    public Set<HmisRace> getRaceWithPrivacy(PIIAccessContext context, DataAccessPurpose purpose) {
+        UniversalDataElementPrivacyPolicy policy = new UniversalDataElementPrivacyPolicy();
+        RaceRedactionStrategy strategy = policy.determineRaceStrategy(context, purpose, this.id.value());
+        
+        RacePrivacyControl control = new RacePrivacyControl.Builder()
+            .withRaces(this.hmisRace)
+            .withStrategy(strategy)
+            .withClientId(this.id.value())
+            .build();
+            
+        return control.getRedactedRaces();
+    }
+    
+    /**
+     * Gets ethnicity data with privacy controls applied
+     */
+    public HmisEthnicity getEthnicityWithPrivacy(PIIAccessContext context, DataAccessPurpose purpose) {
+        UniversalDataElementPrivacyPolicy policy = new UniversalDataElementPrivacyPolicy();
+        EthnicityPrecision precision = policy.determineEthnicityPrecision(context, purpose, this.id.value());
+        
+        EthnicityPrivacyControl control = new EthnicityPrivacyControl.Builder()
+            .withEthnicity(this.hmisEthnicity)
+            .withPrecision(precision)
+            .withClientId(this.id.value())
+            .build();
+            
+        return control.getRedactedEthnicity();
+    }
+    
+    /**
+     * Gets a privacy-controlled demographic projection for export/reporting
+     */
+    public Map<String, Object> getDemographicProjection(PIIAccessContext context, DataAccessPurpose purpose) {
+        UniversalDataElementPrivacyPolicy policy = new UniversalDataElementPrivacyPolicy();
+        
+        Map<String, Object> projection = new HashMap<>();
+        projection.put("clientId", this.id.value());
+        
+        // Check if demographics should be included
+        if (!policy.shouldIncludeDemographics(context, purpose)) {
+            projection.put("demographicsIncluded", false);
+            return projection;
+        }
+        
+        // Get privacy-controlled race data
+        RaceRedactionStrategy raceStrategy = policy.determineRaceStrategy(context, purpose, this.id.value());
+        RacePrivacyControl raceControl = new RacePrivacyControl.Builder()
+            .withRaces(this.hmisRace)
+            .withStrategy(raceStrategy)
+            .withClientId(this.id.value())
+            .build();
+        
+        // Get privacy-controlled ethnicity data
+        EthnicityPrecision ethnicityPrecision = policy.determineEthnicityPrecision(context, purpose, this.id.value());
+        EthnicityPrivacyControl ethnicityControl = new EthnicityPrivacyControl.Builder()
+            .withEthnicity(this.hmisEthnicity)
+            .withPrecision(ethnicityPrecision)
+            .withClientId(this.id.value())
+            .build();
+        
+        projection.put("demographicsIncluded", true);
+        projection.put("race", raceControl.getReportingProjection());
+        projection.put("ethnicity", ethnicityControl.getReportingProjection());
+        projection.put("privacyNotice", policy.getPrivacyNotice(raceStrategy, ethnicityPrecision));
+        
+        return projection;
+    }
+    
+    /**
+     * Sets default privacy strategies for this client
+     */
+    public void setDefaultPrivacyStrategies(RaceRedactionStrategy raceStrategy, 
+                                           EthnicityPrecision ethnicityPrecision) {
+        this.defaultRaceStrategy = raceStrategy != null ? raceStrategy : RaceRedactionStrategy.FULL_DISCLOSURE;
+        this.defaultEthnicityPrecision = ethnicityPrecision != null ? ethnicityPrecision : EthnicityPrecision.FULL;
+    }
 
     @Override
     protected void when(DomainEvent e) {

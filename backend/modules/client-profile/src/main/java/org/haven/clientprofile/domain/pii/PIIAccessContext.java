@@ -75,6 +75,31 @@ public class PIIAccessContext {
         return userMaxLevel.ordinal() >= requiredLevel.ordinal();
     }
     
+    /**
+     * Checks if the user is an assigned case worker for the given client
+     */
+    public boolean isAssignedCaseWorker(UUID clientId) {
+        // In a real implementation, this would check against case assignments
+        // For now, return true if user is a case manager with a valid case ID
+        return hasRole("CASE_MANAGER") && caseId != null;
+    }
+    
+    /**
+     * Checks if the user has legal authorization (e.g., court order)
+     */
+    public boolean hasLegalAuthorization() {
+        // Check for specific legal authorization role or justification
+        return hasRole("LEGAL_AUTHORITY") || 
+               (businessJustification != null && businessJustification.toLowerCase().contains("court order"));
+    }
+    
+    /**
+     * Checks if the access is anonymous (no user context)
+     */
+    public boolean isAnonymous() {
+        return userId == null || userRoles == null || userRoles.isEmpty();
+    }
+    
     // Getters
     public UUID getUserId() { return userId; }
     public List<String> getUserRoles() { return List.copyOf(userRoles); }
