@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  * HMIS Enrollment.csv projection
  * Represents the standardized HMIS CSV format for enrollment data export.
  * Aligned with HMIS 2024 Data Standards CSV schema.
+ * Enhanced to support Joint TH/RRH projects and enrollment transitions.
  */
 public record HmisEnrollmentProjection(
     String enrollmentId,
@@ -26,7 +27,11 @@ public record HmisEnrollmentProjection(
     LocalDate dateUpdated,
     String userId,
     LocalDateTime dateDeleted,
-    String exportId
+    String exportId,
+    // Joint TH/RRH specific fields
+    String predecessorEnrollmentId,
+    LocalDate residentialMoveInDate,
+    HmisProjectType projectType
 ) {
 
     /**
@@ -64,7 +69,55 @@ public record HmisEnrollmentProjection(
             dateUpdated,
             userId,
             null, // Not deleted
-            exportId
+            exportId,
+            null, // No predecessor by default
+            null, // No move-in date by default
+            null  // Project type to be set separately
+        );
+    }
+    
+    /**
+     * Create projection for Joint TH/RRH enrollment with linkage information
+     */
+    public static HmisEnrollmentProjection fromJointThRrhEnrollment(
+            String enrollmentId,
+            HmisPersonalId personalId,
+            String projectId,
+            LocalDate entryDate,
+            String householdId,
+            RelationshipToHeadOfHousehold relationshipToHoH,
+            PriorLivingSituation priorLivingSituation,
+            LengthOfStay lengthOfStay,
+            DisablingCondition disablingCondition,
+            LocalDate dateCreated,
+            LocalDate dateUpdated,
+            String userId,
+            String exportId,
+            String predecessorEnrollmentId,
+            LocalDate residentialMoveInDate,
+            HmisProjectType projectType) {
+        
+        return new HmisEnrollmentProjection(
+            enrollmentId,
+            personalId,
+            projectId,
+            entryDate,
+            householdId,
+            relationshipToHoH != null ? relationshipToHoH : RelationshipToHeadOfHousehold.DATA_NOT_COLLECTED,
+            priorLivingSituation != null ? priorLivingSituation : PriorLivingSituation.DATA_NOT_COLLECTED,
+            lengthOfStay != null ? lengthOfStay : LengthOfStay.DATA_NOT_COLLECTED,
+            null, // Entry from street/ES/SH calculated from prior living situation
+            null, // Months homeless - would need additional data collection
+            null, // Times homeless - would need additional data collection
+            disablingCondition != null ? disablingCondition : DisablingCondition.DATA_NOT_COLLECTED,
+            dateCreated,
+            dateUpdated,
+            userId,
+            null, // Not deleted
+            exportId,
+            predecessorEnrollmentId,
+            residentialMoveInDate,
+            projectType
         );
     }
 
@@ -119,6 +172,36 @@ public record HmisEnrollmentProjection(
     public boolean isFamilyHousehold() {
         return relationshipToHoH.isFamilyMember() || 
                relationshipToHoH.isHeadOfHousehold();
+    }
+    
+    /**
+     * Determine if this is a linked enrollment (part of Joint TH/RRH)
+     */
+    public boolean isLinkedEnrollment() {
+        return predecessorEnrollmentId != null;
+    }
+    
+    /**
+     * Determine if this is an RRH enrollment with move-in date
+     */
+    public boolean isRrhWithMoveIn() {
+        return projectType != null && 
+               (projectType.isRapidRehousing() || projectType.isJointThRrh()) &&
+               residentialMoveInDate != null;
+    }
+    
+    /**
+     * Determine if this enrollment supports Joint TH/RRH flow
+     */
+    public boolean supportsJointFlow() {
+        return projectType != null && projectType.supportsJointFlow();
+    }
+    
+    /**
+     * Get the HMIS project type ID for CSV export
+     */
+    public int getHmisProjectTypeId() {
+        return projectType != null ? projectType.getHmisTypeId() : 0;
     }
 
     private String quote(String value) {

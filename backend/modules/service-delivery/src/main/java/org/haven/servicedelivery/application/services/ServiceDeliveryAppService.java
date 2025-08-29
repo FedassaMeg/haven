@@ -1,6 +1,7 @@
 package org.haven.servicedelivery.application.services;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.programenrollment.application.services.ProgramEnrollmentAppService;
 import org.haven.programenrollment.domain.ProgramEnrollmentRepository;
 import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.servicedelivery.application.commands.*;
@@ -25,16 +26,19 @@ public class ServiceDeliveryAppService {
 
     private final ServiceEpisodeRepository serviceEpisodeRepository;
     private final ProgramEnrollmentRepository programEnrollmentRepository;
+    private final ProgramEnrollmentAppService programEnrollmentAppService;
     private final ServiceBillingService billingService;
     private final ServiceReportingService reportingService;
 
     public ServiceDeliveryAppService(
             ServiceEpisodeRepository serviceEpisodeRepository,
             ProgramEnrollmentRepository programEnrollmentRepository,
+            ProgramEnrollmentAppService programEnrollmentAppService,
             ServiceBillingService billingService,
             ServiceReportingService reportingService) {
         this.serviceEpisodeRepository = serviceEpisodeRepository;
         this.programEnrollmentRepository = programEnrollmentRepository;
+        this.programEnrollmentAppService = programEnrollmentAppService;
         this.billingService = billingService;
         this.reportingService = reportingService;
     }
@@ -355,4 +359,92 @@ public class ServiceDeliveryAppService {
         
         return createServiceEpisode(cmd);
     }
+
+    /**
+     * Get combined service history across linked enrollments (Joint TH/RRH)
+     * Retrieves services from both the TH and RRH enrollments in a transition chain
+     */
+    @Transactional(readOnly = true)
+    public CombinedServiceHistory getCombinedServiceHistory(UUID enrollmentId) {
+        // Find the enrollment chain
+        var enrollment = programEnrollmentRepository.findById(ProgramEnrollmentId.of(enrollmentId))
+            .orElseThrow(() -> new IllegalArgumentException("Enrollment not found"));
+        
+        List<UUID> chainEnrollmentIds = getEnrollmentChain(enrollmentId);
+        
+        // Get services for all enrollments in the chain
+        List<ServiceEpisode> allServices = chainEnrollmentIds.stream()
+            .flatMap(id -> serviceEpisodeRepository.findByEnrollmentId(id.toString()).stream())
+            .sorted((s1, s2) -> s1.getServiceDate().compareTo(s2.getServiceDate()))
+            .toList();
+        
+        // Calculate statistics
+        int totalServiceCount = allServices.size();
+        LocalDate firstServiceDate = allServices.isEmpty() ? null : allServices.get(0).getServiceDate();
+        LocalDate lastServiceDate = allServices.isEmpty() ? null : allServices.get(allServices.size() - 1).getServiceDate();
+        
+        // Group by enrollment
+        var servicesByEnrollment = allServices.stream()
+            .collect(java.util.stream.Collectors.groupingBy(ServiceEpisode::getEnrollmentId));
+        
+        // Create enrollment service summaries
+        List<EnrollmentServiceSummary> enrollmentSummaries = chainEnrollmentIds.stream()
+            .map(id -> {
+                List<ServiceEpisode> enrollmentServices = servicesByEnrollment.getOrDefault(id.toString(), List.of());
+                return new EnrollmentServiceSummary(
+                    id,
+                    enrollmentServices.size(),
+                    enrollmentServices.isEmpty() ? null : enrollmentServices.get(0).getServiceDate(),
+                    enrollmentServices.isEmpty() ? null : enrollmentServices.get(enrollmentServices.size() - 1).getServiceDate(),
+                    enrollmentServices
+                );
+            })
+            .toList();
+        
+        return new CombinedServiceHistory(
+            enrollmentId,
+            chainEnrollmentIds,
+            totalServiceCount,
+            firstServiceDate,
+            lastServiceDate,
+            enrollmentSummaries,
+            allServices
+        );
+    }
+    
+    /**
+     * Get the enrollment chain for a given enrollment ID
+     * Returns all related enrollments (TH -> RRH transitions)
+     */
+    private List<UUID> getEnrollmentChain(UUID enrollmentId) {
+        try {
+            // Use the program enrollment app service to get the complete enrollment chain
+            return programEnrollmentAppService.getEnrollmentChain(enrollmentId)
+                .stream()
+                .map(ProgramEnrollmentAppService.EnrollmentSummary::id)
+                .toList();
+        } catch (Exception e) {
+            // Fallback to single enrollment
+            return List.of(enrollmentId);
+        }
+    }
+    
+    // Record classes for combined service history
+    public record CombinedServiceHistory(
+        UUID rootEnrollmentId,
+        List<UUID> enrollmentChain,
+        int totalServiceCount,
+        LocalDate firstServiceDate,
+        LocalDate lastServiceDate,
+        List<EnrollmentServiceSummary> enrollmentSummaries,
+        List<ServiceEpisode> allServices
+    ) {}
+    
+    public record EnrollmentServiceSummary(
+        UUID enrollmentId,
+        int serviceCount,
+        LocalDate firstServiceDate,
+        LocalDate lastServiceDate,
+        List<ServiceEpisode> services
+    ) {}
 }
