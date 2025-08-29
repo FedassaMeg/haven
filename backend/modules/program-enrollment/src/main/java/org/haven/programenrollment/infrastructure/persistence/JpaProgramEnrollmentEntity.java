@@ -41,6 +41,15 @@ public class JpaProgramEnrollmentEntity {
     @Column(name = "entry_from_street_outreach")
     private Boolean entryFromStreetOutreach;
     
+    @Column(name = "predecessor_enrollment_id")
+    private UUID predecessorEnrollmentId;
+    
+    @Column(name = "residential_move_in_date")
+    private LocalDate residentialMoveInDate;
+    
+    @Column(name = "household_id")
+    private String householdId;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "status", columnDefinition = "enrollment_status")
     private EnrollmentStatus status;
@@ -158,6 +167,21 @@ public class JpaProgramEnrollmentEntity {
     public Boolean getEntryFromStreetOutreach() { return entryFromStreetOutreach; }
     public void setEntryFromStreetOutreach(Boolean entryFromStreetOutreach) { 
         this.entryFromStreetOutreach = entryFromStreetOutreach; 
+    }
+    
+    public UUID getPredecessorEnrollmentId() { return predecessorEnrollmentId; }
+    public void setPredecessorEnrollmentId(UUID predecessorEnrollmentId) {
+        this.predecessorEnrollmentId = predecessorEnrollmentId;
+    }
+    
+    public LocalDate getResidentialMoveInDate() { return residentialMoveInDate; }
+    public void setResidentialMoveInDate(LocalDate residentialMoveInDate) {
+        this.residentialMoveInDate = residentialMoveInDate;
+    }
+    
+    public String getHouseholdId() { return householdId; }
+    public void setHouseholdId(String householdId) {
+        this.householdId = householdId;
     }
     
     public EnrollmentStatus getStatus() { return status; }

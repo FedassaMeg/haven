@@ -38,6 +38,11 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     private LengthOfStay hmisLengthOfStay;
     private DisablingCondition hmisDisablingCondition;
     
+    // Joint TH/RRH support
+    private UUID predecessorEnrollmentId;
+    private LocalDate residentialMoveInDate;
+    private HmisProjectType projectType;
+    
     // Service episodes during enrollment
     private List<ServiceEpisode> serviceEpisodes = new ArrayList<>();
     
@@ -65,6 +70,14 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             Instant.now()
         ));
         return enrollment;
+    }
+    
+    /**
+     * Set the project type for this enrollment
+     * This should be called after creation to ensure proper validation
+     */
+    public void setProjectType(HmisProjectType projectType) {
+        this.projectType = projectType;
     }
     
     public void addServiceEpisode(CodeableConcept serviceType, LocalDate serviceDate, 
@@ -205,6 +218,14 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
                 );
             }
             
+        } else if (event instanceof EnrollmentTransitionedToRrh e) {
+            // This event is primarily for external systems (like creating the RRH enrollment)
+            // The TH enrollment itself doesn't change state during transition
+            // The event signals that a new RRH enrollment should be created
+            
+        } else if (event instanceof ResidentialMoveInDateUpdated e) {
+            this.residentialMoveInDate = e.moveInDate();
+            
         } else {
             throw new IllegalArgumentException("Unhandled event: " + event.getClass());
         }
@@ -309,5 +330,108 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
                hmisPriorLivingSituation != null &&
                hmisLengthOfStay != null && hmisLengthOfStay.isKnownLength() &&
                hmisDisablingCondition != null && hmisDisablingCondition.isKnownStatus();
+    }
+    
+    /**
+     * Transition from TH to RRH in a Joint TH/RRH project
+     * Creates a new RRH enrollment linked to this TH enrollment
+     */
+    public ProgramEnrollmentId transitionToRrh(UUID rrhProgramId, LocalDate moveInDate, 
+                                               HmisProjectType rrhProjectType) {
+        // Ensure enrollment is still active
+        if (status != EnrollmentStatus.ACTIVE) {
+            throw new IllegalStateException("Can only transition from active enrollment");
+        }
+        
+        // Generate new enrollment ID for RRH
+        ProgramEnrollmentId rrhEnrollmentId = ProgramEnrollmentId.generate();
+        
+        // Raise domain event for transition
+        apply(new EnrollmentTransitionedToRrh(
+            id.value(),
+            rrhEnrollmentId.value(),
+            clientId.value(),
+            rrhProgramId,
+            moveInDate,
+            householdId, // Preserve household ID
+            hmisRelationshipToHoH,
+            hmisPriorLivingSituation,
+            hmisLengthOfStay,
+            hmisDisablingCondition,
+            Instant.now()
+        ));
+        
+        return rrhEnrollmentId;
+    }
+    
+    /**
+     * Create RRH enrollment from TH transition
+     */
+    public static ProgramEnrollment createFromTransition(
+            ProgramEnrollmentId enrollmentId,
+            ClientId clientId,
+            UUID programId,
+            UUID predecessorId,
+            LocalDate enrollmentDate,
+            LocalDate moveInDate,
+            String householdId,
+            RelationshipToHeadOfHousehold relationshipToHoH,
+            PriorLivingSituation priorLivingSituation,
+            LengthOfStay lengthOfStay,
+            DisablingCondition disablingCondition,
+            HmisProjectType projectType) {
+        
+        ProgramEnrollment enrollment = new ProgramEnrollment();
+        enrollment.id = enrollmentId;
+        enrollment.clientId = clientId;
+        enrollment.programId = programId;
+        enrollment.predecessorEnrollmentId = predecessorId;
+        enrollment.enrollmentDate = enrollmentDate;
+        enrollment.residentialMoveInDate = moveInDate;
+        enrollment.householdId = householdId;
+        enrollment.hmisRelationshipToHoH = relationshipToHoH;
+        enrollment.hmisPriorLivingSituation = priorLivingSituation;
+        enrollment.hmisLengthOfStay = lengthOfStay;
+        enrollment.hmisDisablingCondition = disablingCondition;
+        enrollment.projectType = projectType;
+        enrollment.status = EnrollmentStatus.ACTIVE;
+        enrollment.enrollmentPeriod = new Period(Instant.now(), null);
+        enrollment.createdAt = Instant.now();
+        
+        return enrollment;
+    }
+    
+    /**
+     * Update residential move-in date for RRH enrollment
+     */
+    public void updateResidentialMoveInDate(LocalDate moveInDate) {
+        if (projectType == null || (!projectType.isRapidRehousing() && !projectType.isJointThRrh())) {
+            throw new IllegalStateException("Move-in date only applies to RRH enrollments");
+        }
+        
+        if (moveInDate.isBefore(enrollmentDate)) {
+            throw new IllegalArgumentException("Move-in date cannot be before enrollment date");
+        }
+        
+        this.residentialMoveInDate = moveInDate;
+        
+        apply(new ResidentialMoveInDateUpdated(
+            id.value(),
+            moveInDate,
+            Instant.now()
+        ));
+    }
+    
+    // Additional getters for new fields
+    public UUID getPredecessorEnrollmentId() { return predecessorEnrollmentId; }
+    public LocalDate getResidentialMoveInDate() { return residentialMoveInDate; }
+    public HmisProjectType getProjectType() { return projectType; }
+    
+    public boolean isLinkedEnrollment() {
+        return predecessorEnrollmentId != null;
+    }
+    
+    public boolean hasResidentialMoveIn() {
+        return residentialMoveInDate != null;
     }
 }
