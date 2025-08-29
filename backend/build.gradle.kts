@@ -16,7 +16,7 @@ subprojects {
 
   tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    options.release.set(21) // Java 21 LTS recommended
+    options.release.set(17) // Java 17 LTS (compatible with current Gradle setup)
   }
 
   tasks.withType<Test> {
