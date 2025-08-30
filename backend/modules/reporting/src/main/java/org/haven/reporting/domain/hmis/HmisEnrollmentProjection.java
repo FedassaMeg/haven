@@ -142,7 +142,9 @@ public record HmisEnrollmentProjection(
             quote(formatDate(dateUpdated)),
             quote(userId),
             quote(formatDateTime(dateDeleted)),
-            quote(exportId)
+            quote(exportId),
+            quote(predecessorEnrollmentId),
+            quote(formatDate(residentialMoveInDate))
         );
     }
 

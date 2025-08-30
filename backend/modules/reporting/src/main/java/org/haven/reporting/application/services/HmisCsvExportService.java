@@ -29,11 +29,28 @@ public class HmisCsvExportService {
         "EnrollmentID,PersonalID,ProjectID,EntryDate,HouseholdID,RelationshipToHoH," +
         "PriorLivingSituation,LengthOfStayPriorToDiEntry,EntryFromStreetESSH," +
         "MonthsHomelessPastThreeYears,TimesHomelessPastThreeYears,DisablingCondition," +
-        "DateCreated,DateUpdated,UserID,DateDeleted,ExportID";
+        "DateCreated,DateUpdated,UserID,DateDeleted,ExportID,PredecessorEnrollmentID,ResidentialMoveInDate";
 
     private static final String CSV_HEADER_EXIT = 
         "ExitID,EnrollmentID,PersonalID,ExitDate,Destination,OtherDestination," +
         "HousingAssessment,Subsidy,DateCreated,DateUpdated,UserID,DateDeleted,ExportID";
+
+    private static final String CSV_HEADER_INCOME_BENEFITS =
+        "IncomeBenefitsID,EnrollmentID,PersonalID,InformationDate,TotalMonthlyIncome," +
+        "EarnedIncome,EarnedIncomeAmount,UnemploymentIncome,UnemploymentIncomeAmount," +
+        "SSIIncome,SSIIncomeAmount,SSDIIncome,SSDIIncomeAmount,VADisabilityServiceIncome,VADisabilityServiceIncomeAmount," +
+        "VADisabilityNonServiceIncome,VADisabilityNonServiceIncomeAmount,PrivateDisabilityIncome,PrivateDisabilityIncomeAmount," +
+        "WorkersCompIncome,WorkersCompIncomeAmount,TANFIncome,TANFIncomeAmount,GAIncome,GAIncomeAmount," +
+        "SocialSecurityRetirementIncome,SocialSecurityRetirementIncomeAmount,PensionIncome,PensionIncomeAmount," +
+        "ChildSupportIncome,ChildSupportIncomeAmount,AlimonyIncome,AlimonyIncomeAmount," +
+        "OtherIncomeSource,OtherIncomeAmount,SNAP,WIC,TANFChildCare,TANFTransportation,OtherTANF,OtherBenefitsSource," +
+        "DateCreated,DateUpdated,UserID,DateDeleted,ExportID";
+
+    private static final String CSV_HEADER_HEALTH_AND_DV =
+        "HealthAndDVID,EnrollmentID,PersonalID,InformationDate,Medicaid,Medicare,SCHIP,VAMedicalServices," +
+        "EmployerProvided,COBRA,PrivatePayment,StateHealthInsurance,IndianHealthService,OtherInsurance,NoInsurance," +
+        "PhysicalDisability,DevelopmentalDisability,ChronicHealthCondition,HIVAIDS,MentalHealthDisorder,SubstanceUseDisorder," +
+        "DomesticViolence,DateCreated,DateUpdated,UserID,DateDeleted,ExportID";
 
     /**
      * Generate complete HMIS CSV export as ZIP file
@@ -42,6 +59,8 @@ public class HmisCsvExportService {
             List<HmisClientProjection> clients,
             List<HmisEnrollmentProjection> enrollments,
             List<HmisExitProjection> exits,
+            List<HmisIncomeBenefitsProjection> incomeBenefits,
+            List<HmisHealthAndDvProjection> healthAndDv,
             String exportId,
             LocalDate reportingPeriodStart,
             LocalDate reportingPeriodEnd) throws IOException {
@@ -60,6 +79,12 @@ public class HmisCsvExportService {
             
             // Exit.csv
             addExitsToZip(zipOut, exits);
+            
+            // IncomeBenefits.csv
+            addIncomeBenefitsToZip(zipOut, incomeBenefits);
+            
+            // HealthAndDV.csv
+            addHealthAndDvToZip(zipOut, healthAndDv);
             
             zipOut.finish();
             return baos.toByteArray();
@@ -103,6 +128,34 @@ public class HmisCsvExportService {
         
         for (HmisExitProjection exit : exits) {
             csv.append(exit.toCsvRow()).append("\n");
+        }
+        
+        return csv.toString();
+    }
+    
+    /**
+     * Generate IncomeBenefits.csv export
+     */
+    public String generateIncomeBenefitsCsv(List<HmisIncomeBenefitsProjection> incomeBenefits) {
+        StringBuilder csv = new StringBuilder();
+        csv.append(CSV_HEADER_INCOME_BENEFITS).append("\n");
+        
+        for (HmisIncomeBenefitsProjection incomeBenefit : incomeBenefits) {
+            csv.append(incomeBenefit.toCsvRow()).append("\n");
+        }
+        
+        return csv.toString();
+    }
+    
+    /**
+     * Generate HealthAndDV.csv export
+     */
+    public String generateHealthAndDvCsv(List<HmisHealthAndDvProjection> healthAndDv) {
+        StringBuilder csv = new StringBuilder();
+        csv.append(CSV_HEADER_HEALTH_AND_DV).append("\n");
+        
+        for (HmisHealthAndDvProjection healthDv : healthAndDv) {
+            csv.append(healthDv.toCsvRow()).append("\n");
         }
         
         return csv.toString();
@@ -174,6 +227,34 @@ public class HmisCsvExportService {
             writer.println(CSV_HEADER_EXIT);
             for (HmisExitProjection exit : exits) {
                 writer.println(exit.toCsvRow());
+            }
+        }
+        
+        zipOut.closeEntry();
+    }
+
+    private void addIncomeBenefitsToZip(ZipOutputStream zipOut, List<HmisIncomeBenefitsProjection> incomeBenefits) throws IOException {
+        ZipEntry incomeBenefitsEntry = new ZipEntry("IncomeBenefits.csv");
+        zipOut.putNextEntry(incomeBenefitsEntry);
+        
+        try (PrintWriter writer = new PrintWriter(zipOut)) {
+            writer.println(CSV_HEADER_INCOME_BENEFITS);
+            for (HmisIncomeBenefitsProjection incomeBenefit : incomeBenefits) {
+                writer.println(incomeBenefit.toCsvRow());
+            }
+        }
+        
+        zipOut.closeEntry();
+    }
+
+    private void addHealthAndDvToZip(ZipOutputStream zipOut, List<HmisHealthAndDvProjection> healthAndDv) throws IOException {
+        ZipEntry healthAndDvEntry = new ZipEntry("HealthAndDV.csv");
+        zipOut.putNextEntry(healthAndDvEntry);
+        
+        try (PrintWriter writer = new PrintWriter(zipOut)) {
+            writer.println(CSV_HEADER_HEALTH_AND_DV);
+            for (HmisHealthAndDvProjection healthDv : healthAndDv) {
+                writer.println(healthDv.toCsvRow());
             }
         }
         
