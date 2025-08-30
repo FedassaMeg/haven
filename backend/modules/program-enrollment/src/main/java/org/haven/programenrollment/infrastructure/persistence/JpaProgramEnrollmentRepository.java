@@ -58,4 +58,9 @@ public interface JpaProgramEnrollmentRepository extends JpaRepository<JpaProgram
     
     Optional<JpaProgramEnrollmentEntity> findByClientIdAndProgramIdAndStatus(
         UUID clientId, UUID programId, JpaProgramEnrollmentEntity.EnrollmentStatus status);
+    
+    /**
+     * Find enrollments by enrollment date range (for compliance reporting)
+     */
+    List<JpaProgramEnrollmentEntity> findAllByEnrollmentDateBetween(LocalDate startDate, LocalDate endDate);
 }
