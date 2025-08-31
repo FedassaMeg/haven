@@ -21,10 +21,12 @@ public class BedNight {
     // Audit fields
     private String createdBy;
     private Instant createdAt;
+    private Instant updatedAt; // May not be needed
     
     public BedNight() {
         this.recordId = UUID.randomUUID();
         this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
     
     /**
@@ -109,6 +111,7 @@ public class BedNight {
     public LocalDate getBedNightDate() { return bedNightDate; }
     public String getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
     
     @Override
     public boolean equals(Object o) {

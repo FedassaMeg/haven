@@ -97,4 +97,20 @@ public enum PriorLivingSituation {
                this == PERMANENT_HOUSING ||
                this == RAPID_REHOUSING;
     }
+    
+    /**
+     * Situations that indicate risk of homelessness
+     */
+    public boolean isAtRiskOfHomelessness() {
+        return this == DOUBLED_UP ||
+               this == DOUBLED_UP_FRIENDS ||
+               this == HOTEL_MOTEL_NO_VOUCHER;
+    }
+    
+    /**
+     * Situations that indicate stable housing
+     */
+    public boolean isStableHousing() {
+        return isPermanentHousing();
+    }
 }

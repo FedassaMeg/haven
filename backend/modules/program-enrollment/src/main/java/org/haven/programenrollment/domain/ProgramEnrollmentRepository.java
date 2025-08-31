@@ -48,7 +48,12 @@ public interface ProgramEnrollmentRepository extends Repository<ProgramEnrollmen
      * Get enrollment statistics for reporting
      */
     EnrollmentStatistics getStatistics(UUID programId, LocalDate startDate, LocalDate endDate);
-    
+
+    /**
+     * Find the enrollment chain starting from the given enrollment id.
+     */
+    List<ProgramEnrollment> findEnrollmentChain(ProgramEnrollmentId enrollmentId);
+
     
     record EnrollmentStatistics(
         long totalEnrollments,

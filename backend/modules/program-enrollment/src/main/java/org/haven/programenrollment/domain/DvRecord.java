@@ -272,6 +272,15 @@ public class DvRecord {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     
+    /**
+     * Update DV record with additional details
+     */
+    public void updateDetails(DomesticViolenceRecency whenExperienced, HmisFivePoint currentlyFleeing) {
+        this.whenExperienced = whenExperienced;
+        this.currentlyFleeing = currentlyFleeing;
+        this.updatedAt = Instant.now();
+    }
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -16,4 +16,8 @@ public class ClientId extends Identifier {
     public static ClientId from(String value) {
         return new ClientId(UUID.fromString(value));
     }
+    
+    public static ClientId of(UUID value) {
+        return new ClientId(value);
+    }
 }

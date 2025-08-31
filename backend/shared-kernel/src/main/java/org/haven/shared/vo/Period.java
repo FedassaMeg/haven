@@ -28,4 +28,8 @@ public record Period(
         return (start == null || !start.isAfter(instant)) && 
                (end == null || !end.isBefore(instant));
     }
+    
+    // Explicit getters for compatibility
+    public Instant getStart() { return start; }
+    public Instant getEnd() { return end; }
 }

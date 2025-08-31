@@ -164,6 +164,58 @@ public class CurrentLivingSituation {
     }
     
     /**
+     * Check if this is transitional housing
+     */
+    public boolean isTransitionalHousing() {
+        return livingSituation == PriorLivingSituation.TRANSITIONAL_HOUSING;
+    }
+    
+    /**
+     * Check if this is permanent housing
+     */
+    public boolean isPermanentHousing() {
+        return livingSituation != null && livingSituation.isPermanentHousing();
+    }
+    
+    /**
+     * Check if this is an institutional setting
+     */
+    public boolean isInstitutional() {
+        return livingSituation != null && livingSituation.isInstitutional();
+    }
+    
+    /**
+     * Check if this is temporary housing
+     */
+    public boolean isTemporaryHousing() {
+        return livingSituation != null && livingSituation.isTemporaryHousing();
+    }
+    
+    /**
+     * Check if this is a homeless situation
+     */
+    public boolean isHomelessSituation() {
+        return livingSituation != null && livingSituation.isLiterallyHomeless();
+    }
+    
+    /**
+     * Check if this is temporarily homeless
+     */
+    public boolean isTemporarilyHomeless() {
+        return livingSituation != null && livingSituation.isTemporaryHousing();
+    }
+    
+    /**
+     * Check if this is a known situation (not refused/unknown)
+     */
+    public boolean isKnownSituation() {
+        return livingSituation != null && 
+               livingSituation != PriorLivingSituation.CLIENT_DOESNT_KNOW &&
+               livingSituation != PriorLivingSituation.CLIENT_PREFERS_NOT_TO_ANSWER &&
+               livingSituation != PriorLivingSituation.DATA_NOT_COLLECTED;
+    }
+    
+    /**
      * Get contact duration in hours
      */
     public Double getContactDurationHours() {

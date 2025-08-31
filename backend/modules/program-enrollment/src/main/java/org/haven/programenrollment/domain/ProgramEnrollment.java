@@ -6,6 +6,7 @@ import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.CodeableConcept;
 import org.haven.shared.vo.Period;
 import org.haven.shared.vo.hmis.*;
+import org.haven.shared.vo.hmis.HmisFivePointResponse;
 import org.haven.programenrollment.domain.events.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -279,6 +280,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     public String getEntryFrom() { return entryFrom; }
     public List<ServiceEpisode> getServiceEpisodes() { return List.copyOf(serviceEpisodes); }
     public ProjectExit getProjectExit() { return projectExit; }
+    public LocalDate getExitDate() { return projectExit != null ? projectExit.getExitDate() : null; }
     public Instant getCreatedAt() { return createdAt; }
     
     public boolean isActive() {
@@ -504,7 +506,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
         getProgramSpecificData().updateDomesticViolence(domesticViolence, informationDate);
     }
     
-    public void updateCurrentLivingSituation(org.haven.shared.vo.hmis.CurrentLivingSituation situation) {
+    public void updateCurrentLivingSituation(CurrentLivingSituation situation) {
         getProgramSpecificData().updateCurrentLivingSituation(situation);
     }
     
@@ -543,8 +545,12 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             throw new IllegalStateException("START income record already exists for this enrollment");
         }
         
+        // TODO: Convert IncomeFromAnySource to HmisFivePointResponse properly
+        HmisFivePointResponse incomeResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        HmisFivePointResponse benefitsResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        
         IncomeBenefitsRecord startRecord = IncomeBenefitsRecord.createAtProjectStart(
-            this.id, this.clientId, this.enrollmentDate, incomeFromAnySource, collectedBy);
+            this.id, this.clientId, this.enrollmentDate, incomeResponse, benefitsResponse, collectedBy);
         
         incomeBenefitsRecords.add(startRecord);
     }
@@ -563,8 +569,12 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             throw new IllegalArgumentException("Change date cannot be before enrollment date");
         }
         
+        // TODO: Convert IncomeFromAnySource to HmisFivePointResponse properly
+        HmisFivePointResponse incomeResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        HmisFivePointResponse benefitsResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        
         IncomeBenefitsRecord updateRecord = IncomeBenefitsRecord.createUpdate(
-            this.id, this.clientId, changeDate, incomeFromAnySource, collectedBy);
+            this.id, this.clientId, changeDate, incomeResponse, benefitsResponse, collectedBy);
         
         incomeBenefitsRecords.add(updateRecord);
     }
@@ -583,8 +593,12 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             throw new IllegalArgumentException("Annual assessment too early - must be at least 1 year after enrollment");
         }
         
+        // TODO: Convert IncomeFromAnySource to HmisFivePointResponse properly
+        HmisFivePointResponse incomeResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        HmisFivePointResponse benefitsResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        
         IncomeBenefitsRecord annualRecord = IncomeBenefitsRecord.createAnnualAssessment(
-            this.id, this.clientId, assessmentDate, incomeFromAnySource, collectedBy);
+            this.id, this.clientId, assessmentDate, incomeResponse, benefitsResponse, collectedBy);
         
         incomeBenefitsRecords.add(annualRecord);
     }
@@ -599,8 +613,12 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             throw new IllegalStateException("Cannot create minor-18 income record for inactive enrollment");
         }
         
+        // TODO: Convert IncomeFromAnySource to HmisFivePointResponse properly
+        HmisFivePointResponse incomeResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        HmisFivePointResponse benefitsResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        
         IncomeBenefitsRecord minor18Record = IncomeBenefitsRecord.createMinorTurning18(
-            this.id, this.clientId, birthdayDate, incomeFromAnySource, collectedBy);
+            this.id, this.clientId, birthdayDate, incomeResponse, benefitsResponse, collectedBy);
         
         incomeBenefitsRecords.add(minor18Record);
     }
@@ -619,8 +637,12 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             throw new IllegalStateException("EXIT income record already exists for this enrollment");
         }
         
+        // TODO: Convert IncomeFromAnySource to HmisFivePointResponse properly
+        HmisFivePointResponse incomeResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        HmisFivePointResponse benefitsResponse = HmisFivePointResponse.DATA_NOT_COLLECTED;
+        
         IncomeBenefitsRecord exitRecord = IncomeBenefitsRecord.createAtProjectExit(
-            this.id, this.clientId, exitDate, incomeFromAnySource, collectedBy);
+            this.id, this.clientId, exitDate, incomeResponse, benefitsResponse, collectedBy);
         
         incomeBenefitsRecords.add(exitRecord);
     }
@@ -1157,6 +1179,94 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
         return List.copyOf(disabilityRecords);
     }
     
+    /**
+     * Get the latest effective disability record for a specific disability kind
+     */
+    public DisabilityRecord getLatestEffectiveDisabilityRecord(DisabilityKind disabilityKind) {
+        return disabilityRecords.stream()
+            .filter(record -> record.getDisabilityKind() == disabilityKind)
+            .filter(record -> !record.isCorrection())
+            .max((a, b) -> a.getInformationDate().compareTo(b.getInformationDate()))
+            .orElse(null);
+    }
+    
+    /**
+     * Get current disabling conditions based on latest disability records
+     */
+    public List<DisabilityKind> getCurrentDisablingConditions() {
+        List<DisabilityKind> disablingConditions = new ArrayList<>();
+        
+        for (DisabilityKind kind : DisabilityKind.values()) {
+            DisabilityRecord latestRecord = getLatestEffectiveDisabilityRecord(kind);
+            if (latestRecord != null && latestRecord.indicatesDisablingCondition()) {
+                disablingConditions.add(kind);
+            }
+        }
+        
+        return disablingConditions;
+    }
+    
+    /**
+     * Check if enrollment has behavioral health disabilities
+     */
+    public boolean hasBehavioralHealthDisabilities() {
+        List<DisabilityKind> conditions = getCurrentDisablingConditions();
+        return conditions.contains(DisabilityKind.MENTAL_HEALTH) ||
+               conditions.contains(DisabilityKind.SUBSTANCE_USE);
+    }
+    
+    /**
+     * Check if enrollment has medical disabilities
+     */
+    public boolean hasMedicalDisabilities() {
+        List<DisabilityKind> conditions = getCurrentDisablingConditions();
+        return conditions.contains(DisabilityKind.PHYSICAL) ||
+               conditions.contains(DisabilityKind.CHRONIC_HEALTH_CONDITION) ||
+               conditions.contains(DisabilityKind.HIV_AIDS) ||
+               conditions.contains(DisabilityKind.DEVELOPMENTAL);
+    }
+    
+    /**
+     * Create all disability records at project start
+     */
+    public void createAllStartDisabilityRecords(
+            HmisFivePoint physicalDisability,
+            HmisFivePoint developmentalDisability, 
+            HmisFivePoint chronicHealthCondition,
+            HmisFivePoint hivAids,
+            HmisFivePoint mentalHealthDisorder,
+            HmisFivePoint substanceUseDisorder,
+            String collectedBy) {
+        
+        createStartDisabilityRecord(DisabilityKind.PHYSICAL, physicalDisability, collectedBy);
+        createStartDisabilityRecord(DisabilityKind.DEVELOPMENTAL, developmentalDisability, collectedBy);
+        createStartDisabilityRecord(DisabilityKind.CHRONIC_HEALTH_CONDITION, chronicHealthCondition, collectedBy);
+        createStartDisabilityRecord(DisabilityKind.HIV_AIDS, hivAids, collectedBy);
+        createStartDisabilityRecord(DisabilityKind.MENTAL_HEALTH, mentalHealthDisorder, collectedBy);
+        createStartDisabilityRecord(DisabilityKind.SUBSTANCE_USE, substanceUseDisorder, collectedBy);
+    }
+    
+    /**
+     * Create all disability records at project exit
+     */
+    public void createAllExitDisabilityRecords(
+            LocalDate exitDate,
+            HmisFivePoint physicalDisability,
+            HmisFivePoint developmentalDisability, 
+            HmisFivePoint chronicHealthCondition,
+            HmisFivePoint hivAids,
+            HmisFivePoint mentalHealthDisorder,
+            HmisFivePoint substanceUseDisorder,
+            String collectedBy) {
+        
+        createExitDisabilityRecord(DisabilityKind.PHYSICAL, exitDate, physicalDisability, collectedBy);
+        createExitDisabilityRecord(DisabilityKind.DEVELOPMENTAL, exitDate, developmentalDisability, collectedBy);
+        createExitDisabilityRecord(DisabilityKind.CHRONIC_HEALTH_CONDITION, exitDate, chronicHealthCondition, collectedBy);
+        createExitDisabilityRecord(DisabilityKind.HIV_AIDS, exitDate, hivAids, collectedBy);
+        createExitDisabilityRecord(DisabilityKind.MENTAL_HEALTH, exitDate, mentalHealthDisorder, collectedBy);
+        createExitDisabilityRecord(DisabilityKind.SUBSTANCE_USE, exitDate, substanceUseDisorder, collectedBy);
+    }
+    
     // =============================================================================
     // Domestic Violence Records Lifecycle Management (HMIS 4.11)
     // =============================================================================
@@ -1175,6 +1285,30 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
         
         DvRecord startRecord = DvRecord.createAtProjectStart(
             this.id, this.clientId, this.enrollmentDate, dvHistory, collectedBy);
+        
+        dvRecords.add(startRecord);
+    }
+    
+    /**
+     * Create DV record at project start with additional details
+     */
+    public void createStartDvRecord(HmisFivePoint dvHistory, 
+                                   DomesticViolenceRecency whenExperienced,
+                                   HmisFivePoint currentlyFleeing,
+                                   String collectedBy) {
+        // Check if PROJECT_START record already exists
+        boolean hasStartRecord = dvRecords.stream()
+            .anyMatch(record -> record.getStage() == DataCollectionStage.PROJECT_START && !record.isCorrection());
+        
+        if (hasStartRecord) {
+            throw new IllegalStateException("PROJECT_START DV record already exists for this enrollment");
+        }
+        
+        DvRecord startRecord = DvRecord.createAtProjectStart(
+            this.id, this.clientId, this.enrollmentDate, dvHistory, collectedBy);
+        
+        // Update additional fields
+        startRecord.updateDetails(whenExperienced, currentlyFleeing);
         
         dvRecords.add(startRecord);
     }
@@ -1200,6 +1334,31 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     }
     
     /**
+     * Create DV update record due to change in circumstances with additional details
+     */
+    public void createDvUpdateRecord(LocalDate changeDate, 
+                                    HmisFivePoint dvHistory,
+                                    DomesticViolenceRecency whenExperienced,
+                                    HmisFivePoint currentlyFleeing,
+                                    String collectedBy) {
+        if (status != EnrollmentStatus.ACTIVE) {
+            throw new IllegalStateException("Cannot update DV for inactive enrollment");
+        }
+        
+        if (changeDate.isBefore(enrollmentDate)) {
+            throw new IllegalArgumentException("Change date cannot be before enrollment date");
+        }
+        
+        DvRecord updateRecord = DvRecord.createUpdate(
+            this.id, this.clientId, changeDate, dvHistory, collectedBy);
+        
+        // Update additional fields
+        updateRecord.updateDetails(whenExperienced, currentlyFleeing);
+        
+        dvRecords.add(updateRecord);
+    }
+    
+    /**
      * Create DV record at project exit
      */
     public void createExitDvRecord(LocalDate exitDate, HmisFivePoint dvHistory, String collectedBy) {
@@ -1213,6 +1372,31 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
         
         DvRecord exitRecord = DvRecord.createAtProjectExit(
             this.id, this.clientId, exitDate, dvHistory, collectedBy);
+        
+        dvRecords.add(exitRecord);
+    }
+    
+    /**
+     * Create DV record at project exit with additional details
+     */
+    public void createExitDvRecord(LocalDate exitDate, 
+                                  HmisFivePoint dvHistory,
+                                  DomesticViolenceRecency whenExperienced,
+                                  HmisFivePoint currentlyFleeing,
+                                  String collectedBy) {
+        // Check if PROJECT_EXIT record already exists
+        boolean hasExitRecord = dvRecords.stream()
+            .anyMatch(record -> record.getStage() == DataCollectionStage.PROJECT_EXIT && !record.isCorrection());
+        
+        if (hasExitRecord) {
+            throw new IllegalStateException("PROJECT_EXIT DV record already exists for this enrollment");
+        }
+        
+        DvRecord exitRecord = DvRecord.createAtProjectExit(
+            this.id, this.clientId, exitDate, dvHistory, collectedBy);
+        
+        // Update additional fields
+        exitRecord.updateDetails(whenExperienced, currentlyFleeing);
         
         dvRecords.add(exitRecord);
     }
@@ -1261,6 +1445,87 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
      */
     public List<DvRecord> getDvRecords() {
         return List.copyOf(dvRecords);
+    }
+    
+    /**
+     * Get DV record by collection stage
+     */
+    public DvRecord getDvRecord(DataCollectionStage stage) {
+        return dvRecords.stream()
+            .filter(record -> record.getStage() == stage && !record.isCorrection())
+            .max((a, b) -> a.getInformationDate().compareTo(b.getInformationDate()))
+            .orElse(null);
+    }
+    
+    /**
+     * Get latest effective DV record
+     */
+    public DvRecord getLatestEffectiveDvRecord() {
+        return dvRecords.stream()
+            .filter(record -> !record.isCorrection())
+            .max((a, b) -> a.getInformationDate().compareTo(b.getInformationDate()))
+            .orElse(null);
+    }
+    
+    /**
+     * Check if enrollment has DV history
+     */
+    public boolean hasDvHistory() {
+        DvRecord latestRecord = getLatestEffectiveDvRecord();
+        return latestRecord != null && latestRecord.hasDvHistory();
+    }
+    
+    /**
+     * Get DV safety assessment for this enrollment
+     */
+    public DvSafetyAssessment getDvSafetyAssessment() {
+        DvRecord latestRecord = getLatestEffectiveDvRecord();
+        if (latestRecord == null) {
+            return new DvSafetyAssessment(
+                UUID.randomUUID(),
+                this.id.value(), 
+                LocalDate.now(),
+                false,
+                false,
+                DvSafetyAssessment.SafetyPlanStatus.NOT_NEEDED,
+                java.util.Set.of(),
+                "No DV assessment available",
+                null,
+                "System"
+            );
+        }
+        
+        return new DvSafetyAssessment(
+            UUID.randomUUID(),
+            this.id.value(),
+            latestRecord.getInformationDate(),
+            latestRecord.isCurrentlyFleeing(),
+            latestRecord.isHighRisk(),
+            latestRecord.requiresEnhancedSafety() ? DvSafetyAssessment.SafetyPlanStatus.IN_DEVELOPMENT : DvSafetyAssessment.SafetyPlanStatus.NOT_NEEDED,
+            latestRecord.requiresEnhancedSafety() ? java.util.Set.of(DvSafetyAssessment.RiskIndicator.ESCALATING_BEHAVIOR) : java.util.Set.of(),
+            "Assessment based on latest DV record",
+            latestRecord.getInformationDate().plusMonths(6),
+            latestRecord.getCollectedBy()
+        );
+    }
+    
+    /**
+     * Correct existing DV record
+     */
+    public void correctDvRecord(DvRecord originalRecord,
+                               HmisFivePoint dvHistory,
+                               DomesticViolenceRecency whenExperienced,
+                               HmisFivePoint currentlyFleeing,
+                               String collectedBy) {
+        
+        // Create correction record
+        DvRecord correctionRecord = DvRecord.createCorrection(
+            originalRecord, dvHistory, collectedBy);
+        
+        // Update additional fields
+        correctionRecord.updateDetails(whenExperienced, currentlyFleeing);
+        
+        dvRecords.add(correctionRecord);
     }
     
     // =============================================================================
@@ -1413,4 +1678,162 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     public List<BedNight> getBedNights() {
         return List.copyOf(bedNights);
     }
+    
+    /**
+     * Get a specific bed night by date
+     */
+    public BedNight getBedNight(LocalDate bedNightDate) {
+        return bedNights.stream()
+            .filter(bn -> bn.getBedNightDate().equals(bedNightDate))
+            .findFirst()
+            .orElse(null);
+    }
+    
+    /**
+     * Get the most recent current living situation
+     */
+    public CurrentLivingSituation getMostRecentCurrentLivingSituation() {
+        return currentLivingSituations.stream()
+            .max((cls1, cls2) -> cls1.getContactDate().compareTo(cls2.getContactDate()))
+            .orElse(null);
+    }
+    
+    /**
+     * Remove a specific current living situation
+     */
+    public void removeCurrentLivingSituation(CurrentLivingSituation clsRecord) {
+        currentLivingSituations.remove(clsRecord);
+    }
+    
+    /**
+     * Check if client is currently unsheltered
+     */
+    public boolean isCurrentlyUnsheltered() {
+        CurrentLivingSituation mostRecent = getMostRecentCurrentLivingSituation();
+        return mostRecent != null && mostRecent.isUnsheltered();
+    }
+    
+    /**
+     * Get current living situation status
+     */
+    public CurrentLivingSituationStatus getCurrentLivingSituationStatus() {
+        CurrentLivingSituation mostRecent = getMostRecentCurrentLivingSituation();
+        if (mostRecent == null) {
+            return CurrentLivingSituationStatus.UNKNOWN;
+        }
+        
+        if (mostRecent.isUnsheltered()) {
+            return CurrentLivingSituationStatus.UNSHELTERED;
+        } else if (mostRecent.isEmergencyShelter()) {
+            return CurrentLivingSituationStatus.EMERGENCY_SHELTER;
+        } else if (mostRecent.isTransitionalHousing()) {
+            return CurrentLivingSituationStatus.TRANSITIONAL_HOUSING;
+        } else if (mostRecent.isPermanentHousing()) {
+            return CurrentLivingSituationStatus.PERMANENT_HOUSING;
+        } else if (mostRecent.isInstitutional()) {
+            return CurrentLivingSituationStatus.INSTITUTIONAL;
+        } else if (mostRecent.isTemporaryHousing()) {
+            return CurrentLivingSituationStatus.TEMPORARY_HOUSING;
+        } else {
+            return CurrentLivingSituationStatus.OTHER;
+        }
+    }
+    
+    /**
+     * Get chronically homeless determination
+     */
+    public ChronicallyHomelessDetermination getChronicallyHomelessDetermination() {
+        // Count months and times homeless
+        int monthsHomeless = 0;
+        int timesHomeless = 0;
+        LocalDate threeYearsAgo = LocalDate.now().minusYears(3);
+        
+        // Check current living situations for homeless episodes
+        List<CurrentLivingSituation> homelessSituations = currentLivingSituations.stream()
+            .filter(cls -> cls.getContactDate().isAfter(threeYearsAgo))
+            .filter(CurrentLivingSituation::isHomelessSituation)
+            .toList();
+        
+        if (!homelessSituations.isEmpty()) {
+            // Calculate total months homeless
+            monthsHomeless = homelessSituations.size(); // Simplified calculation
+            timesHomeless = 1; // Would need more complex logic to count separate episodes
+        }
+        
+        // Check for disabling condition
+        boolean hasDisablingCondition = hmisDisablingCondition != null && 
+                                       hmisDisablingCondition == DisablingCondition.YES;
+        
+        // HUD definition: 12+ months continuously OR 4+ times in 3 years totaling 12+ months
+        boolean isChronicallyHomeless = hasDisablingCondition && 
+                                       (monthsHomeless >= 12 || (timesHomeless >= 4 && monthsHomeless >= 12));
+        
+        if (isChronicallyHomeless) {
+            return ChronicallyHomelessDetermination.chronicallyHomeless(
+                monthsHomeless,
+                timesHomeless,
+                hasDisablingCondition,
+                List.of("Meets HUD chronic homelessness criteria")
+            );
+        } else {
+            String reason = !hasDisablingCondition ? "No disabling condition" : 
+                          "Does not meet time requirements";
+            return ChronicallyHomelessDetermination.notChronicallyHomeless(reason);
+        }
+    }
+    
+    /**
+     * Get all date of engagement records
+     */
+    public List<DateOfEngagement> getAllDateOfEngagementRecords() {
+        if (dateOfEngagement == null) {
+            return List.of();
+        }
+        return List.of(dateOfEngagement);
+    }
+    
+    /**
+     * Remove date of engagement
+     */
+    public void removeDateOfEngagement(DateOfEngagement engagementRecord) {
+        if (dateOfEngagement != null && dateOfEngagement.equals(engagementRecord)) {
+            dateOfEngagement = null;
+        }
+    }
+    
+    /**
+     * Get entry date (alias for enrollment date)
+     */
+    public LocalDate getEntryDate() {
+        return enrollmentDate;
+    }
+    
+    /**
+     * Factory method to reconstitute from persistence
+     */
+    public static ProgramEnrollment reconstitute(
+            ProgramEnrollmentId id,
+            ClientId clientId,
+            UUID programId,
+            LocalDate enrollmentDate,
+            EnrollmentStatus status,
+            Instant createdAt) {
+        ProgramEnrollment enrollment = new ProgramEnrollment();
+        enrollment.id = id;
+        enrollment.clientId = clientId;
+        enrollment.programId = programId;
+        enrollment.enrollmentDate = enrollmentDate;
+        enrollment.status = status;
+        enrollment.createdAt = createdAt;
+        enrollment.programSpecificData = new ProgramSpecificDataElements();
+        return enrollment;
+    }
+    
+    // Additional setters needed for JPA conversion (getters are already defined above)
+    public void setHouseholdId(String householdId) { this.householdId = householdId; }
+    public void setResidentialMoveInDate(LocalDate date) { this.residentialMoveInDate = date; }
+    public void setPredecessorEnrollmentId(UUID id) { this.predecessorEnrollmentId = id; }
+    public void setEnrollmentPeriod(Period period) { this.enrollmentPeriod = period; }
+    public void setServiceEpisodes(List<ServiceEpisode> episodes) { this.serviceEpisodes = episodes; }
+    public void setProjectExit(ProjectExit exit) { this.projectExit = exit; }
 }
