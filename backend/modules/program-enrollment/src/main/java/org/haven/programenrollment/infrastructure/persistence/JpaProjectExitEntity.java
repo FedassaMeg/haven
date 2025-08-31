@@ -1,6 +1,7 @@
 package org.haven.programenrollment.infrastructure.persistence;
 
 import jakarta.persistence.*;
+import org.haven.programenrollment.domain.ProjectExit;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -154,4 +155,16 @@ public class JpaProjectExitEntity {
     
     public Instant getRecordedAt() { return recordedAt; }
     public void setRecordedAt(Instant recordedAt) { this.recordedAt = recordedAt; }
+    
+    // Conversion methods - placeholder implementations
+    public static JpaProjectExitEntity fromDomainObject(ProjectExit exit) {
+        JpaProjectExitEntity entity = new JpaProjectExitEntity();
+        // TODO: Implement proper conversion when domain objects are finalized
+        return entity;
+    }
+    
+    public ProjectExit toDomainObject() {
+        // TODO: Implement proper conversion when domain objects are finalized
+        throw new UnsupportedOperationException("ProjectExit conversion not yet implemented");
+    }
 }

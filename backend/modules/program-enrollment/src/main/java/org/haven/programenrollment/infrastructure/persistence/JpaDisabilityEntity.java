@@ -31,20 +31,20 @@ public class JpaDisabilityEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "stage", nullable = false)
-    private String stage;
+    private DataCollectionStage stage;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "disability_kind", nullable = false)
-    private String disabilityKind;
+    private DisabilityKind disabilityKind;
     
     // Disability assessment fields
     @Enumerated(EnumType.STRING)
     @Column(name = "has_disability", nullable = false)
-    private String hasDisability;
+    private HmisFivePoint hasDisability;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "expected_long_term")
-    private String expectedLongTerm;
+    private HmisFivePoint expectedLongTerm;
     
     // Correction tracking
     @Column(name = "is_correction", nullable = false)
@@ -72,11 +72,10 @@ public class JpaDisabilityEntity {
         this.enrollmentId = record.getEnrollmentId().value();
         this.clientId = record.getClientId().value();
         this.informationDate = record.getInformationDate();
-        this.stage = record.getStage().toDatabaseValue();
-        this.disabilityKind = record.getDisabilityKind().toDatabaseValue();
-        this.hasDisability = record.getHasDisability().toDatabaseValue();
-        this.expectedLongTerm = record.getExpectedLongTerm() != null ? 
-            record.getExpectedLongTerm().toDatabaseValue() : null;
+        this.stage = record.getStage();
+        this.disabilityKind = record.getDisabilityKind();
+        this.hasDisability = record.getHasDisability();
+        this.expectedLongTerm = record.getExpectedLongTerm();
         this.isCorrection = record.isCorrection();
         this.correctsRecordId = record.getCorrectsRecordId();
         this.collectedBy = record.getCollectedBy();
@@ -89,11 +88,8 @@ public class JpaDisabilityEntity {
     }
     
     private DisabilityRecord reconstituteDomainObject() {
-        DataCollectionStage stageEnum = DataCollectionStage.fromDatabaseValue(stage);
-        DisabilityKind kindEnum = DisabilityKind.fromDatabaseValue(disabilityKind);
         ProgramEnrollmentId enrollmentDomainId = ProgramEnrollmentId.of(enrollmentId);
         ClientId clientDomainId = new ClientId(clientId);
-        HmisFivePoint hasDisabilityResponse = HmisFivePoint.fromDatabaseValue(hasDisability);
         
         DisabilityRecord record;
         
@@ -101,24 +97,23 @@ public class JpaDisabilityEntity {
             // This is a correction - create base record and mark as correction
             record = new DisabilityRecord();
             setPrivateFields(record, enrollmentDomainId, clientDomainId, informationDate, 
-                            stageEnum, kindEnum, hasDisabilityResponse, collectedBy, true, correctsRecordId);
+                            stage, disabilityKind, hasDisability, collectedBy, true, correctsRecordId);
         } else {
             // Create based on stage
-            switch (stageEnum) {
+            switch (stage) {
                 case PROJECT_START -> record = DisabilityRecord.createAtProjectStart(
-                    enrollmentDomainId, clientDomainId, informationDate, kindEnum, hasDisabilityResponse, collectedBy);
+                    enrollmentDomainId, clientDomainId, informationDate, disabilityKind, hasDisability, collectedBy);
                 case UPDATE -> record = DisabilityRecord.createUpdate(
-                    enrollmentDomainId, clientDomainId, informationDate, kindEnum, hasDisabilityResponse, collectedBy);
+                    enrollmentDomainId, clientDomainId, informationDate, disabilityKind, hasDisability, collectedBy);
                 case PROJECT_EXIT -> record = DisabilityRecord.createAtProjectExit(
-                    enrollmentDomainId, clientDomainId, informationDate, kindEnum, hasDisabilityResponse, collectedBy);
+                    enrollmentDomainId, clientDomainId, informationDate, disabilityKind, hasDisability, collectedBy);
                 default -> throw new IllegalArgumentException("Unknown stage: " + stage);
             }
         }
         
         // Update expected long-term if present
         if (expectedLongTerm != null) {
-            HmisFivePoint expectedLongTermResponse = HmisFivePoint.fromDatabaseValue(expectedLongTerm);
-            record.updateExpectedLongTerm(expectedLongTermResponse);
+            record.updateExpectedLongTerm(expectedLongTerm);
         }
         
         // Override the generated ID and timestamps with persisted values
@@ -196,10 +191,10 @@ public class JpaDisabilityEntity {
     public UUID getEnrollmentId() { return enrollmentId; }
     public UUID getClientId() { return clientId; }
     public LocalDate getInformationDate() { return informationDate; }
-    public String getStage() { return stage; }
-    public String getDisabilityKind() { return disabilityKind; }
-    public String getHasDisability() { return hasDisability; }
-    public String getExpectedLongTerm() { return expectedLongTerm; }
+    public DataCollectionStage getStage() { return stage; }
+    public DisabilityKind getDisabilityKind() { return disabilityKind; }
+    public HmisFivePoint getHasDisability() { return hasDisability; }
+    public HmisFivePoint getExpectedLongTerm() { return expectedLongTerm; }
     public Boolean getIsCorrection() { return isCorrection; }
     public UUID getCorrectsRecordId() { return correctsRecordId; }
     public String getCollectedBy() { return collectedBy; }

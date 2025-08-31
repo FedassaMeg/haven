@@ -212,15 +212,25 @@ public class JpaIncomeBenefitsEntity {
         
         switch (infoDateType) {
             case START_OF_PROJECT -> record = IncomeBenefitsRecord.createAtProjectStart(
-                enrollmentDomainId, clientDomainId, informationDate, incomeStatus, collectedBy);
+                enrollmentDomainId, clientDomainId, informationDate, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, collectedBy);
             case UPDATE -> record = IncomeBenefitsRecord.createUpdate(
-                enrollmentDomainId, clientDomainId, informationDate, incomeStatus, collectedBy);
+                enrollmentDomainId, clientDomainId, informationDate, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, collectedBy);
             case ANNUAL_ASSESSMENT -> record = IncomeBenefitsRecord.createAnnualAssessment(
-                enrollmentDomainId, clientDomainId, informationDate, incomeStatus, collectedBy);
+                enrollmentDomainId, clientDomainId, informationDate, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, collectedBy);
             case EXIT -> record = IncomeBenefitsRecord.createAtProjectExit(
-                enrollmentDomainId, clientDomainId, informationDate, incomeStatus, collectedBy);
+                enrollmentDomainId, clientDomainId, informationDate, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, collectedBy);
             case MINOR_TURNING_18 -> record = IncomeBenefitsRecord.createMinorTurning18(
-                enrollmentDomainId, clientDomainId, informationDate, incomeStatus, collectedBy);
+                enrollmentDomainId, clientDomainId, informationDate, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, 
+                org.haven.shared.vo.hmis.HmisFivePointResponse.DATA_NOT_COLLECTED, collectedBy);
             default -> throw new IllegalArgumentException("Unknown record type: " + recordType);
         }
         

@@ -137,7 +137,7 @@ public interface JpaPhysicalDisabilityRepository extends JpaRepository<JpaPhysic
      */
     @Query("""
         SELECT DISTINCT e.id FROM JpaProgramEnrollmentEntity e 
-        WHERE e.exitDate IS NOT NULL
+        WHERE e.projectExit IS NOT NULL
         AND NOT EXISTS (
             SELECT p FROM JpaPhysicalDisabilityEntity p 
             WHERE p.enrollmentId = e.id 

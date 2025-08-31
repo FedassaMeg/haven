@@ -31,16 +31,16 @@ public class JpaPhysicalDisabilityEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "stage", nullable = false)
-    private String stage;
+    private DataCollectionStage stage;
     
     // UDE 3.08 Physical Disability fields
     @Enumerated(EnumType.STRING)
     @Column(name = "physical_disability", nullable = false)
-    private String physicalDisability;
+    private HmisFivePointResponse physicalDisability;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "physical_expected_long_term")
-    private String physicalExpectedLongTerm;
+    private HmisFivePointResponse physicalExpectedLongTerm;
     
     // Correction tracking
     @Column(name = "is_correction", nullable = false)
@@ -68,10 +68,9 @@ public class JpaPhysicalDisabilityEntity {
         this.enrollmentId = record.getEnrollmentId().value();
         this.clientId = record.getClientId().value();
         this.informationDate = record.getInformationDate();
-        this.stage = record.getStage().toDatabaseValue();
-        this.physicalDisability = record.getPhysicalDisability().toDatabaseValue();
-        this.physicalExpectedLongTerm = record.getPhysicalExpectedLongTerm() != null ? 
-            record.getPhysicalExpectedLongTerm().toDatabaseValue() : null;
+        this.stage = record.getStage();
+        this.physicalDisability = record.getPhysicalDisability();
+        this.physicalExpectedLongTerm = record.getPhysicalExpectedLongTerm();
         this.isCorrection = record.isCorrection();
         this.correctsRecordId = record.getCorrectsRecordId();
         this.collectedBy = record.getCollectedBy();
@@ -85,10 +84,10 @@ public class JpaPhysicalDisabilityEntity {
     
     private PhysicalDisabilityRecord reconstituteDomainObject() {
         // Create appropriate factory method based on stage and correction status
-        DataCollectionStage stageEnum = DataCollectionStage.fromDatabaseValue(stage);
+        DataCollectionStage stageEnum = stage;
         ProgramEnrollmentId enrollmentDomainId = ProgramEnrollmentId.of(enrollmentId);
         ClientId clientDomainId = new ClientId(clientId);
-        HmisFivePointResponse physicalDisabilityResponse = HmisFivePointResponse.fromDatabaseValue(physicalDisability);
+        HmisFivePointResponse physicalDisabilityResponse = physicalDisability;
         
         PhysicalDisabilityRecord record;
         
@@ -114,8 +113,7 @@ public class JpaPhysicalDisabilityEntity {
         
         // Update physical expected long-term if present
         if (physicalExpectedLongTerm != null) {
-            HmisFivePointResponse expectedLongTermResponse = HmisFivePointResponse.fromDatabaseValue(physicalExpectedLongTerm);
-            record.updatePhysicalExpectedLongTerm(expectedLongTermResponse);
+            record.updatePhysicalExpectedLongTerm(physicalExpectedLongTerm);
         }
         
         // Override the generated ID and timestamps with persisted values
@@ -189,9 +187,9 @@ public class JpaPhysicalDisabilityEntity {
     public UUID getEnrollmentId() { return enrollmentId; }
     public UUID getClientId() { return clientId; }
     public LocalDate getInformationDate() { return informationDate; }
-    public String getStage() { return stage; }
-    public String getPhysicalDisability() { return physicalDisability; }
-    public String getPhysicalExpectedLongTerm() { return physicalExpectedLongTerm; }
+    public DataCollectionStage getStage() { return stage; }
+    public HmisFivePointResponse getPhysicalDisability() { return physicalDisability; }
+    public HmisFivePointResponse getPhysicalExpectedLongTerm() { return physicalExpectedLongTerm; }
     public Boolean getIsCorrection() { return isCorrection; }
     public UUID getCorrectsRecordId() { return correctsRecordId; }
     public String getCollectedBy() { return collectedBy; }

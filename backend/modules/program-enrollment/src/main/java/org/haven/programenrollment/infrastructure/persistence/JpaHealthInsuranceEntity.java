@@ -73,7 +73,7 @@ public class JpaHealthInsuranceEntity {
     // HOPWA-specific field
     @Enumerated(EnumType.STRING)
     @Column(name = "hopwa_no_insurance_reason")
-    private String hopwaNoInsuranceReason;
+    private HopwaNoInsuranceReason hopwaNoInsuranceReason;
     
     // Audit fields
     @Column(name = "collected_by", nullable = false)
@@ -114,8 +114,7 @@ public class JpaHealthInsuranceEntity {
         this.otherInsuranceSpecify = record.getOtherInsuranceSpecify();
         
         // Map HOPWA reason
-        this.hopwaNoInsuranceReason = record.getHopwaNoInsuranceReason() != null ? 
-            record.getHopwaNoInsuranceReason().toDatabaseValue() : null;
+        this.hopwaNoInsuranceReason = record.getHopwaNoInsuranceReason();
     }
     
     public HealthInsuranceRecord toDomainObject() {
@@ -150,8 +149,7 @@ public class JpaHealthInsuranceEntity {
         
         // Update HOPWA reason if present
         if (hopwaNoInsuranceReason != null) {
-            record.updateHopwaNoInsuranceReason(
-                HopwaNoInsuranceReason.fromDatabaseValue(hopwaNoInsuranceReason));
+            record.updateHopwaNoInsuranceReason(hopwaNoInsuranceReason);
         }
         
         return record;
@@ -213,5 +211,5 @@ public class JpaHealthInsuranceEntity {
     public Boolean getIndianHealthService() { return indianHealthService; }
     public Boolean getOtherInsurance() { return otherInsurance; }
     public String getOtherInsuranceSpecify() { return otherInsuranceSpecify; }
-    public String getHopwaNoInsuranceReason() { return hopwaNoInsuranceReason; }
+    public HopwaNoInsuranceReason getHopwaNoInsuranceReason() { return hopwaNoInsuranceReason; }
 }

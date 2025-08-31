@@ -4,6 +4,7 @@ import org.haven.clientprofile.domain.ClientId;
 import org.haven.programenrollment.domain.ProgramEnrollment;
 import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.programenrollment.domain.ProgramEnrollmentRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -15,7 +16,8 @@ import java.util.UUID;
  * Simple in-memory implementation of ProgramEnrollmentRepository
  * This is a temporary implementation until proper persistence is added
  */
-@Component
+@Component("inMemoryProgramEnrollmentRepository")
+@ConditionalOnProperty(name = "haven.enrollment.repository.type", havingValue = "memory")
 public class ProgramEnrollmentRepositoryImpl implements ProgramEnrollmentRepository {
     
     private final java.util.Map<ProgramEnrollmentId, ProgramEnrollment> store = new java.util.concurrent.ConcurrentHashMap<>();
@@ -120,7 +122,23 @@ public class ProgramEnrollmentRepositoryImpl implements ProgramEnrollmentReposit
         
         return new EnrollmentStatistics(totalEnrollments, activeEnrollments, exitedEnrollments, totalServiceEpisodes);
     }
-    
+
+    @Override
+    public List<ProgramEnrollment> findEnrollmentChain(ProgramEnrollmentId enrollmentId) {
+        // Minimal in-memory chain resolution (self + predecessor if present)
+        List<ProgramEnrollment> chain = new java.util.ArrayList<>();
+        Optional<ProgramEnrollment> enrollment = findById(enrollmentId);
+        if (enrollment.isPresent()) {
+            chain.add(enrollment.get());
+            if (enrollment.get().getPredecessorEnrollmentId() != null) {
+                Optional<ProgramEnrollment> predecessor = findById(
+                    ProgramEnrollmentId.of(enrollment.get().getPredecessorEnrollmentId())
+                );
+                predecessor.ifPresent(chain::add);
+            }
+        }
+        return chain;
+    }
     @Override
     public void delete(ProgramEnrollment enrollment) {
         store.remove(enrollment.getId());

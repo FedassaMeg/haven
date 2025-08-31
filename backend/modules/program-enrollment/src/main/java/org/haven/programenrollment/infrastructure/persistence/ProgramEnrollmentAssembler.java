@@ -7,10 +7,12 @@ import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.programenrollment.domain.ProgramRepository;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.UUID;
 
 @Component
+@Lazy
 public class ProgramEnrollmentAssembler {
     
     private final ProgramRepository programRepository;
@@ -28,7 +30,7 @@ public class ProgramEnrollmentAssembler {
         );
         
         // Map basic fields
-        entity.setStatus(mapStatus(domainObject.getStatus()));
+        entity.setStatus(domainObject.getStatus());
         entity.setPredecessorEnrollmentId(domainObject.getPredecessorEnrollmentId());
         entity.setResidentialMoveInDate(domainObject.getResidentialMoveInDate());
         entity.setHouseholdId(domainObject.getHouseholdId());
@@ -97,27 +99,7 @@ public class ProgramEnrollmentAssembler {
             .orElse(HmisProjectType.SERVICES_ONLY); // Safe default
     }
     
-    private JpaProgramEnrollmentEntity.EnrollmentStatus mapStatus(ProgramEnrollment.EnrollmentStatus status) {
-        switch (status) {
-            case PENDING: return JpaProgramEnrollmentEntity.EnrollmentStatus.PENDING;
-            case ACTIVE: return JpaProgramEnrollmentEntity.EnrollmentStatus.ACTIVE;
-            case SUSPENDED: return JpaProgramEnrollmentEntity.EnrollmentStatus.SUSPENDED;
-            case EXITED: return JpaProgramEnrollmentEntity.EnrollmentStatus.EXITED;
-            case CANCELLED: return JpaProgramEnrollmentEntity.EnrollmentStatus.CANCELLED;
-            default: return JpaProgramEnrollmentEntity.EnrollmentStatus.ACTIVE;
-        }
-    }
-    
-    private ProgramEnrollment.EnrollmentStatus mapStatus(JpaProgramEnrollmentEntity.EnrollmentStatus status) {
-        switch (status) {
-            case PENDING: return ProgramEnrollment.EnrollmentStatus.PENDING;
-            case ACTIVE: return ProgramEnrollment.EnrollmentStatus.ACTIVE;
-            case SUSPENDED: return ProgramEnrollment.EnrollmentStatus.SUSPENDED;
-            case EXITED: return ProgramEnrollment.EnrollmentStatus.EXITED;
-            case CANCELLED: return ProgramEnrollment.EnrollmentStatus.CANCELLED;
-            default: return ProgramEnrollment.EnrollmentStatus.ACTIVE;
-        }
-    }
+    // Status enum mapping no longer needed since we use domain enum directly
     
     private JpaProgramEnrollmentEntity.HmisRelationshipToHead mapRelationshipToHead(RelationshipToHeadOfHousehold relationship) {
         if (relationship == null) return JpaProgramEnrollmentEntity.HmisRelationshipToHead.DATA_NOT_COLLECTED;

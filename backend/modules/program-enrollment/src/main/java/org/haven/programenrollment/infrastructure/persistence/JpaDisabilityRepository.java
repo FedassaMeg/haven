@@ -79,6 +79,26 @@ public interface JpaDisabilityRepository extends JpaRepository<JpaDisabilityEnti
         @Param("endDate") LocalDate endDate);
     
     /**
+     * Find latest record per enrollment (single record per enrollment across all disability kinds)
+     */
+    @Query("""
+        SELECT d FROM JpaDisabilityEntity d 
+        WHERE (d.enrollmentId, d.informationDate) IN (
+            SELECT d2.enrollmentId, MAX(d2.informationDate) 
+            FROM JpaDisabilityEntity d2 
+            WHERE d2.informationDate >= :startDate 
+            AND d2.informationDate <= :endDate 
+            AND d2.isCorrection = FALSE
+            GROUP BY d2.enrollmentId
+        )
+        AND d.isCorrection = FALSE
+        ORDER BY d.enrollmentId
+        """)
+    List<JpaDisabilityEntity> findLatestRecordPerEnrollment(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
+    
+    /**
      * Find records indicating disabling conditions
      */
     @Query("""
@@ -90,6 +110,37 @@ public interface JpaDisabilityRepository extends JpaRepository<JpaDisabilityEnti
         AND d.isCorrection = FALSE
         """)
     List<JpaDisabilityEntity> findRecordsWithDisablingConditions(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Find records indicating disabling conditions for specific disability kind
+     */
+    @Query("""
+        SELECT d FROM JpaDisabilityEntity d 
+        WHERE d.hasDisability = 'YES' 
+        AND d.expectedLongTerm = 'YES'
+        AND d.disabilityKind = :disabilityKind
+        AND d.informationDate >= :startDate 
+        AND d.informationDate <= :endDate
+        AND d.isCorrection = FALSE
+        """)
+    List<JpaDisabilityEntity> findRecordsWithDisablingConditions(
+        @Param("disabilityKind") String disabilityKind,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Find behavioral health disability records (mental health and substance use)
+     */
+    @Query("""
+        SELECT d FROM JpaDisabilityEntity d 
+        WHERE d.disabilityKind IN ('MENTAL_HEALTH', 'SUBSTANCE_USE')
+        AND d.informationDate >= :startDate 
+        AND d.informationDate <= :endDate
+        AND d.isCorrection = FALSE
+        """)
+    List<JpaDisabilityEntity> findBehavioralHealthDisabilityRecords(
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate);
     
@@ -123,6 +174,21 @@ public interface JpaDisabilityRepository extends JpaRepository<JpaDisabilityEnti
     List<UUID> findEnrollmentsMissingProjectStartRecord(@Param("disabilityKind") String disabilityKind);
     
     /**
+     * Find enrollments missing PROJECT_EXIT records for specific disability kind
+     */
+    @Query("""
+        SELECT DISTINCT e.id FROM JpaProgramEnrollmentEntity e 
+        WHERE NOT EXISTS (
+            SELECT d FROM JpaDisabilityEntity d 
+            WHERE d.enrollmentId = e.id 
+            AND d.stage = 'PROJECT_EXIT'
+            AND d.disabilityKind = :disabilityKind
+        )
+        AND e.projectExit IS NOT NULL
+        """)
+    List<UUID> findEnrollmentsMissingProjectExitRecord(@Param("disabilityKind") String disabilityKind);
+    
+    /**
      * Find records with data quality issues
      */
     @Query("""
@@ -151,6 +217,13 @@ public interface JpaDisabilityRepository extends JpaRepository<JpaDisabilityEnti
     boolean existsByEnrollmentIdAndStageAndDisabilityKind(UUID enrollmentId, String stage, String disabilityKind);
     
     /**
+     * Check if enrollment has record for specific disability kind and stage - convenience method
+     */
+    default boolean existsByEnrollmentIdAndDisabilityKindAndStage(UUID enrollmentId, String disabilityKind, String stage) {
+        return existsByEnrollmentIdAndStageAndDisabilityKind(enrollmentId, stage, disabilityKind);
+    }
+    
+    /**
      * Find records for HMIS CSV export
      */
     @Query("""
@@ -169,6 +242,37 @@ public interface JpaDisabilityRepository extends JpaRepository<JpaDisabilityEnti
      */
     @Query("SELECT d.disabilityKind, COUNT(d) FROM JpaDisabilityEntity d WHERE d.informationDate >= :startDate AND d.informationDate <= :endDate AND d.isCorrection = FALSE GROUP BY d.disabilityKind")
     List<Object[]> countRecordsByDisabilityKind(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Count records with disabling conditions for specific disability kind
+     */
+    @Query("""
+        SELECT COUNT(d) FROM JpaDisabilityEntity d 
+        WHERE d.hasDisability = 'YES' 
+        AND d.expectedLongTerm = 'YES'
+        AND d.disabilityKind = :disabilityKind
+        AND d.informationDate >= :startDate 
+        AND d.informationDate <= :endDate
+        AND d.isCorrection = FALSE
+        """)
+    Long countRecordsWithDisablingConditions(
+        @Param("disabilityKind") String disabilityKind,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Count behavioral health disability records
+     */
+    @Query("""
+        SELECT COUNT(d) FROM JpaDisabilityEntity d 
+        WHERE d.disabilityKind IN ('MENTAL_HEALTH', 'SUBSTANCE_USE')
+        AND d.informationDate >= :startDate 
+        AND d.informationDate <= :endDate
+        AND d.isCorrection = FALSE
+        """)
+    Long countBehavioralHealthDisabilityRecords(
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate);
 }

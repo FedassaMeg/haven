@@ -1,6 +1,8 @@
 package org.haven.programenrollment.infrastructure.persistence;
 
 import jakarta.persistence.*;
+import org.haven.clientprofile.domain.ClientId;
+import org.haven.programenrollment.domain.*;
 import org.haven.shared.vo.CodeableConcept;
 import org.haven.shared.vo.Period;
 import java.time.Instant;
@@ -8,6 +10,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "program_enrollments", schema = "haven")
@@ -52,7 +55,7 @@ public class JpaProgramEnrollmentEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status", columnDefinition = "enrollment_status")
-    private EnrollmentStatus status;
+    private ProgramEnrollment.EnrollmentStatus status;
     
     @Column(name = "enrollment_period_start")
     private Instant enrollmentPeriodStart;
@@ -91,7 +94,7 @@ public class JpaProgramEnrollmentEntity {
         this.clientId = clientId;
         this.programId = programId;
         this.enrollmentDate = enrollmentDate;
-        this.status = EnrollmentStatus.ACTIVE;
+        this.status = ProgramEnrollment.EnrollmentStatus.ACTIVE;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -130,10 +133,6 @@ public class JpaProgramEnrollmentEntity {
         CLIENT_DOESNT_KNOW,
         CLIENT_REFUSED,
         DATA_NOT_COLLECTED
-    }
-    
-    public enum EnrollmentStatus {
-        PENDING, ACTIVE, SUSPENDED, EXITED, CANCELLED
     }
     
     // Getters and Setters
@@ -184,8 +183,8 @@ public class JpaProgramEnrollmentEntity {
         this.householdId = householdId;
     }
     
-    public EnrollmentStatus getStatus() { return status; }
-    public void setStatus(EnrollmentStatus status) { this.status = status; }
+    public ProgramEnrollment.EnrollmentStatus getStatus() { return status; }
+    public void setStatus(ProgramEnrollment.EnrollmentStatus status) { this.status = status; }
     
     public Instant getEnrollmentPeriodStart() { return enrollmentPeriodStart; }
     public void setEnrollmentPeriodStart(Instant enrollmentPeriodStart) { 
@@ -219,4 +218,71 @@ public class JpaProgramEnrollmentEntity {
     
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
+    
+    // Constructor from domain object
+    public JpaProgramEnrollmentEntity(ProgramEnrollment enrollment) {
+        this.id = enrollment.getId().value();
+        this.clientId = enrollment.getClientId().value();
+        this.programId = enrollment.getProgramId();
+        this.enrollmentDate = enrollment.getEnrollmentDate();
+        this.status = enrollment.getStatus();
+        this.householdId = enrollment.getHouseholdId();
+        this.residentialMoveInDate = enrollment.getResidentialMoveInDate();
+        this.predecessorEnrollmentId = enrollment.getPredecessorEnrollmentId();
+        
+        if (enrollment.getEnrollmentPeriod() != null) {
+            this.enrollmentPeriodStart = enrollment.getEnrollmentPeriod().getStart();
+            this.enrollmentPeriodEnd = enrollment.getEnrollmentPeriod().getEnd();
+        }
+        
+        this.createdAt = enrollment.getCreatedAt();
+        this.updatedAt = Instant.now();
+        
+        // Handle service episodes
+        if (enrollment.getServiceEpisodes() != null) {
+            this.serviceEpisodes = enrollment.getServiceEpisodes().stream()
+                .map(JpaServiceEpisodeEntity::fromDomainObject)
+                .collect(Collectors.toList());
+        }
+        
+        // Handle project exit
+        if (enrollment.getProjectExit() != null) {
+            this.projectExit = JpaProjectExitEntity.fromDomainObject(enrollment.getProjectExit());
+        }
+    }
+    
+    // Convert to domain object
+    public ProgramEnrollment toDomainObject() {
+        ProgramEnrollment enrollment = ProgramEnrollment.reconstitute(
+            ProgramEnrollmentId.of(this.id),
+            ClientId.of(this.clientId),
+            this.programId,
+            this.enrollmentDate,
+            this.status,
+            this.createdAt
+        );
+        
+        enrollment.setHouseholdId(this.householdId);
+        enrollment.setResidentialMoveInDate(this.residentialMoveInDate);
+        enrollment.setPredecessorEnrollmentId(this.predecessorEnrollmentId);
+        
+        if (this.enrollmentPeriodStart != null || this.enrollmentPeriodEnd != null) {
+            enrollment.setEnrollmentPeriod(new Period(this.enrollmentPeriodStart, this.enrollmentPeriodEnd));
+        }
+        
+        // Convert service episodes
+        if (this.serviceEpisodes != null && !this.serviceEpisodes.isEmpty()) {
+            List<ServiceEpisode> episodes = this.serviceEpisodes.stream()
+                .map(JpaServiceEpisodeEntity::toDomainObject)
+                .collect(Collectors.toList());
+            enrollment.setServiceEpisodes(episodes);
+        }
+        
+        // Convert project exit
+        if (this.projectExit != null) {
+            enrollment.setProjectExit(this.projectExit.toDomainObject());
+        }
+        
+        return enrollment;
+    }
 }

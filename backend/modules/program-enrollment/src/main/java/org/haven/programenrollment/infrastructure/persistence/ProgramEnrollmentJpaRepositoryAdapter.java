@@ -4,8 +4,10 @@ import org.haven.clientprofile.domain.ClientId;
 import org.haven.programenrollment.domain.ProgramEnrollment;
 import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.programenrollment.domain.ProgramEnrollmentRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -15,17 +17,19 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * JPA-backed implementation of ProgramEnrollmentRepository
- * Replaces the in-memory implementation for production use
+ * JPA-backed adapter for ProgramEnrollmentRepository
+ * Avoids Spring Data's Impl suffix to prevent fragment binding
  */
-@Repository
+@Repository("jpaProgramEnrollmentRepositoryBean")
 @Primary
-public class JpaProgramEnrollmentRepositoryImpl implements ProgramEnrollmentRepository {
+@Lazy
+@ConditionalOnProperty(name = "haven.enrollment.repository.type", havingValue = "jpa", matchIfMissing = true)
+public class ProgramEnrollmentJpaRepositoryAdapter implements ProgramEnrollmentRepository {
     
     private final JpaProgramEnrollmentRepository jpaRepository;
     private final ProgramEnrollmentAssembler assembler;
     
-    public JpaProgramEnrollmentRepositoryImpl(
+    public ProgramEnrollmentJpaRepositoryAdapter(
             JpaProgramEnrollmentRepository jpaRepository,
             ProgramEnrollmentAssembler assembler) {
         this.jpaRepository = jpaRepository;
@@ -89,7 +93,7 @@ public class JpaProgramEnrollmentRepositoryImpl implements ProgramEnrollmentRepo
     public boolean hasActiveEnrollment(ClientId clientId, UUID programId) {
         return jpaRepository.findByClientId(clientId.value()).stream()
             .anyMatch(entity -> entity.getProgramId().equals(programId) && 
-                     entity.getStatus() == JpaProgramEnrollmentEntity.EnrollmentStatus.ACTIVE);
+                     entity.getStatus() == ProgramEnrollment.EnrollmentStatus.ACTIVE);
     }
     
     @Override
@@ -98,7 +102,7 @@ public class JpaProgramEnrollmentRepositoryImpl implements ProgramEnrollmentRepo
         List<JpaProgramEnrollmentEntity> enrollments = jpaRepository.findByProgramId(programId);
         long totalEnrollments = enrollments.size();
         long activeEnrollments = enrollments.stream()
-            .mapToLong(e -> e.getStatus() == JpaProgramEnrollmentEntity.EnrollmentStatus.ACTIVE ? 1 : 0)
+            .mapToLong(e -> e.getStatus() == ProgramEnrollment.EnrollmentStatus.ACTIVE ? 1 : 0)
             .sum();
         return new EnrollmentStatistics(totalEnrollments, activeEnrollments, 0L, 0L);
     }
@@ -122,6 +126,7 @@ public class JpaProgramEnrollmentRepositoryImpl implements ProgramEnrollmentRepo
     /**
      * Find enrollment chain starting from the given enrollment
      */
+    @Override
     public List<ProgramEnrollment> findEnrollmentChain(ProgramEnrollmentId enrollmentId) {
         return jpaRepository.findCompleteEnrollmentChain(enrollmentId.value()).stream()
             .map(assembler::toDomainObject)

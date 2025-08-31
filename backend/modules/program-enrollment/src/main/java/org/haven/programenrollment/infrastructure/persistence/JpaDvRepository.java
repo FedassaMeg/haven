@@ -134,4 +134,36 @@ public interface JpaDvRepository extends JpaRepository<JpaDvEntity, UUID> {
     Long countHighRiskCases(
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Find enrollments missing PROJECT_START DV records
+     */
+    @Query("""
+        SELECT DISTINCT e.id FROM JpaProgramEnrollmentEntity e 
+        WHERE NOT EXISTS (
+            SELECT d FROM JpaDvEntity d 
+            WHERE d.enrollmentId = e.id 
+            AND d.stage = 'PROJECT_START'
+        )
+        """)
+    List<UUID> findEnrollmentsMissingProjectStartRecord();
+    
+    /**
+     * Find enrollments missing PROJECT_EXIT DV records
+     */
+    @Query("""
+        SELECT DISTINCT e.id FROM JpaProgramEnrollmentEntity e 
+        WHERE NOT EXISTS (
+            SELECT d FROM JpaDvEntity d 
+            WHERE d.enrollmentId = e.id 
+            AND d.stage = 'PROJECT_EXIT'
+        )
+        AND e.projectExit IS NOT NULL
+        """)
+    List<UUID> findEnrollmentsMissingProjectExitRecord();
+    
+    /**
+     * Find correction records for a specific original record
+     */
+    List<JpaDvEntity> findByCorrectsRecordIdOrderByCreatedAtDesc(UUID originalRecordId);
 }

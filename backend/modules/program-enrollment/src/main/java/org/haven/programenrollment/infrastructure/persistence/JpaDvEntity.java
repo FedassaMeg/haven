@@ -31,20 +31,20 @@ public class JpaDvEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "stage", nullable = false)
-    private String stage;
+    private DataCollectionStage stage;
     
     // DV fields
     @Enumerated(EnumType.STRING)
     @Column(name = "dv_history", nullable = false)
-    private String dvHistory;
+    private HmisFivePoint dvHistory;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "currently_fleeing")
-    private String currentlyFleeing;
+    private HmisFivePoint currentlyFleeing;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "when_experienced")
-    private String whenExperienced;
+    private DomesticViolenceRecency whenExperienced;
     
     // Correction tracking
     @Column(name = "is_correction", nullable = false)
@@ -72,12 +72,10 @@ public class JpaDvEntity {
         this.enrollmentId = record.getEnrollmentId().value();
         this.clientId = record.getClientId().value();
         this.informationDate = record.getInformationDate();
-        this.stage = record.getStage().toDatabaseValue();
-        this.dvHistory = record.getDvHistory().toDatabaseValue();
-        this.currentlyFleeing = record.getCurrentlyFleeing() != null ? 
-            record.getCurrentlyFleeing().toDatabaseValue() : null;
-        this.whenExperienced = record.getWhenExperienced() != null ? 
-            record.getWhenExperienced().toDatabaseValue() : null;
+        this.stage = record.getStage();
+        this.dvHistory = record.getDvHistory();
+        this.currentlyFleeing = record.getCurrentlyFleeing();
+        this.whenExperienced = record.getWhenExperienced();
         this.isCorrection = record.isCorrection();
         this.correctsRecordId = record.getCorrectsRecordId();
         this.collectedBy = record.getCollectedBy();
@@ -90,10 +88,10 @@ public class JpaDvEntity {
     }
     
     private DvRecord reconstituteDomainObject() {
-        DataCollectionStage stageEnum = DataCollectionStage.fromDatabaseValue(stage);
+        DataCollectionStage stageEnum = stage;
         ProgramEnrollmentId enrollmentDomainId = ProgramEnrollmentId.of(enrollmentId);
         ClientId clientDomainId = new ClientId(clientId);
-        HmisFivePoint dvHistoryResponse = HmisFivePoint.fromDatabaseValue(dvHistory);
+        HmisFivePoint dvHistoryResponse = dvHistory;
         
         DvRecord record;
         
@@ -117,14 +115,12 @@ public class JpaDvEntity {
         
         // Update currently fleeing if present
         if (currentlyFleeing != null) {
-            HmisFivePoint fleeingResponse = HmisFivePoint.fromDatabaseValue(currentlyFleeing);
-            record.updateCurrentlyFleeing(fleeingResponse);
+            record.updateCurrentlyFleeing(currentlyFleeing);
         }
         
         // Update when experienced if present
         if (whenExperienced != null) {
-            DomesticViolenceRecency recencyResponse = DomesticViolenceRecency.fromDatabaseValue(whenExperienced);
-            record.updateWhenExperienced(recencyResponse);
+            record.updateWhenExperienced(whenExperienced);
         }
         
         // Override the generated ID and timestamps with persisted values
@@ -198,10 +194,10 @@ public class JpaDvEntity {
     public UUID getEnrollmentId() { return enrollmentId; }
     public UUID getClientId() { return clientId; }
     public LocalDate getInformationDate() { return informationDate; }
-    public String getStage() { return stage; }
-    public String getDvHistory() { return dvHistory; }
-    public String getCurrentlyFleeing() { return currentlyFleeing; }
-    public String getWhenExperienced() { return whenExperienced; }
+    public DataCollectionStage getStage() { return stage; }
+    public HmisFivePoint getDvHistory() { return dvHistory; }
+    public HmisFivePoint getCurrentlyFleeing() { return currentlyFleeing; }
+    public DomesticViolenceRecency getWhenExperienced() { return whenExperienced; }
     public Boolean getIsCorrection() { return isCorrection; }
     public UUID getCorrectsRecordId() { return correctsRecordId; }
     public String getCollectedBy() { return collectedBy; }

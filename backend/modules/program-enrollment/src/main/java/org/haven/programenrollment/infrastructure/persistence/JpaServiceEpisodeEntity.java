@@ -1,6 +1,7 @@
 package org.haven.programenrollment.infrastructure.persistence;
 
 import jakarta.persistence.*;
+import org.haven.programenrollment.domain.ServiceEpisode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -161,4 +162,16 @@ public class JpaServiceEpisodeEntity {
     
     public UUID getCreatedBy() { return createdBy; }
     public void setCreatedBy(UUID createdBy) { this.createdBy = createdBy; }
+    
+    // Conversion methods - placeholder implementations
+    public static JpaServiceEpisodeEntity fromDomainObject(ServiceEpisode episode) {
+        JpaServiceEpisodeEntity entity = new JpaServiceEpisodeEntity();
+        // TODO: Implement proper conversion when domain objects are finalized
+        return entity;
+    }
+    
+    public ServiceEpisode toDomainObject() {
+        // TODO: Implement proper conversion when domain objects are finalized
+        throw new UnsupportedOperationException("ServiceEpisode conversion not yet implemented");
+    }
 }

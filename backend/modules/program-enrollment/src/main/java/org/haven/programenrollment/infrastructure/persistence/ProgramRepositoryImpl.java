@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Repository
+@Repository("jpaProgramRepositoryBean")
 public class ProgramRepositoryImpl implements ProgramRepository {
     
     private final JpaProgramRepository jpaRepository;
