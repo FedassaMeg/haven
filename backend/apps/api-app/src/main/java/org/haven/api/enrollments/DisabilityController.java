@@ -4,12 +4,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.haven.programenrollment.application.services.DisabilityLifecycleService;
-import org.haven.programenrollment.domain.DisabilityKind;
+import org.haven.shared.vo.hmis.DisabilityKind;
 import org.haven.programenrollment.domain.DisabilityRecord;
 import org.haven.shared.vo.hmis.HmisFivePoint;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,7 @@ public class DisabilityController {
     
     private final DisabilityLifecycleService disabilityService;
     
-    public DisabilityController(DisabilityLifecycleService disabilityService) {
+    public DisabilityController(@Lazy DisabilityLifecycleService disabilityService) {
         this.disabilityService = disabilityService;
     }
     

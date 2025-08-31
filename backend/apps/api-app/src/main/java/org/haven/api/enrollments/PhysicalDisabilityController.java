@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,7 @@ public class PhysicalDisabilityController {
     
     private final PhysicalDisabilityLifecycleService physicalDisabilityService;
     
-    public PhysicalDisabilityController(PhysicalDisabilityLifecycleService physicalDisabilityService) {
+    public PhysicalDisabilityController(@Lazy PhysicalDisabilityLifecycleService physicalDisabilityService) {
         this.physicalDisabilityService = physicalDisabilityService;
     }
     

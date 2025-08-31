@@ -8,11 +8,12 @@ import org.haven.programenrollment.application.services.CurrentLivingSituationSe
 import org.haven.programenrollment.domain.CurrentLivingSituation;
 import org.haven.programenrollment.domain.CurrentLivingSituationStatus;
 import org.haven.programenrollment.domain.ChronicallyHomelessDetermination;
-import org.haven.programenrollment.domain.PriorLivingSituation;
+import org.haven.shared.vo.hmis.PriorLivingSituation;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -33,7 +34,7 @@ public class CurrentLivingSituationController {
     
     private final CurrentLivingSituationService clsService;
     
-    public CurrentLivingSituationController(CurrentLivingSituationService clsService) {
+    public CurrentLivingSituationController(@Lazy CurrentLivingSituationService clsService) {
         this.clsService = clsService;
     }
     
@@ -224,18 +225,23 @@ public class CurrentLivingSituationController {
             @PathVariable UUID enrollmentId) {
         
         try {
-            CurrentLivingSituationStatus status = clsService.getCurrentLivingSituationStatus(enrollmentId);
+            CurrentLivingSituation mostRecent = clsService.getMostRecentCurrentLivingSituation(enrollmentId);
             boolean isCurrentlyUnsheltered = clsService.isCurrentlyUnsheltered(enrollmentId);
             boolean hasRecentContact = clsService.hasRecentStreetContact(enrollmentId, 30);
-            
+
+            PriorLivingSituation currentSituation = mostRecent != null ? mostRecent.getLivingSituation() : null;
+            LocalDate lastContactDate = mostRecent != null ? mostRecent.getContactDate() : null;
+            Integer daysSinceLastContact = mostRecent != null ?
+                (int) java.time.temporal.ChronoUnit.DAYS.between(mostRecent.getContactDate(), LocalDate.now()) : null;
+
             LivingSituationStatusResponse response = new LivingSituationStatusResponse(
-                status.getCurrentSituation(),
-                status.getLastContactDate(),
-                status.getDaysSinceLastContact(),
+                currentSituation,
+                lastContactDate,
+                daysSinceLastContact,
                 isCurrentlyUnsheltered,
                 hasRecentContact
             );
-            
+
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
@@ -382,9 +388,8 @@ public class CurrentLivingSituationController {
         UUID clientId,
         LocalDate contactDate,
         PriorLivingSituation livingSituation,
-        Integer lengthOfStayDays,
-        String lengthOfStayAtTimeOfContact,
-        Boolean verifiedBy,
+        String locationDescription,
+        String verifiedBy,
         String createdBy,
         Instant createdAt,
         Instant updatedAt,
@@ -397,8 +402,7 @@ public class CurrentLivingSituationController {
                 record.getClientId().value(),
                 record.getContactDate(),
                 record.getLivingSituation(),
-                record.getLengthOfStayDays(),
-                record.getLengthOfStayAtTimeOfContact(),
+                record.getLocationDescription(),
                 record.getVerifiedBy(),
                 record.getCreatedBy(),
                 record.getCreatedAt(),
@@ -422,21 +426,23 @@ public class CurrentLivingSituationController {
     ) {}
     
     public record ChronicallyHomelessResponse(
-        boolean meetsChronicallyHomelessCriteria,
-        Integer totalUnshelteredDays,
-        Integer continuousUnshelteredDays,
-        LocalDate firstUnshelteredDate,
-        LocalDate lastUnshelteredDate,
-        String determination
+        boolean isChronicallyHomeless,
+        int monthsHomelessInThreeYears,
+        int timesHomelessInThreeYears,
+        boolean hasDisablingCondition,
+        LocalDate determinationDate,
+        String determinationReason,
+        List<String> qualifyingFactors
     ) {
         public static ChronicallyHomelessResponse from(ChronicallyHomelessDetermination determination) {
             return new ChronicallyHomelessResponse(
-                determination.meetsChronicallyHomelessCriteria(),
-                determination.getTotalUnshelteredDays(),
-                determination.getContinuousUnshelteredDays(),
-                determination.getFirstUnshelteredDate(),
-                determination.getLastUnshelteredDate(),
-                determination.getDetermination()
+                determination.isChronicallyHomeless(),
+                determination.monthsHomelessInThreeYears(),
+                determination.timesHomelessInThreeYears(),
+                determination.hasDisablingCondition(),
+                determination.determinationDate(),
+                determination.determinationReason(),
+                determination.qualifyingFactors()
             );
         }
     }

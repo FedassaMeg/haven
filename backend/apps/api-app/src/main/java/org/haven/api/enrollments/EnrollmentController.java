@@ -10,6 +10,7 @@ import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -24,8 +25,8 @@ public class EnrollmentController {
     private final ProgramEnrollmentAppService enrollmentAppService;
     private final ServiceDeliveryAppService serviceDeliveryAppService;
     
-    public EnrollmentController(ProgramEnrollmentAppService enrollmentAppService,
-                               ServiceDeliveryAppService serviceDeliveryAppService) {
+    public EnrollmentController(@Lazy ProgramEnrollmentAppService enrollmentAppService,
+                               @Lazy ServiceDeliveryAppService serviceDeliveryAppService) {
         this.enrollmentAppService = enrollmentAppService;
         this.serviceDeliveryAppService = serviceDeliveryAppService;
     }

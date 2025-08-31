@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -32,7 +33,7 @@ public class ServiceEpisodeController {
     private final ServiceBillingService billingService;
 
     public ServiceEpisodeController(
-            ServiceDeliveryAppService serviceDeliveryService,
+            @Lazy ServiceDeliveryAppService serviceDeliveryService,
             ServiceReportingService reportingService,
             ServiceBillingService billingService) {
         this.serviceDeliveryService = serviceDeliveryService;

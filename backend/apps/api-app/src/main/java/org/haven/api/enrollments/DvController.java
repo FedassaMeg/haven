@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.haven.programenrollment.application.services.DvLifecycleService;
-import org.haven.programenrollment.domain.DomesticViolenceRecency;
+import org.haven.shared.vo.hmis.DomesticViolenceRecency;
 import org.haven.programenrollment.domain.DvRecord;
 import org.haven.programenrollment.domain.DvSafetyAssessment;
 import org.haven.shared.vo.hmis.HmisFivePoint;
@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -34,7 +35,7 @@ public class DvController {
     
     private final DvLifecycleService dvService;
     
-    public DvController(DvLifecycleService dvService) {
+    public DvController(@Lazy DvLifecycleService dvService) {
         this.dvService = dvService;
     }
     
@@ -469,23 +470,29 @@ public class DvController {
     }
     
     public record DvSafetyAssessmentResponse(
-        boolean hasDvHistory,
-        boolean isCurrentlyFleeing,
-        boolean isDvRecent,
-        boolean isDvVeryRecent,
-        boolean requiresEnhancedSafety,
-        String riskLevel,
-        String recommendedActions
+        UUID assessmentId,
+        UUID enrollmentId,
+        LocalDate assessmentDate,
+        boolean currentlyFleeing,
+        boolean imminentDanger,
+        String safetyPlanStatus,
+        List<String> riskIndicators,
+        String safetyPlanDetails,
+        LocalDate nextReviewDate,
+        String assessedBy
     ) {
         public static DvSafetyAssessmentResponse from(DvSafetyAssessment assessment) {
             return new DvSafetyAssessmentResponse(
-                assessment.hasDvHistory(),
-                assessment.isCurrentlyFleeing(),
-                assessment.isDvRecent(),
-                assessment.isDvVeryRecent(),
-                assessment.requiresEnhancedSafety(),
-                assessment.getRiskLevel().name(),
-                assessment.getRecommendedActions()
+                assessment.assessmentId(),
+                assessment.enrollmentId(),
+                assessment.assessmentDate(),
+                assessment.currentlyFleeing(),
+                assessment.imminentDanger(),
+                assessment.safetyPlanStatus().getDescription(),
+                assessment.riskIndicators().stream().map(Enum::name).toList(),
+                assessment.safetyPlanDetails(),
+                assessment.nextReviewDate(),
+                assessment.assessedBy()
             );
         }
     }

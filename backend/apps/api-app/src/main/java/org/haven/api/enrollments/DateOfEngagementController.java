@@ -10,6 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.context.annotation.Lazy;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -30,7 +31,7 @@ public class DateOfEngagementController {
     
     private final DateOfEngagementService engagementService;
     
-    public DateOfEngagementController(DateOfEngagementService engagementService) {
+    public DateOfEngagementController(@Lazy DateOfEngagementService engagementService) {
         this.engagementService = engagementService;
     }
     
