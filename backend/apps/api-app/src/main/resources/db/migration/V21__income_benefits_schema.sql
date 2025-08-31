@@ -79,9 +79,9 @@ CREATE TABLE income_benefits (
     
     -- Foreign key constraints
     CONSTRAINT fk_income_benefits_enrollment FOREIGN KEY (enrollment_id) 
-        REFERENCES program_enrollments(enrollment_id) ON DELETE CASCADE,
+        REFERENCES program_enrollments(id) ON DELETE CASCADE,
     CONSTRAINT fk_income_benefits_client FOREIGN KEY (client_id) 
-        REFERENCES clients(client_id) ON DELETE CASCADE
+        REFERENCES clients(id) ON DELETE CASCADE
 );
 
 -- Indexes for performance

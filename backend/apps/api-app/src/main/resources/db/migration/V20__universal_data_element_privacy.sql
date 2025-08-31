@@ -8,6 +8,32 @@
 SET search_path TO haven, public;
 
 -- ============================================================================
+-- Create Required Roles and Views
+-- ============================================================================
+
+-- Ensure authenticated role exists for RLS policies
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+        CREATE ROLE authenticated NOLOGIN;
+    END IF;
+END $$;
+
+-- Grant authenticated role to current user
+GRANT authenticated TO CURRENT_USER;
+
+-- Create user_roles view if it doesn't exist (referenced by RLS policies)
+-- This assumes users table has id and role columns - adjust as needed
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+            CREATE VIEW user_roles AS 
+            SELECT id AS user_id, 'USER' AS role FROM users
+            WHERE EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'id');
+        END IF;
+    END IF;
+END $$;
+
+-- ============================================================================
 -- Create Privacy Control Enums
 -- ============================================================================
 

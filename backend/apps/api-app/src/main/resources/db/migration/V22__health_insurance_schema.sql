@@ -48,9 +48,9 @@ CREATE TABLE health_insurance_records (
     
     -- Foreign key constraints
     CONSTRAINT fk_health_insurance_enrollment FOREIGN KEY (enrollment_id) 
-        REFERENCES program_enrollments(enrollment_id) ON DELETE CASCADE,
+        REFERENCES program_enrollments(id) ON DELETE CASCADE,
     CONSTRAINT fk_health_insurance_client FOREIGN KEY (client_id) 
-        REFERENCES clients(client_id) ON DELETE CASCADE
+        REFERENCES clients(id) ON DELETE CASCADE
 );
 
 -- Indexes for performance

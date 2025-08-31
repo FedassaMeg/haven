@@ -3,6 +3,39 @@
 -- HMIS FY2024 Data Standards
 -- ==================================
 
+-- Create enum for prior living situation (HMIS UDE 3.917)
+DO $$ BEGIN
+    CREATE TYPE prior_living_situation AS ENUM (
+        'EMERGENCY_SHELTER',
+        'SAFE_HAVEN', 
+        'TRANSITIONAL_HOUSING',
+        'PLACE_NOT_MEANT_FOR_HABITATION',
+        'PSYCHIATRIC_HOSPITAL',
+        'SUBSTANCE_ABUSE_TREATMENT',
+        'HOSPITAL',
+        'JAIL_PRISON',
+        'FOSTER_CARE_HOME',
+        'LONG_TERM_CARE',
+        'DOUBLED_UP',
+        'DOUBLED_UP_FRIENDS',
+        'HOTEL_MOTEL_NO_VOUCHER',
+        'RENTAL_HOUSING',
+        'RENTAL_WITH_SUBSIDY',
+        'RENTAL_WITH_OTHER_SUBSIDY',
+        'OWNED_BY_CLIENT',
+        'OWNED_WITH_SUBSIDY',
+        'PERMANENT_HOUSING',
+        'RAPID_REHOUSING',
+        'RESIDENTIAL_PROJECT',
+        'OTHER',
+        'CLIENT_DOESNT_KNOW',
+        'CLIENT_PREFERS_NOT_TO_ANSWER',
+        'DATA_NOT_COLLECTED'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- Create enum for DV recency
 CREATE TYPE dv_recency AS ENUM (
     'WITHIN_3_MONTHS',

@@ -4,6 +4,16 @@
 -- UDE 3.08 Physical Disability (5-point response)
 -- ==================================
 
+-- Ensure haven_application role exists
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'haven_application') THEN
+        CREATE ROLE haven_application NOLOGIN;
+    END IF;
+END $$;
+
+-- Grant haven_application role to current user for development
+GRANT haven_application TO CURRENT_USER;
+
 -- Create enum for data collection stage
 CREATE TYPE data_collection_stage AS ENUM (
     'PROJECT_START',
