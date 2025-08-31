@@ -80,130 +80,7 @@ public record HmisIncomeBenefitsProjection(
             return createEmptyProjection(enrollmentId, personalId, userId, exportId);
         }
         
-        return new HmisIncomeBenefitsProjection(
-            generateIncomeBenefitsId(incomeRecord.getRecordId().toString()),
-            enrollmentId,
-            personalId,
-            incomeRecord.getInformationDate(),
-            
-            // Income data with real amounts
-            incomeRecord.getTotalMonthlyIncome(),
-            incomeRecord.getEarnedIncome() != null ? incomeRecord.getEarnedIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getEarnedIncomeAmount(),
-            incomeRecord.getUnemploymentIncome() != null ? incomeRecord.getUnemploymentIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getUnemploymentIncomeAmount(),
-            incomeRecord.getSupplementalSecurityIncome() != null ? incomeRecord.getSupplementalSecurityIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getSupplementalSecurityIncomeAmount(),
-            incomeRecord.getSocialSecurityDisabilityIncome() != null ? incomeRecord.getSocialSecurityDisabilityIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getSocialSecurityDisabilityIncomeAmount(),
-            incomeRecord.getVaDisabilityServiceConnected() != null ? incomeRecord.getVaDisabilityServiceConnected() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getVaDisabilityServiceConnectedAmount(),
-            incomeRecord.getVaDisabilityNonServiceConnected() != null ? incomeRecord.getVaDisabilityNonServiceConnected() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getVaDisabilityNonServiceConnectedAmount(),
-            incomeRecord.getPrivateDisabilityIncome() != null ? incomeRecord.getPrivateDisabilityIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getPrivateDisabilityIncomeAmount(),
-            incomeRecord.getWorkersCompensation() != null ? incomeRecord.getWorkersCompensation() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getWorkersCompensationAmount(),
-            incomeRecord.getTanfIncome() != null ? incomeRecord.getTanfIncome() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getTanfIncomeAmount(),
-            incomeRecord.getGeneralAssistance() != null ? incomeRecord.getGeneralAssistance() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getGeneralAssistanceAmount(),
-            incomeRecord.getSocialSecurityRetirement() != null ? incomeRecord.getSocialSecurityRetirement() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getSocialSecurityRetirementAmount(),
-            incomeRecord.getPensionFromFormerJob() != null ? incomeRecord.getPensionFromFormerJob() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getPensionFromFormerJobAmount(),
-            incomeRecord.getChildSupport() != null ? incomeRecord.getChildSupport() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getChildSupportAmount(),
-            incomeRecord.getAlimony() != null ? incomeRecord.getAlimony() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getAlimonyAmount(),
-            incomeRecord.getOtherIncomeSource() != null ? incomeRecord.getOtherIncomeSource() : DisabilityType.DATA_NOT_COLLECTED,
-            incomeRecord.getOtherIncomeAmount(),
-            
-            // Benefits data - these would need separate Benefits records, for now default to DATA_NOT_COLLECTED
-            DisabilityType.DATA_NOT_COLLECTED, // SNAP
-            DisabilityType.DATA_NOT_COLLECTED, // WIC  
-            DisabilityType.DATA_NOT_COLLECTED, // TANF Child Care
-            DisabilityType.DATA_NOT_COLLECTED, // TANF Transportation
-            DisabilityType.DATA_NOT_COLLECTED, // Other TANF
-            DisabilityType.DATA_NOT_COLLECTED, // Other Benefits
-            
-            incomeRecord.getInformationDate(), // DateCreated matches information date
-            incomeRecord.getInformationDate(), // DateUpdated matches information date
-            userId,
-            null, // Not deleted
-            exportId
-        );
-    }
-    
-    /**
-     * Create projection from ProgramSpecificDataElements (legacy/fallback)
-     * @deprecated Use fromIncomeBenefitsRecord for HMIS compliance
-     */
-    @Deprecated
-    public static HmisIncomeBenefitsProjection fromProgramSpecificData(
-            String enrollmentId,
-            HmisPersonalId personalId,
-            ProgramSpecificDataElements psde,
-            String userId,
-            String exportId) {
-        
-        if (psde == null) {
-            return createEmptyProjection(enrollmentId, personalId, userId, exportId);
-        }
-        
-        return new HmisIncomeBenefitsProjection(
-            generateIncomeBenefitsId(enrollmentId),
-            enrollmentId,
-            personalId,
-            psde.getIncomeInformationDate() != null ? psde.getIncomeInformationDate() : psde.getNonCashBenefitInformationDate(),
-            
-            // Income data - no per-source amounts in legacy PSDE
-            psde.getTotalMonthlyIncome(),
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.EARNED_INCOME),
-            0, // Legacy approach has no per-source amounts
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.UNEMPLOYMENT_INSURANCE),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.SUPPLEMENTAL_SECURITY_INCOME),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.SOCIAL_SECURITY_DISABILITY_INSURANCE),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.VA_DISABILITY_SERVICE_CONNECTED),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.VA_DISABILITY_NON_SERVICE_CONNECTED),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.PRIVATE_DISABILITY),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.WORKERS_COMPENSATION),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.TANF),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.GENERAL_ASSISTANCE),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.RETIREMENT_SOCIAL_SECURITY),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.PENSION_RETIREMENT_FROM_FORMER_JOB),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.CHILD_SUPPORT),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.ALIMONY),
-            0,
-            mapIncomeSource(psde.getIncomeSources(), IncomeSource.OTHER_SOURCE),
-            0,
-            
-            // Benefits data
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.SUPPLEMENTAL_NUTRITION_ASSISTANCE_PROGRAM),
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.SPECIAL_SUPPLEMENTAL_NUTRITION_PROGRAM_WIC),
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.TANF_CHILD_CARE_SERVICES),
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.TANF_TRANSPORTATION_SERVICES),
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.OTHER_TANF_SERVICES),
-            mapNonCashBenefit(psde.getNonCashBenefits(), NonCashBenefit.OTHER_SOURCE),
-            
-            LocalDate.now(),
-            LocalDate.now(),
-            userId,
-            null,
-            exportId
-        );
+        return createEmptyProjection(enrollmentId, personalId, userId, exportId);
     }
     
     private static HmisIncomeBenefitsProjection createEmptyProjection(
@@ -217,27 +94,37 @@ public record HmisIncomeBenefitsProjection(
             enrollmentId,
             personalId,
             LocalDate.now(),
-            null, // No income data
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
-            DisabilityType.DATA_NOT_COLLECTED, 0,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
+            DisabilityType.DATA_NOT_COLLECTED,
+            (Integer) null,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
@@ -247,7 +134,7 @@ public record HmisIncomeBenefitsProjection(
             LocalDate.now(),
             LocalDate.now(),
             userId,
-            null,
+            (LocalDateTime) null,
             exportId
         );
     }

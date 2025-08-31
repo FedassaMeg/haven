@@ -8,6 +8,7 @@ import org.haven.reporting.domain.hmis.*;
 import org.haven.reporting.domain.sage.SageAggregateData;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,7 +31,7 @@ public class HmisIntegrationService {
 
     public HmisIntegrationService(
             ClientRepository clientRepository,
-            ProgramEnrollmentRepository enrollmentRepository,
+            @Lazy ProgramEnrollmentRepository enrollmentRepository,
             HmisCsvExportService csvExportService,
             SageAggregationService sageService) {
         this.clientRepository = clientRepository;
@@ -79,6 +80,8 @@ public class HmisIntegrationService {
             clientProjections,
             enrollmentProjections,
             exitProjections,
+            java.util.List.of(), // Empty income benefits projections
+            java.util.List.of(), // Empty health and DV projections
             exportId,
             reportingPeriodStart,
             reportingPeriodEnd

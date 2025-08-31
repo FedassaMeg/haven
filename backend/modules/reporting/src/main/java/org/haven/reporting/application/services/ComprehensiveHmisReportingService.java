@@ -6,6 +6,7 @@ import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.programenrollment.application.services.*;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,12 +30,12 @@ public class ComprehensiveHmisReportingService {
     private final BedNightService bedNightService;
     
     public ComprehensiveHmisReportingService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            DisabilityLifecycleService disabilityService,
-            DvLifecycleService dvService,
-            CurrentLivingSituationService clsService,
-            DateOfEngagementService engagementService,
-            BedNightService bedNightService) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy DisabilityLifecycleService disabilityService,
+            @Lazy DvLifecycleService dvService,
+            @Lazy CurrentLivingSituationService clsService,
+            @Lazy DateOfEngagementService engagementService,
+            @Lazy BedNightService bedNightService) {
         this.enrollmentRepository = enrollmentRepository;
         this.disabilityService = disabilityService;
         this.dvService = dvService;
@@ -129,7 +130,7 @@ public class ComprehensiveHmisReportingService {
             HmisDomesticViolenceProjection.createAllStagesForEnrollment(enrollment, userId, exportId);
         
         // Get current living situation data
-        List<CurrentLivingSituation> clsRecords = clsService
+        List<org.haven.programenrollment.domain.CurrentLivingSituation> clsRecords = clsService
             .getCurrentLivingSituationsForEnrollment(enrollmentId);
         
         // Get engagement data
@@ -166,27 +167,50 @@ public class ComprehensiveHmisReportingService {
         List<JpaProgramEnrollmentEntity> enrollmentEntities = enrollmentRepository
             .findByEntryDateBetween(startDate, endDate);
         
-        DataQualityStatistics stats = new DataQualityStatistics();
+        // Use counters instead of trying to mutate immutable record
+        int totalEnrollments = 0;
+        int enrollmentsWithCompleteDisabilityData = 0;
+        int enrollmentsWithCompleteDvData = 0;
+        int enrollmentsWithEngagementDate = 0;
+        int enrollmentsWithRecentClsContact = 0;
+        
         List<DataQualityIssue> issues = new ArrayList<>();
         
         for (JpaProgramEnrollmentEntity entity : enrollmentEntities) {
             ProgramEnrollment enrollment = entity.toDomainObject();
             UUID enrollmentId = enrollment.getId().value();
             
-            stats.totalEnrollments++;
+            totalEnrollments++;
             
             // Check disability data quality
-            assessDisabilityDataQuality(enrollmentId, enrollment, stats, issues);
+            if (assessDisabilityDataQuality(enrollmentId, enrollment, issues)) {
+                enrollmentsWithCompleteDisabilityData++;
+            }
             
             // Check DV data quality
-            assessDvDataQuality(enrollmentId, enrollment, stats, issues);
+            if (assessDvDataQuality(enrollmentId, enrollment, issues)) {
+                enrollmentsWithCompleteDvData++;
+            }
             
             // Check engagement data quality
-            assessEngagementDataQuality(enrollmentId, enrollment, stats, issues);
+            if (assessEngagementDataQuality(enrollmentId, enrollment, issues)) {
+                enrollmentsWithEngagementDate++;
+            }
             
             // Check current living situation data quality
-            assessCurrentLivingSituationDataQuality(enrollmentId, enrollment, stats, issues);
+            if (assessCurrentLivingSituationDataQuality(enrollmentId, enrollment, issues)) {
+                enrollmentsWithRecentClsContact++;
+            }
         }
+        
+        // Create the final statistics record
+        DataQualityStatistics stats = new DataQualityStatistics(
+            totalEnrollments,
+            enrollmentsWithCompleteDisabilityData,
+            enrollmentsWithCompleteDvData,
+            enrollmentsWithEngagementDate,
+            enrollmentsWithRecentClsContact
+        );
         
         return new HmisDataQualityReport(
             startDate,
@@ -292,13 +316,13 @@ public class ComprehensiveHmisReportingService {
         );
     }
     
-    private void assessDisabilityDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
-                                           DataQualityStatistics stats, List<DataQualityIssue> issues) {
+    private boolean assessDisabilityDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
+                                           List<DataQualityIssue> issues) {
         // Check if enrollment meets disability compliance
         boolean meetsCompliance = disabilityService.meetsDisabilityDataCompliance(enrollmentId);
         
         if (meetsCompliance) {
-            stats.enrollmentsWithCompleteDisabilityData++;
+            return true;
         } else {
             issues.add(new DataQualityIssue(
                 enrollmentId,
@@ -319,14 +343,16 @@ public class ComprehensiveHmisReportingService {
                 ));
             }
         }
+        
+        return false;
     }
     
-    private void assessDvDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
-                                   DataQualityStatistics stats, List<DataQualityIssue> issues) {
+    private boolean assessDvDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
+                                   List<DataQualityIssue> issues) {
         boolean meetsCompliance = dvService.meetsDvDataCompliance(enrollmentId);
         
         if (meetsCompliance) {
-            stats.enrollmentsWithCompleteDvData++;
+            return true;
         } else {
             issues.add(new DataQualityIssue(
                 enrollmentId,
@@ -348,16 +374,14 @@ public class ComprehensiveHmisReportingService {
                 ));
             }
         }
+        
+        return false;
     }
     
-    private void assessEngagementDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
-                                           DataQualityStatistics stats, List<DataQualityIssue> issues) {
+    private boolean assessEngagementDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
+                                           List<DataQualityIssue> issues) {
         boolean hasEngagement = engagementService.hasDateOfEngagement(enrollmentId);
         boolean meetsCompliance = engagementService.meetsEngagementCompliance(enrollmentId);
-        
-        if (hasEngagement) {
-            stats.enrollmentsWithEngagementDate++;
-        }
         
         if (!meetsCompliance) {
             issues.add(new DataQualityIssue(
@@ -367,15 +391,13 @@ public class ComprehensiveHmisReportingService {
                 "Enrollment does not meet engagement date compliance requirements"
             ));
         }
+        
+        return hasEngagement;
     }
     
-    private void assessCurrentLivingSituationDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
-                                                       DataQualityStatistics stats, List<DataQualityIssue> issues) {
+    private boolean assessCurrentLivingSituationDataQuality(UUID enrollmentId, ProgramEnrollment enrollment,
+                                                       List<DataQualityIssue> issues) {
         boolean hasRecentContact = clsService.hasRecentStreetContact(enrollmentId, 90);
-        
-        if (hasRecentContact) {
-            stats.enrollmentsWithRecentClsContact++;
-        }
         
         // Check for enrollments with engagement gaps
         if (!clsService.hasRecentStreetContact(enrollmentId, 30)) {
@@ -386,13 +408,15 @@ public class ComprehensiveHmisReportingService {
                 "Enrollment has not had recent current living situation contact"
             ));
         }
+        
+        return hasRecentContact;
     }
     
     private EnrollmentSummaryStatistics calculateSummaryStatistics(
             ProgramEnrollment enrollment,
             List<HmisDisabilitiesProjection> disabilities,
             List<HmisDomesticViolenceProjection> dvProjections,
-            List<CurrentLivingSituation> clsRecords,
+            List<org.haven.programenrollment.domain.CurrentLivingSituation> clsRecords,
             List<BedNight> bedNights) {
         
         // Count disabling conditions
@@ -408,7 +432,7 @@ public class ComprehensiveHmisReportingService {
         
         // Count unsheltered contacts
         long unshelteredContacts = clsRecords.stream()
-            .filter(CurrentLivingSituation::isUnsheltered)
+            .filter(org.haven.programenrollment.domain.CurrentLivingSituation::isUnsheltered)
             .count();
         
         return new EnrollmentSummaryStatistics(
@@ -433,7 +457,7 @@ public class ComprehensiveHmisReportingService {
         LocalDate exitDate,
         List<HmisDisabilitiesProjection> disabilitiesProjections,
         List<HmisDomesticViolenceProjection> dvProjections,
-        List<CurrentLivingSituation> currentLivingSituations,
+        List<org.haven.programenrollment.domain.CurrentLivingSituation> currentLivingSituations,
         DateOfEngagement dateOfEngagement,
         List<BedNight> bedNights,
         EnrollmentSummaryStatistics summaryStats

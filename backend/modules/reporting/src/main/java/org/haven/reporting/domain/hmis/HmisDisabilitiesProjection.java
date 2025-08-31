@@ -80,7 +80,7 @@ public record HmisDisabilitiesProjection(
             // Map each disability kind to HMIS DisabilityType
             mapDisabilityRecord(recordsByKind.get(DisabilityKind.PHYSICAL)),
             mapDisabilityRecord(recordsByKind.get(DisabilityKind.DEVELOPMENTAL)),
-            mapDisabilityRecord(recordsByKind.get(DisabilityKind.CHRONIC_HEALTH)),
+            mapDisabilityRecord(recordsByKind.get(DisabilityKind.CHRONIC_HEALTH_CONDITION)),
             mapDisabilityRecord(recordsByKind.get(DisabilityKind.HIV_AIDS)),
             mapDisabilityRecord(recordsByKind.get(DisabilityKind.MENTAL_HEALTH)),
             mapDisabilityRecord(recordsByKind.get(DisabilityKind.SUBSTANCE_USE)),
@@ -143,7 +143,7 @@ public record HmisDisabilitiesProjection(
             String exportId) {
         
         // Get all disability records for the stage
-        List<DisabilityRecord> allDisabilityRecords = enrollment.getAllDisabilityRecords();
+        List<DisabilityRecord> allDisabilityRecords = enrollment.getDisabilityRecords();
         
         // Also include physical disability records if available
         List<PhysicalDisabilityRecord> physicalRecords = enrollment.getPhysicalDisabilityRecords();
@@ -174,7 +174,7 @@ public record HmisDisabilitiesProjection(
     
     private static boolean enrollmentHasDataForStage(ProgramEnrollment enrollment, DataCollectionStage stage) {
         // Check if enrollment has any disability data for this stage
-        boolean hasDisabilityData = enrollment.getAllDisabilityRecords().stream()
+        boolean hasDisabilityData = enrollment.getDisabilityRecords().stream()
             .anyMatch(record -> record.getStage() == stage);
         
         boolean hasPhysicalDisabilityData = enrollment.getPhysicalDisabilityRecords().stream()
