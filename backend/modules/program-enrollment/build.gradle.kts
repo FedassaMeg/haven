@@ -28,6 +28,10 @@ dependencies {
     // Validation
     implementation("org.springframework.boot:spring-boot-starter-validation")
     
+    // Spring Security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito:mockito-junit-jupiter")

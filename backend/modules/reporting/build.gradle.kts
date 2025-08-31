@@ -22,6 +22,7 @@ dependencies {
     // Spring Framework
     implementation("org.springframework:spring-context")
     implementation("org.springframework:spring-tx")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     
     // JPA/Hibernate
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
