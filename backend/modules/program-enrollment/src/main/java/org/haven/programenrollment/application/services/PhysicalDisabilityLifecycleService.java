@@ -5,6 +5,7 @@ import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,8 +24,8 @@ public class PhysicalDisabilityLifecycleService {
     private final JpaPhysicalDisabilityRepository physicalDisabilityRepository;
     
     public PhysicalDisabilityLifecycleService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            JpaPhysicalDisabilityRepository physicalDisabilityRepository) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy JpaPhysicalDisabilityRepository physicalDisabilityRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.physicalDisabilityRepository = physicalDisabilityRepository;
     }

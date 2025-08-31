@@ -8,6 +8,7 @@ import org.haven.programenrollment.domain.ProgramEnrollmentRepository;
 import org.haven.programenrollment.domain.ProgramRepository;
 import org.haven.shared.vo.hmis.HmisProjectType;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -25,8 +26,8 @@ public class ProgramEnrollmentAppService {
     private final ProgramRepository programRepository;
     
     public ProgramEnrollmentAppService(
-            ProgramEnrollmentRepository enrollmentRepository,
-            ProgramRepository programRepository) {
+            @Lazy ProgramEnrollmentRepository enrollmentRepository,
+            @Lazy ProgramRepository programRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.programRepository = programRepository;
     }
@@ -126,28 +127,7 @@ public class ProgramEnrollmentAppService {
         // Use the JPA repository's proper chain resolution
         ProgramEnrollmentId id = ProgramEnrollmentId.of(enrollmentId);
         
-        List<ProgramEnrollment> chain;
-        
-        // Check if the repository supports chain resolution (JPA implementation does)
-        if (enrollmentRepository instanceof org.haven.programenrollment.infrastructure.persistence.JpaProgramEnrollmentRepositoryImpl) {
-            var jpaRepo = (org.haven.programenrollment.infrastructure.persistence.JpaProgramEnrollmentRepositoryImpl) enrollmentRepository;
-            chain = jpaRepo.findEnrollmentChain(id);
-        } else {
-            // Fallback to minimal implementation
-            chain = new ArrayList<>();
-            Optional<ProgramEnrollment> enrollment = enrollmentRepository.findById(id);
-            if (enrollment.isPresent()) {
-                chain.add(enrollment.get());
-                
-                // Add predecessor if exists
-                if (enrollment.get().getPredecessorEnrollmentId() != null) {
-                    Optional<ProgramEnrollment> predecessor = enrollmentRepository.findById(
-                        ProgramEnrollmentId.of(enrollment.get().getPredecessorEnrollmentId())
-                    );
-                    predecessor.ifPresent(chain::add);
-                }
-            }
-        }
+        List<ProgramEnrollment> chain = enrollmentRepository.findEnrollmentChain(id);
         
         return chain.stream()
             .map(e -> new EnrollmentSummary(

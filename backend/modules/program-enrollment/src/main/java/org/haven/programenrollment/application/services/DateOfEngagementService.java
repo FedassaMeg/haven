@@ -4,6 +4,7 @@ import org.haven.programenrollment.domain.*;
 import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,8 +23,8 @@ public class DateOfEngagementService {
     private final JpaDateOfEngagementRepository engagementRepository;
     
     public DateOfEngagementService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            JpaDateOfEngagementRepository engagementRepository) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy JpaDateOfEngagementRepository engagementRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.engagementRepository = engagementRepository;
     }

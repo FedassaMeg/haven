@@ -10,8 +10,8 @@ import org.haven.programenrollment.application.security.HmisAuditLogger;
 import org.haven.programenrollment.application.validation.*;
 import org.haven.shared.validation.BusinessRuleValidator.ValidationResult;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 import java.util.List;
 
@@ -40,76 +40,47 @@ public class HmisValidationAspect {
     }
     
     /**
-     * Security validation for disability data access
+     * Unified security validation for POST operations in enrollment controllers.
+     * Avoids direct references to specific controller classes to prevent bean cycles.
      */
-    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && " +
-            "execution(* org.haven.api.enrollments.DisabilityController.*(..))")
-    public void validateDisabilityDataAccess(JoinPoint joinPoint) {
+    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && @within(org.springframework.web.bind.annotation.RestController)")
+    public void validatePostMappingAccess(JoinPoint joinPoint) {
         UUID enrollmentId = extractEnrollmentId(joinPoint);
         String operation = extractOperation(joinPoint);
-        
-        if (!securityService.canAccessDisabilityData(enrollmentId, operation)) {
-            throw new AccessDeniedException("Insufficient permissions for disability data access");
-        }
-    }
-    
-    /**
-     * Security validation for DV data access with sensitivity levels
-     */
-    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && " +
-            "execution(* org.haven.api.enrollments.DvController.*(..))")
-    public void validateDvDataAccess(JoinPoint joinPoint) {
-        UUID enrollmentId = extractEnrollmentId(joinPoint);
-        String operation = extractOperation(joinPoint);
-        
-        // Determine sensitivity level based on operation
-        HmisDataSecurityService.DvDataSensitivityLevel sensitivityLevel = 
-            determineDvSensitivityLevel(operation);
-        
-        if (!securityService.canAccessDvData(enrollmentId, operation, sensitivityLevel)) {
-            throw new AccessDeniedException("Insufficient permissions for DV data access");
-        }
-    }
-    
-    /**
-     * Security validation for current living situation data access
-     */
-    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && " +
-            "execution(* org.haven.api.enrollments.CurrentLivingSituationController.*(..))")
-    public void validateCurrentLivingSituationDataAccess(JoinPoint joinPoint) {
-        UUID enrollmentId = extractEnrollmentId(joinPoint);
-        String operation = extractOperation(joinPoint);
-        
-        if (!securityService.canAccessCurrentLivingSituationData(enrollmentId, operation)) {
-            throw new AccessDeniedException("Insufficient permissions for current living situation data access");
-        }
-    }
-    
-    /**
-     * Security validation for date of engagement data access
-     */
-    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && " +
-            "execution(* org.haven.api.enrollments.DateOfEngagementController.*(..))")
-    public void validateDateOfEngagementDataAccess(JoinPoint joinPoint) {
-        UUID enrollmentId = extractEnrollmentId(joinPoint);
-        String operation = extractOperation(joinPoint);
-        
-        if (!securityService.canAccessDateOfEngagementData(enrollmentId, operation)) {
-            throw new AccessDeniedException("Insufficient permissions for date of engagement data access");
-        }
-    }
-    
-    /**
-     * Security validation for bed night data access
-     */
-    @Before("@annotation(org.springframework.web.bind.annotation.PostMapping) && " +
-            "execution(* org.haven.api.enrollments.BedNightController.*(..))")
-    public void validateBedNightDataAccess(JoinPoint joinPoint) {
-        UUID enrollmentId = extractEnrollmentId(joinPoint);
-        String operation = extractOperation(joinPoint);
-        
-        if (!securityService.canAccessBedNightData(enrollmentId, operation)) {
-            throw new AccessDeniedException("Insufficient permissions for bed night data access");
+        String controllerName = joinPoint.getTarget().getClass().getSimpleName();
+        String dataType = extractDataTypeFromController(controllerName);
+
+        switch (dataType) {
+            case "DISABILITY" -> {
+                if (!securityService.canAccessDisabilityData(enrollmentId, operation)) {
+                    throw new AccessDeniedException("Insufficient permissions for disability data access");
+                }
+            }
+            case "DOMESTIC_VIOLENCE" -> {
+                HmisDataSecurityService.DvDataSensitivityLevel sensitivityLevel =
+                    determineDvSensitivityLevel(operation);
+                if (!securityService.canAccessDvData(enrollmentId, operation, sensitivityLevel)) {
+                    throw new AccessDeniedException("Insufficient permissions for DV data access");
+                }
+            }
+            case "CURRENT_LIVING_SITUATION" -> {
+                if (!securityService.canAccessCurrentLivingSituationData(enrollmentId, operation)) {
+                    throw new AccessDeniedException("Insufficient permissions for current living situation data access");
+                }
+            }
+            case "DATE_OF_ENGAGEMENT" -> {
+                if (!securityService.canAccessDateOfEngagementData(enrollmentId, operation)) {
+                    throw new AccessDeniedException("Insufficient permissions for date of engagement data access");
+                }
+            }
+            case "BED_NIGHT" -> {
+                if (!securityService.canAccessBedNightData(enrollmentId, operation)) {
+                    throw new AccessDeniedException("Insufficient permissions for bed night data access");
+                }
+            }
+            default -> {
+                // No access decision for unknown types.
+            }
         }
     }
     
@@ -142,7 +113,7 @@ public class HmisValidationAspect {
     /**
      * Time-based access validation for sensitive operations
      */
-    @Before("execution(* org.haven.api.enrollments.DvController.*(..)) || " +
+    @Before("(@within(org.springframework.web.bind.annotation.RestController) && execution(* *..*Controller.createSafetyAlert(..))) || " +
             "execution(* *..*Service.create*SafetyAlert(..))")
     public void validateTimeBasedAccess(JoinPoint joinPoint) {
         String operation = joinPoint.getSignature().getName();
@@ -156,7 +127,7 @@ public class HmisValidationAspect {
     /**
      * Log successful operations
      */
-    @AfterReturning(pointcut = "execution(* org.haven.api.enrollments.*Controller.*(..))", returning = "result")
+    @AfterReturning(pointcut = "within(@org.springframework.web.bind.annotation.RestController *)", returning = "result")
     public void logSuccessfulOperation(JoinPoint joinPoint, Object result) {
         String controllerName = joinPoint.getTarget().getClass().getSimpleName();
         String operation = joinPoint.getSignature().getName();
@@ -169,7 +140,7 @@ public class HmisValidationAspect {
     /**
      * Log failed operations
      */
-    @AfterThrowing(pointcut = "execution(* org.haven.api.enrollments.*Controller.*(..))", throwing = "exception")
+    @AfterThrowing(pointcut = "within(@org.springframework.web.bind.annotation.RestController *)", throwing = "exception")
     public void logFailedOperation(JoinPoint joinPoint, Exception exception) {
         String controllerName = joinPoint.getTarget().getClass().getSimpleName();
         String operation = joinPoint.getSignature().getName();
@@ -226,7 +197,7 @@ public class HmisValidationAspect {
     /**
      * Log DV high-risk events
      */
-    @AfterReturning(pointcut = "execution(* org.haven.api.enrollments.DvController.createSafetyAlert(..))")
+    @AfterReturning(pointcut = "@within(org.springframework.web.bind.annotation.RestController) && execution(* *..*Controller.createSafetyAlert(..))")
     public void logDvHighRiskEvent(JoinPoint joinPoint) {
         UUID enrollmentId = extractEnrollmentId(joinPoint);
         
@@ -322,7 +293,7 @@ public class HmisValidationAspect {
     }
     
     private String getCurrentUsername() {
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : "ANONYMOUS";
     }
     

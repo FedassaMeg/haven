@@ -8,6 +8,7 @@ import org.haven.servicedelivery.application.commands.*;
 import org.haven.servicedelivery.domain.*;
 import org.haven.shared.vo.services.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -32,8 +33,8 @@ public class ServiceDeliveryAppService {
 
     public ServiceDeliveryAppService(
             ServiceEpisodeRepository serviceEpisodeRepository,
-            ProgramEnrollmentRepository programEnrollmentRepository,
-            ProgramEnrollmentAppService programEnrollmentAppService,
+            @Lazy ProgramEnrollmentRepository programEnrollmentRepository,
+            @Lazy ProgramEnrollmentAppService programEnrollmentAppService,
             ServiceBillingService billingService,
             ServiceReportingService reportingService) {
         this.serviceEpisodeRepository = serviceEpisodeRepository;

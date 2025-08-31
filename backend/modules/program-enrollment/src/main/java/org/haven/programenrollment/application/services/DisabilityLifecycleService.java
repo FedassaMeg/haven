@@ -5,6 +5,7 @@ import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,8 +24,8 @@ public class DisabilityLifecycleService {
     private final JpaDisabilityRepository disabilityRepository;
     
     public DisabilityLifecycleService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            JpaDisabilityRepository disabilityRepository) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy JpaDisabilityRepository disabilityRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.disabilityRepository = disabilityRepository;
     }
@@ -48,7 +49,7 @@ public class DisabilityLifecycleService {
         enrollment.createStartDisabilityRecord(disabilityKind, hasDisability, collectedBy);
         
         // Get the created record
-        DisabilityRecord startRecord = enrollment.getDisabilityRecord(DataCollectionStage.PROJECT_START, disabilityKind);
+        DisabilityRecord startRecord = enrollment.getDisabilityRecord(disabilityKind, DataCollectionStage.PROJECT_START);
         
         // Persist the record
         JpaDisabilityEntity disabilityEntity = new JpaDisabilityEntity(startRecord);
@@ -110,7 +111,7 @@ public class DisabilityLifecycleService {
         enrollment.createExitDisabilityRecord(disabilityKind, exitDate, hasDisability, collectedBy);
         
         // Get the exit record
-        DisabilityRecord exitRecord = enrollment.getDisabilityRecord(DataCollectionStage.PROJECT_EXIT, disabilityKind);
+        DisabilityRecord exitRecord = enrollment.getDisabilityRecord(disabilityKind, DataCollectionStage.PROJECT_EXIT);
         
         // Persist the record
         JpaDisabilityEntity disabilityEntity = new JpaDisabilityEntity(exitRecord);
@@ -145,7 +146,8 @@ public class DisabilityLifecycleService {
         enrollment.correctDisabilityRecord(originalRecord, hasDisability, collectedBy);
         
         // Get the correction record (should be the most recent one)
-        DisabilityRecord correctionRecord = enrollment.getDisabilityRecords(originalRecord.getDisabilityKind()).stream()
+        DisabilityRecord correctionRecord = enrollment.getDisabilityRecords().stream()
+            .filter(record -> record.getDisabilityKind() == originalRecord.getDisabilityKind())
             .filter(record -> record.isCorrection() && record.getCorrectsRecordId().equals(originalRecordId))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Correction record not found after creation"));
@@ -462,7 +464,7 @@ public class DisabilityLifecycleService {
         
         // Persist all records
         for (DisabilityKind kind : DisabilityKind.values()) {
-            DisabilityRecord record = enrollment.getDisabilityRecord(DataCollectionStage.PROJECT_START, kind);
+            DisabilityRecord record = enrollment.getDisabilityRecord(kind, DataCollectionStage.PROJECT_START);
             if (record != null) {
                 JpaDisabilityEntity entity = new JpaDisabilityEntity(record);
                 disabilityRepository.save(entity);
@@ -499,7 +501,7 @@ public class DisabilityLifecycleService {
         
         // Persist all records
         for (DisabilityKind kind : DisabilityKind.values()) {
-            DisabilityRecord record = enrollment.getDisabilityRecord(DataCollectionStage.PROJECT_EXIT, kind);
+            DisabilityRecord record = enrollment.getDisabilityRecord(kind, DataCollectionStage.PROJECT_EXIT);
             if (record != null) {
                 JpaDisabilityEntity entity = new JpaDisabilityEntity(record);
                 disabilityRepository.save(entity);

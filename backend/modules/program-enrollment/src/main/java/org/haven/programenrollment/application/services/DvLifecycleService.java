@@ -5,6 +5,7 @@ import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,8 +24,8 @@ public class DvLifecycleService {
     private final JpaDvRepository dvRepository;
     
     public DvLifecycleService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            JpaDvRepository dvRepository) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy JpaDvRepository dvRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.dvRepository = dvRepository;
     }

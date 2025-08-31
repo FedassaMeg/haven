@@ -1,6 +1,7 @@
 package org.haven.programenrollment.application.validation;
 
 import org.haven.programenrollment.domain.*;
+import org.haven.shared.vo.hmis.DomesticViolenceRecency;
 import org.haven.shared.validation.BusinessRuleValidator;
 import org.haven.shared.validation.BusinessRuleValidator.*;
 import org.haven.shared.vo.hmis.HmisFivePoint;

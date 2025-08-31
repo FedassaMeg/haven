@@ -4,6 +4,7 @@ import org.haven.programenrollment.domain.*;
 import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -19,11 +20,11 @@ import java.util.UUID;
 @Transactional
 public class BedNightService {
     
-    private final JpaProgramEnrollmentRepository enrollmentRepository;
+    private final ProgramEnrollmentRepository enrollmentRepository;
     private final JpaBedNightRepository bedNightRepository;
     
     public BedNightService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy ProgramEnrollmentRepository enrollmentRepository,
             JpaBedNightRepository bedNightRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.bedNightRepository = bedNightRepository;
@@ -38,10 +39,9 @@ public class BedNightService {
             String createdBy) {
         
         // Load enrollment aggregate
-        JpaProgramEnrollmentEntity enrollmentEntity = enrollmentRepository.findById(enrollmentId)
+        ProgramEnrollmentId domainId = ProgramEnrollmentId.of(enrollmentId);
+        ProgramEnrollment enrollment = enrollmentRepository.findById(domainId)
             .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
-        
-        ProgramEnrollment enrollment = enrollmentEntity.toDomainObject();
         
         // Record bed night through aggregate
         enrollment.addBedNight(bedNightDate, createdBy);
@@ -54,7 +54,7 @@ public class BedNightService {
         bedNightRepository.save(bedNightEntity);
         
         // Update enrollment
-        enrollmentRepository.save(new JpaProgramEnrollmentEntity(enrollment));
+        enrollmentRepository.save(enrollment);
         
         return bedNightRecord;
     }
@@ -69,10 +69,9 @@ public class BedNightService {
             String createdBy) {
         
         // Load enrollment aggregate
-        JpaProgramEnrollmentEntity enrollmentEntity = enrollmentRepository.findById(enrollmentId)
+        ProgramEnrollmentId domainId = ProgramEnrollmentId.of(enrollmentId);
+        ProgramEnrollment enrollment = enrollmentRepository.findById(domainId)
             .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
-        
-        ProgramEnrollment enrollment = enrollmentEntity.toDomainObject();
         
         // Record bed night range through aggregate
         enrollment.addBedNightRange(startDate, endDate, createdBy);
@@ -93,7 +92,7 @@ public class BedNightService {
         }
         
         // Update enrollment
-        enrollmentRepository.save(new JpaProgramEnrollmentEntity(enrollment));
+        enrollmentRepository.save(enrollment);
         
         return bedNightRecords;
     }
@@ -103,10 +102,9 @@ public class BedNightService {
      */
     public void removeBedNight(UUID enrollmentId, LocalDate bedNightDate) {
         // Load enrollment aggregate
-        JpaProgramEnrollmentEntity enrollmentEntity = enrollmentRepository.findById(enrollmentId)
+        ProgramEnrollmentId domainId = ProgramEnrollmentId.of(enrollmentId);
+        ProgramEnrollment enrollment = enrollmentRepository.findById(domainId)
             .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
-        
-        ProgramEnrollment enrollment = enrollmentEntity.toDomainObject();
         
         // Get the bed night to remove
         BedNight bedNightToRemove = enrollment.getBedNight(bedNightDate);
@@ -121,7 +119,7 @@ public class BedNightService {
         bedNightRepository.deleteByEnrollmentIdAndBedNightDate(enrollmentId, bedNightDate);
         
         // Update enrollment
-        enrollmentRepository.save(new JpaProgramEnrollmentEntity(enrollment));
+        enrollmentRepository.save(enrollment);
     }
     
     /**
@@ -356,8 +354,11 @@ public class BedNightService {
      */
     @Transactional(readOnly = true)
     public List<UUID> findEnrollmentsWithBedNightGaps(int minGapDays) {
-        return enrollmentRepository.findAll().stream()
-            .map(JpaProgramEnrollmentEntity::toDomainObject)
+        // Use a broad date range to get recent enrollments
+        LocalDate yearAgo = LocalDate.now().minusYears(1);
+        LocalDate now = LocalDate.now();
+        
+        return enrollmentRepository.findByEnrollmentDateBetween(yearAgo, now).stream()
             .filter(enrollment -> !enrollment.hasExited())
             .filter(enrollment -> {
                 ConsecutiveNightsAnalysis analysis = getConsecutiveNightsAnalysis(enrollment.getId().value());

@@ -5,6 +5,7 @@ import org.haven.programenrollment.infrastructure.persistence.*;
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.vo.hmis.*;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,8 +23,8 @@ public class IncomeLifecycleService {
     private final JpaIncomeBenefitsRepository incomeRepository;
     
     public IncomeLifecycleService(
-            JpaProgramEnrollmentRepository enrollmentRepository,
-            JpaIncomeBenefitsRepository incomeRepository) {
+            @Lazy JpaProgramEnrollmentRepository enrollmentRepository,
+            @Lazy JpaIncomeBenefitsRepository incomeRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.incomeRepository = incomeRepository;
     }

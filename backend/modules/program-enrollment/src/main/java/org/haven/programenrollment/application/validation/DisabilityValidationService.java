@@ -1,6 +1,8 @@
 package org.haven.programenrollment.application.validation;
 
 import org.haven.programenrollment.domain.*;
+import org.haven.shared.vo.hmis.DisabilityKind;
+import org.haven.shared.vo.hmis.DataCollectionStage;
 import org.haven.shared.validation.BusinessRuleValidator;
 import org.haven.shared.validation.BusinessRuleValidator.*;
 import org.haven.shared.vo.hmis.HmisFivePoint;
