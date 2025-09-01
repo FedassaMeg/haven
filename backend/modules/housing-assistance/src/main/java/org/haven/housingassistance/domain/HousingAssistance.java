@@ -119,6 +119,13 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
     
     public void authorizePayment(BigDecimal amount, LocalDate paymentDate, String paymentType,
                                String payeeId, String payeeName, String authorizedBy) {
+        authorizePayment(amount, paymentDate, paymentType, AssistancePaymentSubtype.OTHER, 
+                        null, null, payeeId, payeeName, authorizedBy);
+    }
+    
+    public void authorizePayment(BigDecimal amount, LocalDate paymentDate, String paymentType,
+                               AssistancePaymentSubtype subtype, LocalDate periodStart, LocalDate periodEnd,
+                               String payeeId, String payeeName, String authorizedBy) {
         if (status != AssistanceStatus.UNIT_ASSIGNED && status != AssistanceStatus.ACTIVE) {
             throw new IllegalStateException("Cannot authorize payment for assistance not unit assigned or active");
         }
@@ -129,6 +136,24 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
             throw new IllegalStateException("Payment amount exceeds remaining budget");
         }
         
+        // Additional validation for arrears
+        if ((subtype == AssistancePaymentSubtype.RENT_ARREARS || 
+             subtype == AssistancePaymentSubtype.UTILITY_ARREARS)) {
+            if (periodStart == null || periodEnd == null) {
+                throw new IllegalArgumentException("Arrears payments must specify period start and end dates");
+            }
+            if (periodStart.isAfter(LocalDate.now())) {
+                throw new IllegalArgumentException("Arrears period cannot be in the future");
+            }
+            // Check arrears period is within approved duration
+            if (approvedDurationMonths != null) {
+                long monthsBetween = java.time.temporal.ChronoUnit.MONTHS.between(periodStart, periodEnd);
+                if (monthsBetween >= approvedDurationMonths) {
+                    throw new IllegalArgumentException("Arrears period exceeds approved duration");
+                }
+            }
+        }
+        
         UUID paymentId = UUID.randomUUID();
         apply(new PaymentAuthorized(
             id.value(),
@@ -136,6 +161,9 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
             amount,
             paymentDate,
             paymentType,
+            subtype,
+            periodStart,
+            periodEnd,
             payeeId,
             payeeName,
             fundingSourceCode,
@@ -173,6 +201,9 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
                 e.amount(),
                 e.paymentDate(),
                 e.paymentType(),
+                e.subtype() != null ? e.subtype() : AssistancePaymentSubtype.OTHER,
+                e.periodStart(),
+                e.periodEnd(),
                 e.payeeId(),
                 e.payeeName(),
                 e.authorizedBy()
@@ -201,11 +232,25 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
         DENIED
     }
     
+    public enum AssistancePaymentSubtype {
+        RENT_CURRENT,
+        RENT_ARREARS,
+        UTILITY_CURRENT,
+        UTILITY_ARREARS,
+        SECURITY_DEPOSIT,
+        APPLICATION_FEE,
+        MOVING_COSTS,
+        OTHER
+    }
+    
     public static class Payment {
         private UUID paymentId;
         private BigDecimal amount;
         private LocalDate paymentDate;
         private String paymentType;
+        private AssistancePaymentSubtype subtype;
+        private LocalDate periodStart;
+        private LocalDate periodEnd;
         private String payeeId;
         private String payeeName;
         private String authorizedBy;
@@ -213,14 +258,38 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
         
         public Payment(UUID paymentId, BigDecimal amount, LocalDate paymentDate, 
                       String paymentType, String payeeId, String payeeName, String authorizedBy) {
+            this(paymentId, amount, paymentDate, paymentType, AssistancePaymentSubtype.OTHER, 
+                 null, null, payeeId, payeeName, authorizedBy);
+        }
+        
+        public Payment(UUID paymentId, BigDecimal amount, LocalDate paymentDate, 
+                      String paymentType, AssistancePaymentSubtype subtype, 
+                      LocalDate periodStart, LocalDate periodEnd,
+                      String payeeId, String payeeName, String authorizedBy) {
             this.paymentId = paymentId;
             this.amount = amount;
             this.paymentDate = paymentDate;
             this.paymentType = paymentType;
+            this.subtype = subtype;
+            this.periodStart = periodStart;
+            this.periodEnd = periodEnd;
             this.payeeId = payeeId;
             this.payeeName = payeeName;
             this.authorizedBy = authorizedBy;
             this.status = PaymentStatus.AUTHORIZED;
+            
+            // Validate arrears periods
+            if (isArrearsSubtype() && (periodStart == null || periodEnd == null)) {
+                throw new IllegalArgumentException("Arrears payments must specify period start and end dates");
+            }
+            if (periodStart != null && periodEnd != null && periodStart.isAfter(periodEnd)) {
+                throw new IllegalArgumentException("Period start date must not be after period end date");
+            }
+        }
+        
+        private boolean isArrearsSubtype() {
+            return subtype == AssistancePaymentSubtype.RENT_ARREARS || 
+                   subtype == AssistancePaymentSubtype.UTILITY_ARREARS;
         }
         
         public enum PaymentStatus {
@@ -232,6 +301,9 @@ public class HousingAssistance extends AggregateRoot<HousingAssistanceId> {
         public BigDecimal getAmount() { return amount; }
         public LocalDate getPaymentDate() { return paymentDate; }
         public String getPaymentType() { return paymentType; }
+        public AssistancePaymentSubtype getSubtype() { return subtype; }
+        public LocalDate getPeriodStart() { return periodStart; }
+        public LocalDate getPeriodEnd() { return periodEnd; }
         public String getPayeeId() { return payeeId; }
         public String getPayeeName() { return payeeName; }
         public String getAuthorizedBy() { return authorizedBy; }

@@ -6,6 +6,7 @@ import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.events.DomainEvent;
 import org.haven.financialassistance.domain.events.*;
 import org.haven.financialassistance.domain.ApprovalChain;
+import org.haven.housingassistance.domain.HousingAssistance.AssistancePaymentSubtype;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -125,6 +126,13 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
     
     public void authorizePayment(BigDecimal amount, LocalDate paymentDate, String paymentMethod,
                                String authorizedBy) {
+        authorizePayment(amount, paymentDate, paymentMethod, AssistancePaymentSubtype.OTHER,
+                        null, null, authorizedBy);
+    }
+    
+    public void authorizePayment(BigDecimal amount, LocalDate paymentDate, String paymentMethod,
+                               AssistancePaymentSubtype subtype, LocalDate periodStart, LocalDate periodEnd,
+                               String authorizedBy) {
         if (status != AssistanceStatus.VENDOR_ASSIGNED && status != AssistanceStatus.ACTIVE) {
             throw new IllegalStateException("Cannot authorize payment for assistance not vendor assigned or active");
         }
@@ -135,12 +143,26 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
             throw new IllegalStateException("Payment amount exceeds remaining budget");
         }
         
+        // Additional validation for arrears
+        if ((subtype == AssistancePaymentSubtype.RENT_ARREARS || 
+             subtype == AssistancePaymentSubtype.UTILITY_ARREARS)) {
+            if (periodStart == null || periodEnd == null) {
+                throw new IllegalArgumentException("Arrears payments must specify period start and end dates");
+            }
+            if (periodStart.isAfter(LocalDate.now())) {
+                throw new IllegalArgumentException("Arrears period cannot be in the future");
+            }
+        }
+        
         UUID paymentId = UUID.randomUUID();
         Payment payment = new Payment(
             paymentId,
             amount,
             paymentDate,
             paymentMethod,
+            subtype,
+            periodStart,
+            periodEnd,
             vendorId,
             vendorName,
             authorizedBy
@@ -198,6 +220,9 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
         private BigDecimal amount;
         private LocalDate paymentDate;
         private String paymentMethod;
+        private AssistancePaymentSubtype subtype;
+        private LocalDate periodStart;
+        private LocalDate periodEnd;
         private String payeeId;
         private String payeeName;
         private String authorizedBy;
@@ -205,14 +230,38 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
         
         public Payment(UUID paymentId, BigDecimal amount, LocalDate paymentDate, 
                       String paymentMethod, String payeeId, String payeeName, String authorizedBy) {
+            this(paymentId, amount, paymentDate, paymentMethod, AssistancePaymentSubtype.OTHER,
+                 null, null, payeeId, payeeName, authorizedBy);
+        }
+        
+        public Payment(UUID paymentId, BigDecimal amount, LocalDate paymentDate, 
+                      String paymentMethod, AssistancePaymentSubtype subtype,
+                      LocalDate periodStart, LocalDate periodEnd,
+                      String payeeId, String payeeName, String authorizedBy) {
             this.paymentId = paymentId;
             this.amount = amount;
             this.paymentDate = paymentDate;
             this.paymentMethod = paymentMethod;
+            this.subtype = subtype;
+            this.periodStart = periodStart;
+            this.periodEnd = periodEnd;
             this.payeeId = payeeId;
             this.payeeName = payeeName;
             this.authorizedBy = authorizedBy;
             this.status = PaymentStatus.AUTHORIZED;
+            
+            // Validate arrears periods
+            if (isArrearsSubtype() && (periodStart == null || periodEnd == null)) {
+                throw new IllegalArgumentException("Arrears payments must specify period start and end dates");
+            }
+            if (periodStart != null && periodEnd != null && periodStart.isAfter(periodEnd)) {
+                throw new IllegalArgumentException("Period start date must not be after period end date");
+            }
+        }
+        
+        private boolean isArrearsSubtype() {
+            return subtype == AssistancePaymentSubtype.RENT_ARREARS || 
+                   subtype == AssistancePaymentSubtype.UTILITY_ARREARS;
         }
         
         public enum PaymentStatus {
@@ -224,6 +273,9 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
         public BigDecimal getAmount() { return amount; }
         public LocalDate getPaymentDate() { return paymentDate; }
         public String getPaymentMethod() { return paymentMethod; }
+        public AssistancePaymentSubtype getSubtype() { return subtype; }
+        public LocalDate getPeriodStart() { return periodStart; }
+        public LocalDate getPeriodEnd() { return periodEnd; }
         public String getPayeeId() { return payeeId; }
         public String getPayeeName() { return payeeName; }
         public String getAuthorizedBy() { return authorizedBy; }

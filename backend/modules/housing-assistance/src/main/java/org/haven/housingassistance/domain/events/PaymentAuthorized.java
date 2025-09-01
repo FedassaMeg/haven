@@ -1,6 +1,7 @@
 package org.haven.housingassistance.domain.events;
 
 import org.haven.shared.events.DomainEvent;
+import org.haven.housingassistance.domain.HousingAssistance.AssistancePaymentSubtype;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,6 +13,9 @@ public record PaymentAuthorized(
     BigDecimal amount,
     LocalDate paymentDate,
     String paymentType, // RENT, DEPOSIT, UTILITIES, etc.
+    AssistancePaymentSubtype subtype,
+    LocalDate periodStart,
+    LocalDate periodEnd,
     String payeeId,
     String payeeName,
     String fundingSourceCode,
