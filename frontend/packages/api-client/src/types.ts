@@ -840,3 +840,155 @@ export interface GenerateReportRequest {
     groupBy?: string[];
   };
 }
+
+// Assistance Payment Types with Arrears Support
+export enum AssistancePaymentSubtype {
+  RENT_CURRENT = 'RENT_CURRENT',
+  RENT_ARREARS = 'RENT_ARREARS',
+  UTILITY_CURRENT = 'UTILITY_CURRENT',
+  UTILITY_ARREARS = 'UTILITY_ARREARS',
+  SECURITY_DEPOSIT = 'SECURITY_DEPOSIT',
+  APPLICATION_FEE = 'APPLICATION_FEE',
+  MOVING_COSTS = 'MOVING_COSTS',
+  OTHER = 'OTHER'
+}
+
+export interface AssistancePaymentRequest {
+  housingAssistanceId: string;
+  amount: number;
+  paymentDate: string;
+  paymentType: string;
+  subtype: AssistancePaymentSubtype;
+  periodStart?: string; // Required for arrears
+  periodEnd?: string; // Required for arrears
+  payeeId: string;
+  payeeName: string;
+  authorizedBy: string;
+  notes?: string;
+  fundingSourceCode?: string;
+}
+
+export interface AssistancePaymentResponse {
+  paymentId: string;
+  housingAssistanceId: string;
+  clientId: string;
+  enrollmentId: string;
+  amount: number;
+  paymentDate: string;
+  paymentType: string;
+  subtype: AssistancePaymentSubtype;
+  periodStart?: string;
+  periodEnd?: string;
+  payeeId: string;
+  payeeName: string;
+  authorizedBy: string;
+  status: string;
+  fundingSourceCode?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  arrearMonths?: number;
+  isArrears: boolean;
+}
+
+export interface ArrearsSummary {
+  clientId: string;
+  totalRentArrears: number;
+  totalUtilityArrears: number;
+  earliestArrearsDate?: string;
+  latestArrearsDate?: string;
+  monthsInArrears: number;
+  details: ArrearsDetail[];
+}
+
+export interface ArrearsDetail {
+  periodStart: string;
+  periodEnd: string;
+  amount: number;
+  subtype: AssistancePaymentSubtype;
+  paymentDate: string;
+  status: string;
+}
+
+// Landlord Communication Types
+export enum LandlordCommunicationChannel {
+  PHONE = 'PHONE',
+  EMAIL = 'EMAIL',
+  TEXT = 'TEXT',
+  FAX = 'FAX',
+  PORTAL = 'PORTAL',
+  IN_PERSON = 'IN_PERSON',
+  OTHER = 'OTHER'
+}
+
+export enum LandlordCommunicationStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  FAILED = 'FAILED'
+}
+
+export interface LandlordCommunicationRequest {
+  clientId: string;
+  housingAssistanceId?: string;
+  channel: LandlordCommunicationChannel;
+  subject: string;
+  body: string;
+  requestedFields?: Record<string, any>;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  recipientFax?: string;
+  recipientPortalId?: string;
+  preferredChannel?: string;
+  notes?: string;
+  urgent?: boolean;
+}
+
+export interface LandlordCommunicationResponse {
+  id: string;
+  landlordId: string;
+  clientId: string;
+  housingAssistanceId?: string;
+  channel: string;
+  subject: string;
+  body: string;
+  sharedFields?: Record<string, any>;
+  recipientContact: string;
+  consentChecked: boolean;
+  consentType?: string;
+  sentStatus: LandlordCommunicationStatus;
+  sentAt?: string;
+  sentBy: string;
+  createdAt: string;
+  updatedAt: string;
+  landlordName?: string;
+  clientName?: string;
+  hasAttachments?: boolean;
+  statusDescription?: string;
+}
+
+export interface ConsentCheckResponse {
+  clientId: string;
+  landlordId: string;
+  hasInformationSharingConsent: boolean;
+  hasReferralSharingConsent: boolean;
+  consentValid: boolean;
+  message: string;
+}
+
+export interface SafetyCheckResponse {
+  clientId: string;
+  channel: string;
+  channelAllowed: boolean;
+  restrictions: string[];
+  message: string;
+}
+
+export interface LandlordCommunicationFilters {
+  clientId?: string;
+  landlordId?: string;
+  channel?: LandlordCommunicationChannel;
+  status?: LandlordCommunicationStatus;
+  startDate?: string;
+  endDate?: string;
+  consentType?: string;
+}
