@@ -24,6 +24,8 @@ dependencies {
   implementation(project(":modules:user-access"))
   implementation(project(":modules:reporting"))
   implementation(project(":modules:read-models"))
+  implementation(project(":modules:housing-assistance"))
+  implementation(project(":modules:financial-assistance"))
   implementation(project(":shared-kernel"))
   implementation(project(":event-store"))
 
