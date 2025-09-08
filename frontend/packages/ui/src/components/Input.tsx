@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "../lib"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({ className, type, helperText, ...props }: React.ComponentProps<"input"> & { helperText?: string }) {
   return (
     <input
       type={type}
