@@ -14,8 +14,20 @@ import java.util.UUID;
  * Repository for landlord communications
  */
 @Repository
-public interface LandlordCommunicationRepository extends JpaRepository<LandlordCommunication, UUID> {
+public interface JpaLandlordCommunicationRepository extends JpaRepository<LandlordCommunication, UUID>, org.haven.housingassistance.domain.LandlordCommunicationRepository {
     
+    // Domain interface implementation
+    @Override
+    default void saveCommunication(LandlordCommunication communication) {
+        save(communication);
+    }
+    
+    @Override
+    default LandlordCommunication findCommunicationById(UUID id) {
+        return findById(id).orElse(null);
+    }
+    
+    // JPA method declarations (these will be implemented by Spring Data JPA)
     /**
      * Find all communications for a specific client
      */
