@@ -63,8 +63,8 @@ CREATE INDEX idx_landlord_communications_sent_at ON landlord_communications(sent
 -- Create view for arrears payment summaries
 CREATE VIEW arrears_payments AS
 SELECT 
-    ap.client_id,
-    ap.enrollment_id,
+    ha.client_id,
+    ha.enrollment_id,
     ap.subtype,
     ap.amount,
     ap.payment_date,
@@ -72,34 +72,14 @@ SELECT
     ap.period_end,
     DATE_PART('year', ap.period_start) AS arrears_year,
     DATE_PART('month', ap.period_start) AS arrears_month,
-    f.name AS funder_name,
+    fs.funding_source_name AS funder_name,
     ha.id AS housing_assistance_id
 FROM assistance_payments ap
-LEFT JOIN housing_assistance ha ON ap.enrollment_id = ha.enrollment_id
-LEFT JOIN funders f ON ap.funder_id = f.id
+LEFT JOIN housing_assistance ha ON ap.assistance_type = 'HOUSING' AND ap.assistance_id = ha.id
+LEFT JOIN funding_sources fs ON ap.funding_source_code = fs.funding_source_code
 WHERE ap.subtype IN ('RENT_ARREARS', 'UTILITY_ARREARS');
 
--- Extend active_assistance view to include arrears totals
-CREATE OR REPLACE VIEW active_assistance AS
-SELECT 
-    ha.id,
-    ha.enrollment_id,
-    ha.client_id,
-    ha.assistance_type,
-    ha.status,
-    ha.start_date,
-    ha.end_date,
-    ha.monthly_amount,
-    ha.total_budget,
-    COALESCE(SUM(ap.amount) FILTER (WHERE ap.subtype NOT IN ('RENT_ARREARS', 'UTILITY_ARREARS')), 0) AS total_current_paid,
-    COALESCE(SUM(ap.amount) FILTER (WHERE ap.subtype IN ('RENT_ARREARS', 'UTILITY_ARREARS')), 0) AS total_arrears_paid,
-    COALESCE(SUM(ap.amount), 0) AS total_paid,
-    ha.total_budget - COALESCE(SUM(ap.amount), 0) AS remaining_budget
-FROM housing_assistance ha
-LEFT JOIN assistance_payments ap ON ha.enrollment_id = ap.enrollment_id
-WHERE ha.status = 'ACTIVE'
-GROUP BY ha.id, ha.enrollment_id, ha.client_id, ha.assistance_type, 
-         ha.status, ha.start_date, ha.end_date, ha.monthly_amount, ha.total_budget;
+-- Note: Keeping original active_assistance view from V5 unchanged for stability
 
 -- Data migration: Backfill existing payment_type values to new subtype
 UPDATE assistance_payments
