@@ -41,6 +41,23 @@ public class ClientController {
         );
         
         var clientId = clientAppService.handle(cmd);
+
+        // Persist initial addresses if provided
+        if (request.addresses() != null) {
+            request.addresses().stream()
+                .filter(a -> a != null)
+                .map(CreateClientRequest.AddressDto::toValueObject)
+                .forEach(addr -> clientAppService.handle(new AddClientAddressCmd(clientId, addr)));
+        }
+
+        // Persist initial telecoms if provided
+        if (request.telecoms() != null) {
+            request.telecoms().stream()
+                .filter(t -> t != null)
+                .map(CreateClientRequest.ContactPointDto::toValueObject)
+                .forEach(tp -> clientAppService.handle(new AddClientTelecomCmd(clientId, tp)));
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(Map.of("id", clientId.value(), "resourceType", "Client"));
     }

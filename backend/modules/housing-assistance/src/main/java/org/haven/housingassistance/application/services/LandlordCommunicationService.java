@@ -10,7 +10,7 @@ import org.haven.clientprofile.domain.consent.ConsentType;
 import org.haven.clientprofile.domain.pii.PIIAccessContext;
 import org.haven.housingassistance.application.services.ContactSafetyService;
 import org.haven.housingassistance.domain.LandlordCommunication;
-import org.haven.housingassistance.infrastructure.persistence.LandlordCommunicationRepository;
+import org.haven.housingassistance.domain.LandlordCommunicationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -108,7 +108,7 @@ public class LandlordCommunicationService {
         }
         
         // Step 6: Save communication record
-        communication = communicationRepository.save(communication);
+        communicationRepository.saveCommunication(communication);
         
         // Step 7: Emit audit log entry
         auditLog(clientId, landlordId, channel, communication.getSentStatus(), userId);
