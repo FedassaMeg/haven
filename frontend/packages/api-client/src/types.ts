@@ -108,11 +108,58 @@ export type Client = z.infer<typeof ClientSchema>;
 export type Case = z.infer<typeof CaseSchema>;
 
 // Request/Command types
+// FHIR-style create client request
+const FhirAddressRequestSchema = z.object({
+  use: z.enum(['HOME', 'WORK', 'TEMP', 'OLD', 'BILLING']).optional(),
+  type: z.enum(['POSTAL', 'PHYSICAL', 'BOTH']).optional(),
+  text: z.string().optional(),
+  line: z.array(z.string()).optional(),
+  city: z.string().optional(),
+  district: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+});
+
+const FhirContactPointRequestSchema = z.object({
+  system: z.enum(['PHONE', 'FAX', 'EMAIL', 'PAGER', 'URL', 'SMS', 'OTHER']),
+  value: z.string(),
+  use: z.enum(['HOME', 'WORK', 'TEMP', 'OLD', 'MOBILE']).optional(),
+  rank: z.number().optional(),
+});
+
+const FhirContactRequestSchema = z.object({
+  relationship: z.array(z.object({ text: z.string().optional() })).optional(),
+  name: HumanNameSchema.optional(),
+  telecom: z.array(FhirContactPointRequestSchema).optional(),
+  address: FhirAddressRequestSchema.optional(),
+  gender: z.string().optional(),
+  organization: z.string().optional(),
+  period: z.any().optional(),
+});
+
 export const CreateClientRequestSchema = z.object({
-  givenName: z.string().min(1).max(100),
-  familyName: z.string().min(1).max(100),
+  name: HumanNameSchema,
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'UNKNOWN']),
   birthDate: z.string().optional(),
+  maritalStatus: z.object({
+    text: z.string().optional(),
+    coding: z.array(z.object({
+      system: z.string().optional(),
+      version: z.string().optional(),
+      code: z.string().optional(),
+      display: z.string().optional(),
+      userSelected: z.boolean().optional(),
+    })).optional(),
+  }).optional(),
+  addresses: z.array(FhirAddressRequestSchema).optional(),
+  telecoms: z.array(FhirContactPointRequestSchema).optional(),
+  contact: z.array(FhirContactRequestSchema).optional(),
+  communication: z.array(z.object({
+    language: z.object({ text: z.string().optional(), coding: z.array(z.any()).optional() }).optional(),
+    preferred: z.boolean().optional(),
+  })).optional(),
+  status: z.string().optional(),
 });
 
 export const UpdateClientDemographicsRequestSchema = z.object({
@@ -991,4 +1038,335 @@ export interface LandlordCommunicationFilters {
   startDate?: string;
   endDate?: string;
   consentType?: string;
+}
+
+// Enrollment types
+export interface EnrollmentSummary {
+  id: string;
+  clientId: string;
+  programId: string;
+  programName?: string;
+  enrollmentDate: string;
+  predecessorEnrollmentId?: string;
+  residentialMoveInDate?: string;
+  householdId?: string;
+  status: string;
+  stage?: 'INTAKE' | 'ACTIVE' | 'HOUSING_SEARCH' | 'STABILIZATION' | 'EXIT_PLANNING' | 'FOLLOW_UP' | 'CLOSED';
+  programType?: string;
+}
+
+export interface IntakeAssessment {
+  enrollmentId: string;
+  clientId: string;
+  assessmentDate: string;
+  assessmentType: 'INTAKE' | 'COMPREHENSIVE' | 'REASSESSMENT';
+  assessorName: string;
+  assessorId: string;
+  status: 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'APPROVED';
+  completionPercentage: number;
+  lastModified: string;
+  sections: IntakeSection[];
+}
+
+export interface IntakeSection {
+  id: string;
+  name: string;
+  description?: string;
+  isRequired: boolean;
+  isCompleted: boolean;
+  completedAt?: string;
+  completedBy?: string;
+  fields: IntakeField[];
+}
+
+export interface IntakeField {
+  id: string;
+  name: string;
+  type: 'TEXT' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'SELECT' | 'MULTI_SELECT' | 'TEXTAREA';
+  label: string;
+  description?: string;
+  isRequired: boolean;
+  value?: any;
+  options?: IntakeFieldOption[];
+  validation?: IntakeFieldValidation;
+}
+
+export interface IntakeFieldOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface IntakeFieldValidation {
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  min?: number;
+  max?: number;
+}
+
+export interface UpdateIntakeFieldRequest {
+  fieldId: string;
+  value: any;
+}
+
+// Financial Assistance types
+export interface FinancialAssistanceRequest {
+  id: string;
+  clientId: string;
+  enrollmentId: string;
+  requestType: AssistanceRequestType;
+  amount: number;
+  requestDate: string;
+  coveragePeriodStart?: string;
+  coveragePeriodEnd?: string;
+  payeeId: string;
+  payeeName: string;
+  fundingSourceId: string;
+  fundingSourceName: string;
+  justification: string;
+  notes?: string;
+  status: AssistanceRequestStatus;
+  approvalWorkflow: ApprovalStep[];
+  supportingDocuments: SupportingDocument[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  lastModifiedBy: string;
+}
+
+export interface CreateAssistanceRequestRequest {
+  clientId: string;
+  enrollmentId: string;
+  requestType: AssistanceRequestType;
+  amount: number;
+  coveragePeriodStart?: string;
+  coveragePeriodEnd?: string;
+  payeeId: string;
+  payeeName: string;
+  fundingSourceId: string;
+  justification: string;
+  notes?: string;
+  supportingDocumentIds: string[];
+}
+
+export interface AssistanceLedgerEntry {
+  id: string;
+  clientId: string;
+  enrollmentId: string;
+  date: string;
+  type: AssistanceRequestType;
+  description: string;
+  amount: number;
+  fundingSource: string;
+  status: AssistancePaymentStatus;
+  payeeName: string;
+  approvedBy?: string;
+  paidDate?: string;
+  checkNumber?: string;
+  transactionId?: string;
+}
+
+export interface AssistanceSummary {
+  clientId: string;
+  enrollmentId: string;
+  totalApproved: number;
+  totalDisbursed: number;
+  totalPending: number;
+  budgetCap: number;
+  remainingBudget: number;
+  byType: {
+    rent: AssistanceTypeSummary;
+    utilities: AssistanceTypeSummary;
+    deposit: AssistanceTypeSummary;
+    moving: AssistanceTypeSummary;
+    other: AssistanceTypeSummary;
+  };
+}
+
+export interface AssistanceTypeSummary {
+  approved: number;
+  disbursed: number;
+  pending: number;
+  monthlyAmount?: number;
+  coverageEndDate?: string;
+}
+
+export interface ApprovalStep {
+  id: string;
+  stepName: string;
+  approverRole: string;
+  approverName?: string;
+  approverId?: string;
+  status: ApprovalStatus;
+  approvedAt?: string;
+  comments?: string;
+  isRequired: boolean;
+  order: number;
+}
+
+export interface SupportingDocument {
+  id: string;
+  filename: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  documentType: SupportingDocumentType;
+  description?: string;
+}
+
+export interface Payee {
+  id: string;
+  name: string;
+  type: PayeeType;
+  contactInfo: PayeeContact;
+  taxInfo: PayeeTaxInfo;
+  bankInfo?: PayeeBankInfo;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayeeContact {
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  phone?: string;
+  email?: string;
+  contactPerson?: string;
+}
+
+export interface PayeeTaxInfo {
+  taxId: string;
+  taxIdType: TaxIdType;
+  w9OnFile: boolean;
+  w9ExpirationDate?: string;
+}
+
+export interface PayeeBankInfo {
+  accountType: BankAccountType;
+  routingNumber: string;
+  accountNumber: string; // Should be encrypted in real implementation
+  achSetupDate?: string;
+}
+
+export interface FundingSource {
+  id: string;
+  name: string;
+  type: FundingSourceType;
+  program: string;
+  totalBudget: number;
+  remainingBudget: number;
+  budgetPeriodStart: string;
+  budgetPeriodEnd: string;
+  clientCapLimit?: number;
+  monthlyCapLimit?: number;
+  isActive: boolean;
+  requiresDocuments: SupportingDocumentType[];
+  approvalThresholds: ApprovalThreshold[];
+}
+
+export interface ApprovalThreshold {
+  threshold: number;
+  requiredApprovers: string[];
+  description: string;
+}
+
+export interface ApprovalQueueItem {
+  requestId: string;
+  clientId: string;
+  clientName: string;
+  requestType: AssistanceRequestType;
+  amount: number;
+  caseManagerName: string;
+  submittedDate: string;
+  currentApprovalStep: string;
+  daysWaiting: number;
+  isUrgent: boolean;
+  fundingSource: string;
+}
+
+// Enums
+export enum AssistanceRequestType {
+  RENT = 'RENT',
+  RENT_ARREARS = 'RENT_ARREARS',
+  UTILITIES = 'UTILITIES',
+  UTILITY_ARREARS = 'UTILITY_ARREARS',
+  SECURITY_DEPOSIT = 'SECURITY_DEPOSIT',
+  APPLICATION_FEE = 'APPLICATION_FEE',
+  MOVING_COSTS = 'MOVING_COSTS',
+  OTHER = 'OTHER'
+}
+
+export enum AssistanceRequestStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  DISBURSED = 'DISBURSED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum AssistancePaymentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PAID = 'PAID',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum ApprovalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  SKIPPED = 'SKIPPED'
+}
+
+export enum SupportingDocumentType {
+  LEASE_AGREEMENT = 'LEASE_AGREEMENT',
+  RENTAL_AGREEMENT = 'RENTAL_AGREEMENT',
+  UTILITY_BILL = 'UTILITY_BILL',
+  EVICTION_NOTICE = 'EVICTION_NOTICE',
+  MOVE_IN_INSPECTION = 'MOVE_IN_INSPECTION',
+  INCOME_VERIFICATION = 'INCOME_VERIFICATION',
+  VENDOR_INVOICE = 'VENDOR_INVOICE',
+  RECEIPT = 'RECEIPT',
+  OTHER = 'OTHER'
+}
+
+export enum PayeeType {
+  LANDLORD = 'LANDLORD',
+  PROPERTY_MANAGER = 'PROPERTY_MANAGER',
+  UTILITY_COMPANY = 'UTILITY_COMPANY',
+  MOVING_COMPANY = 'MOVING_COMPANY',
+  VENDOR = 'VENDOR',
+  INDIVIDUAL = 'INDIVIDUAL'
+}
+
+export enum TaxIdType {
+  SSN = 'SSN',
+  EIN = 'EIN',
+  ITIN = 'ITIN'
+}
+
+export enum BankAccountType {
+  CHECKING = 'CHECKING',
+  SAVINGS = 'SAVINGS'
+}
+
+export enum FundingSourceType {
+  HUD_COC = 'HUD_COC',
+  HUD_RRH = 'HUD_RRH',
+  HUD_PSH = 'HUD_PSH',
+  VAWA = 'VAWA',
+  STATE_FUNDING = 'STATE_FUNDING',
+  LOCAL_FUNDING = 'LOCAL_FUNDING',
+  PRIVATE_FOUNDATION = 'PRIVATE_FOUNDATION',
+  OTHER = 'OTHER'
 }

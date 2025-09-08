@@ -29,6 +29,16 @@ import type {
   ServiceTypeResponse,
   ServiceDeliveryModeResponse,
   FundingSource,
+  EnrollmentSummary,
+  IntakeAssessment,
+  UpdateIntakeFieldRequest,
+  FinancialAssistanceRequest,
+  CreateAssistanceRequestRequest,
+  AssistanceLedgerEntry,
+  AssistanceSummary,
+  ApprovalQueueItem,
+  Payee,
+  FundingSource,
 } from './types';
 
 export class ApiClient {
@@ -463,6 +473,118 @@ export class ApiClient {
 
   async getFundingSources(): Promise<FundingSource[]> {
     return this.get<FundingSource[]>('/v1/service-episodes/funding-sources');
+  }
+
+  // =====================================
+  // Enrollments
+  // =====================================
+
+  async getClientEnrollments(clientId: string): Promise<EnrollmentSummary[]> {
+    return this.get<EnrollmentSummary[]>(`/api/v1/enrollments/client/${clientId}`);
+  }
+
+  async getEnrollmentChain(enrollmentId: string): Promise<EnrollmentSummary[]> {
+    return this.get<EnrollmentSummary[]>(`/api/v1/enrollments/${enrollmentId}/chain`);
+  }
+
+  // =====================================
+  // Intake Assessment
+  // =====================================
+
+  async getIntakeAssessment(enrollmentId: string): Promise<IntakeAssessment> {
+    return this.get<IntakeAssessment>(`/api/v1/intake/${enrollmentId}`);
+  }
+
+  async updateIntakeField(enrollmentId: string, request: UpdateIntakeFieldRequest): Promise<void> {
+    return this.put<void>(`/api/v1/intake/${enrollmentId}/fields`, request);
+  }
+
+  async completeIntakeSection(enrollmentId: string, sectionId: string): Promise<void> {
+    return this.post<void>(`/api/v1/intake/${enrollmentId}/sections/${sectionId}/complete`);
+  }
+
+  async submitIntakeAssessment(enrollmentId: string): Promise<void> {
+    return this.post<void>(`/api/v1/intake/${enrollmentId}/submit`);
+  }
+
+  // =====================================
+  // Financial Assistance
+  // =====================================
+
+  async getAssistanceRequests(clientId: string): Promise<FinancialAssistanceRequest[]> {
+    return this.get<FinancialAssistanceRequest[]>(`/api/v1/financial-assistance/client/${clientId}`);
+  }
+
+  async getAssistanceRequest(requestId: string): Promise<FinancialAssistanceRequest> {
+    return this.get<FinancialAssistanceRequest>(`/api/v1/financial-assistance/${requestId}`);
+  }
+
+  async createAssistanceRequest(request: CreateAssistanceRequestRequest): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/api/v1/financial-assistance', request);
+  }
+
+  async updateAssistanceRequest(requestId: string, request: Partial<CreateAssistanceRequestRequest>): Promise<void> {
+    return this.put<void>(`/api/v1/financial-assistance/${requestId}`, request);
+  }
+
+  async submitAssistanceRequest(requestId: string): Promise<void> {
+    return this.post<void>(`/api/v1/financial-assistance/${requestId}/submit`);
+  }
+
+  async approveAssistanceRequest(requestId: string, comments?: string): Promise<void> {
+    return this.post<void>(`/api/v1/financial-assistance/${requestId}/approve`, { comments });
+  }
+
+  async rejectAssistanceRequest(requestId: string, reason: string): Promise<void> {
+    return this.post<void>(`/api/v1/financial-assistance/${requestId}/reject`, { reason });
+  }
+
+  async getAssistanceSummary(clientId: string, enrollmentId: string): Promise<AssistanceSummary> {
+    return this.get<AssistanceSummary>(`/api/v1/financial-assistance/summary/${clientId}/${enrollmentId}`);
+  }
+
+  async getAssistanceLedger(clientId: string, enrollmentId?: string): Promise<AssistanceLedgerEntry[]> {
+    const path = enrollmentId 
+      ? `/api/v1/financial-assistance/ledger/${clientId}/${enrollmentId}`
+      : `/api/v1/financial-assistance/ledger/${clientId}`;
+    return this.get<AssistanceLedgerEntry[]>(path);
+  }
+
+  async exportLedger(clientId: string, format: 'csv' | 'pdf', enrollmentId?: string): Promise<{ downloadUrl: string }> {
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (enrollmentId) params.append('enrollmentId', enrollmentId);
+    
+    return this.post<{ downloadUrl: string }>(`/api/v1/financial-assistance/ledger/${clientId}/export?${params.toString()}`);
+  }
+
+  async getApprovalQueue(): Promise<ApprovalQueueItem[]> {
+    return this.get<ApprovalQueueItem[]>('/api/v1/financial-assistance/approval-queue');
+  }
+
+  async getPayees(): Promise<Payee[]> {
+    return this.get<Payee[]>('/api/v1/payees');
+  }
+
+  async getPayee(payeeId: string): Promise<Payee> {
+    return this.get<Payee>(`/api/v1/payees/${payeeId}`);
+  }
+
+  async createPayee(payee: Omit<Payee, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }> {
+    return this.post<{ id: string }>('/api/v1/payees', payee);
+  }
+
+  async getFinancialFundingSources(): Promise<FundingSource[]> {
+    return this.get<FundingSource[]>('/api/v1/funding-sources');
+  }
+
+  async uploadSupportingDocument(file: File, documentType: string, description?: string): Promise<{ id: string; filename: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    if (description) formData.append('description', description);
+
+    return this.post<{ id: string; filename: string }>('/api/v1/documents/upload', formData);
   }
 }
 

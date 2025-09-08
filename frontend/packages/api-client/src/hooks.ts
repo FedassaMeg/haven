@@ -28,6 +28,13 @@ import type {
   ComplianceOverview,
   ComplianceMetric,
   AuditEntry,
+  EnrollmentSummary,
+  IntakeAssessment,
+  FinancialAssistanceRequest,
+  CreateAssistanceRequestRequest,
+  AssistanceLedgerEntry,
+  AssistanceSummary,
+  Payee,
   AuditLogFilters,
   MandatedReport,
   CreateMandatedReportRequest,
@@ -1687,6 +1694,274 @@ export function useGenerateReport() {
 
   return {
     generateReport,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+// =====================================
+// Enrollment and Intake hooks
+// =====================================
+
+export function useClientEnrollments(clientId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<EnrollmentSummary[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchEnrollments = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const enrollments = await apiClient.getClientEnrollments(clientId);
+      setData(enrollments);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [clientId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchEnrollments();
+    }
+  }, [fetchEnrollments, hasError]);
+
+  return {
+    enrollments: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchEnrollments,
+  };
+}
+
+export function useIntakeAssessment(enrollmentId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<IntakeAssessment>();
+  const [hasError, setHasError] = useState(false);
+
+  const fetchIntakeAssessment = useCallback(async () => {
+    if (!enrollmentId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const assessment = await apiClient.getIntakeAssessment(enrollmentId);
+      setData(assessment);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchIntakeAssessment();
+    }
+  }, [fetchIntakeAssessment, hasError]);
+
+  const updateField = useCallback(async (fieldId: string, value: any) => {
+    if (!enrollmentId) return;
+    
+    try {
+      await apiClient.updateIntakeField(enrollmentId, { fieldId, value });
+      // Refetch assessment after updating
+      await fetchIntakeAssessment();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [enrollmentId, fetchIntakeAssessment, setError]);
+
+  const completeSection = useCallback(async (sectionId: string) => {
+    if (!enrollmentId) return;
+    
+    try {
+      await apiClient.completeIntakeSection(enrollmentId, sectionId);
+      // Refetch assessment after completing section
+      await fetchIntakeAssessment();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [enrollmentId, fetchIntakeAssessment, setError]);
+
+  const submitAssessment = useCallback(async () => {
+    if (!enrollmentId) return;
+    
+    try {
+      await apiClient.submitIntakeAssessment(enrollmentId);
+      // Refetch assessment after submission
+      await fetchIntakeAssessment();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [enrollmentId, fetchIntakeAssessment, setError]);
+
+  return {
+    assessment: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchIntakeAssessment,
+    updateField,
+    completeSection,
+    submitAssessment,
+  };
+}
+
+// =====================================
+// Financial Assistance hooks
+// =====================================
+
+export function useAssistanceRequests(clientId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<FinancialAssistanceRequest[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchRequests = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const requests = await apiClient.getAssistanceRequests(clientId);
+      setData(requests);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [clientId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchRequests();
+    }
+  }, [fetchRequests, hasError]);
+
+  return {
+    requests: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchRequests,
+  };
+}
+
+export function useAssistanceSummary(clientId: string | null, enrollmentId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<AssistanceSummary>();
+  const [hasError, setHasError] = useState(false);
+
+  const fetchSummary = useCallback(async () => {
+    if (!clientId || !enrollmentId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const summary = await apiClient.getAssistanceSummary(clientId, enrollmentId);
+      setData(summary);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [clientId, enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchSummary();
+    }
+  }, [fetchSummary, hasError]);
+
+  return {
+    summary: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchSummary,
+  };
+}
+
+export function useAssistanceLedger(clientId: string | null, enrollmentId?: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<AssistanceLedgerEntry[]>([]);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchLedger = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    setHasError(false);
+    try {
+      const ledger = await apiClient.getAssistanceLedger(clientId, enrollmentId || undefined);
+      setData(ledger);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      setHasError(true);
+    }
+  }, [clientId, enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    if (!hasError) {
+      fetchLedger();
+    }
+  }, [fetchLedger, hasError]);
+
+  return {
+    ledger: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchLedger,
+  };
+}
+
+export function useCreateAssistanceRequest() {
+  const [state, { setLoading, setError, reset }] = useApiState();
+
+  const createRequest = useCallback(async (requestData: CreateAssistanceRequestRequest) => {
+    setLoading(true);
+    try {
+      const result = await apiClient.createAssistanceRequest(requestData);
+      reset();
+      return result;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  const submitRequest = useCallback(async (requestId: string) => {
+    setLoading(true);
+    try {
+      await apiClient.submitAssistanceRequest(requestId);
+      reset();
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    }
+  }, [setLoading, setError, reset]);
+
+  return {
+    createRequest,
+    submitRequest,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function usePayees() {
+  const [state, { setData, setLoading, setError }] = useApiState<Payee[]>([]);
+
+  useEffect(() => {
+    const fetchPayees = async () => {
+      setLoading(true);
+      try {
+        const payees = await apiClient.getPayees();
+        setData(payees);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchPayees();
+  }, [setData, setLoading, setError]);
+
+  return {
+    payees: state.data,
     loading: state.loading,
     error: state.error,
   };
