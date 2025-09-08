@@ -1,4 +1,4 @@
-import { Input, Select, FormCheckbox as Checkbox } from '@haven/ui';
+import { Input, FormSelect, FormCheckbox as Checkbox } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface ContactInfoStepProps {
@@ -61,7 +61,7 @@ export default function ContactInfoStep({ data, errors, onChange }: ContactInfoS
       <div>
         <h3 className="text-lg font-semibold mb-4">Communication Preferences</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
+          <FormSelect
             id="preferredContactMethod"
             label="Preferred Contact Method"
             value={data.preferredContactMethod}
@@ -74,7 +74,7 @@ export default function ContactInfoStep({ data, errors, onChange }: ContactInfoS
               { value: 'IN_PERSON', label: 'In Person Only' }
             ]}
           />
-          <Select
+          <FormSelect
             id="preferredLanguage"
             label="Preferred Language"
             value={data.preferredLanguage}

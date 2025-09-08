@@ -1,4 +1,4 @@
-import { Input, Select } from '@haven/ui';
+import { Input, FormSelect } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface BasicInfoStepProps {
@@ -91,7 +91,7 @@ export default function BasicInfoStep({ data, errors, onChange }: BasicInfoStepP
       <div>
         <h3 className="text-lg font-semibold mb-4">Demographics</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
+          <FormSelect
             id="gender"
             label="Administrative Gender"
             value={data.gender}
@@ -152,7 +152,7 @@ export default function BasicInfoStep({ data, errors, onChange }: BasicInfoStepP
               }
             </p>
           </div>
-          <Select
+          <FormSelect
             id="ssnDataQuality"
             label="SSN Data Quality"
             value={data.ssnDataQuality.toString()}
@@ -172,7 +172,7 @@ export default function BasicInfoStep({ data, errors, onChange }: BasicInfoStepP
       <div>
         <h3 className="text-lg font-semibold mb-4">Data Quality Assessment</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
+          <FormSelect
             id="nameDataQuality"
             label="Name Data Quality"
             value={data.nameDataQuality.toString()}
@@ -186,7 +186,7 @@ export default function BasicInfoStep({ data, errors, onChange }: BasicInfoStepP
             ]}
             helperText="Quality of name information provided"
           />
-          <Select
+          <FormSelect
             id="dobDataQuality"
             label="DOB Data Quality"
             value={data.dobDataQuality.toString()}

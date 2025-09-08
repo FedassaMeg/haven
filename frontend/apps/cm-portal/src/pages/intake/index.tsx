@@ -71,7 +71,7 @@ export interface IntakeFormData {
     quietHoursEnd: string;
   };
   safeAtHomeParticipant: boolean;
-  domesticViolenceVictim: boolean;
+  domesticViolenceVictim: boolean | null;
   domesticViolenceFleeing: boolean;
   
   // Step 6: Documents & Consent
@@ -102,8 +102,8 @@ const initialFormData: IntakeFormData = {
   
   hmisRace: [],
   hmisGender: [],
-  veteranStatus: 'DATA_NOT_COLLECTED',
-  disablingCondition: 'DATA_NOT_COLLECTED',
+  veteranStatus: '',
+  disablingCondition: '',
   nameDataQuality: 1,
   dobDataQuality: 1,
   
@@ -141,7 +141,7 @@ const initialFormData: IntakeFormData = {
     quietHoursEnd: ''
   },
   safeAtHomeParticipant: false,
-  domesticViolenceVictim: false,
+  domesticViolenceVictim: null,
   domesticViolenceFleeing: false,
   
   consentToServices: false,
@@ -206,11 +206,19 @@ export default function IntakePage() {
       
       case 2: // HMIS Data
         if (formData.hmisRace.length === 0) {
-          newErrors.hmisRace = 'At least one race selection is required';
+          newErrors.hmisRace = 'At least one race selection is required for HMIS compliance';
           isValid = false;
         }
         if (formData.hmisGender.length === 0) {
-          newErrors.hmisGender = 'At least one gender selection is required';
+          newErrors.hmisGender = 'At least one gender selection is required for HMIS compliance';
+          isValid = false;
+        }
+        if (!formData.veteranStatus || formData.veteranStatus === '') {
+          newErrors.veteranStatus = 'Veteran status is required for HMIS compliance';
+          isValid = false;
+        }
+        if (!formData.disablingCondition || formData.disablingCondition === '') {
+          newErrors.disablingCondition = 'Disabling condition status is required for HMIS compliance';
           isValid = false;
         }
         break;
@@ -224,14 +232,43 @@ export default function IntakePage() {
       
       case 4: // Housing History
         if (!formData.priorLivingSituation) {
-          newErrors.priorLivingSituation = 'Prior living situation is required';
+          newErrors.priorLivingSituation = 'Prior living situation is required for HMIS compliance';
+          isValid = false;
+        }
+        if (!formData.lengthOfStay) {
+          newErrors.lengthOfStay = 'Length of stay is required for HMIS compliance';
+          isValid = false;
+        }
+        if (!formData.dateOfEngagement) {
+          newErrors.dateOfEngagement = 'Date of engagement is required for HMIS compliance';
+          isValid = false;
+        }
+        break;
+      
+      case 5: // Safety Planning  
+        // No required fields for step 5 - all safety preferences are optional
+        // but we validate that the domestic violence questions are answered
+        if (formData.domesticViolenceVictim === undefined || formData.domesticViolenceVictim === null) {
+          newErrors.domesticViolenceVictim = 'Domestic violence history is required for HMIS compliance';
           isValid = false;
         }
         break;
       
       case 6: // Documents & Consent
         if (!formData.consentToServices) {
-          newErrors.consent = 'Consent to services is required';
+          newErrors.consentToServices = 'Consent to services is required';
+          isValid = false;
+        }
+        if (!formData.consentToHmisParticipation) {
+          newErrors.consentToHmisParticipation = 'HMIS participation consent is required for federal compliance';
+          isValid = false;
+        }
+        if (!formData.intakeWorker || formData.intakeWorker.trim() === '') {
+          newErrors.intakeWorker = 'Intake worker identification is required';
+          isValid = false;
+        }
+        if (!formData.intakeLocation || formData.intakeLocation.trim() === '') {
+          newErrors.intakeLocation = 'Intake location is required';
           isValid = false;
         }
         break;
@@ -507,7 +544,29 @@ export default function IntakePage() {
                   Step {currentStep}: {STEPS[currentStep - 1].name}
                 </CardTitle>
               </CardHeader>
-              <CardContent>{renderStep()}</CardContent>
+              <CardContent>
+                {/* Validation Error Summary */}
+                {Object.keys(errors).length > 0 && (
+                  <div className="bg-destructive-50 border border-destructive-200 rounded-lg p-4 mb-6">
+                    <div className="flex">
+                      <svg className="h-5 w-5 text-destructive-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-destructive-800">
+                          Please fix the following errors to continue:
+                        </h3>
+                        <ul className="mt-2 text-sm text-destructive-700 space-y-1">
+                          {Object.entries(errors).map(([field, error]) => (
+                            <li key={field}>• {error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {renderStep()}
+              </CardContent>
             </Card>
 
             {/* Navigation Buttons */}
@@ -527,7 +586,7 @@ export default function IntakePage() {
                 </Link>
                 
                 {currentStep < STEPS.length ? (
-                  <Button onClick={handleNext}>
+                  <Button type="button" onClick={handleNext}>
                     Next Step
                   </Button>
                 ) : (

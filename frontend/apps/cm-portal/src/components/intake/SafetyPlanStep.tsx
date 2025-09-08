@@ -1,4 +1,4 @@
-import { Input, FormCheckbox as Checkbox, Select } from '@haven/ui';
+import { Input, FormCheckbox as Checkbox, FormSelect } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface SafetyPlanStepProps {
@@ -92,11 +92,12 @@ export default function SafetyPlanStep({ data, errors, onChange }: SafetyPlanSte
             <label className="block text-sm font-medium text-secondary-700 mb-2">
               Domestic Violence Victim/Survivor
             </label>
-            <Select
+            <FormSelect
               id="domesticViolenceVictim"
               value={data.domesticViolenceVictim ? 'YES' : 'NO'}
               onChange={(value) => onChange({ domesticViolenceVictim: value === 'YES' })}
               options={[
+                { value: '', label: 'Select...' },
                 { value: 'NO', label: 'No' },
                 { value: 'YES', label: 'Yes' },
                 { value: 'UNKNOWN', label: 'Client doesn\'t know' },
@@ -111,11 +112,12 @@ export default function SafetyPlanStep({ data, errors, onChange }: SafetyPlanSte
               <label className="block text-sm font-medium text-warning-800 mb-2">
                 Currently Fleeing Domestic Violence
               </label>
-              <Select
+              <FormSelect
                 id="domesticViolenceFleeing"
                 value={data.domesticViolenceFleeing ? 'YES' : 'NO'}
                 onChange={(value) => onChange({ domesticViolenceFleeing: value === 'YES' })}
                 options={[
+                  { value: '', label: 'Select...' },
                   { value: 'NO', label: 'No' },
                   { value: 'YES', label: 'Yes - Currently fleeing' }
                 ]}

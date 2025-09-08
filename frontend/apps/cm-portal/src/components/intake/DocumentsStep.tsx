@@ -1,4 +1,4 @@
-import { FormCheckbox as Checkbox, Input, Select } from '@haven/ui';
+import { FormCheckbox as Checkbox, Input, FormSelect } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface DocumentsStepProps {
@@ -150,12 +150,13 @@ export default function DocumentsStep({ data, errors, onChange }: DocumentsStepP
             onChange={(e) => onChange({ intakeLocation: e.target.value })}
             placeholder="Office, shelter, outreach site, etc."
           />
-          <Select
+          <FormSelect
             id="dataCollectionStage"
             label="Data Collection Stage"
             value={data.dataCollectionStage}
             onChange={(value) => onChange({ dataCollectionStage: value })}
             options={[
+              { value: '', label: 'Select...' },
               { value: 'PROJECT_START', label: 'Project Start' },
               { value: 'PROJECT_UPDATE', label: 'Project Update' },
               { value: 'PROJECT_ANNUAL', label: 'Annual Assessment' },

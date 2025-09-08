@@ -1,4 +1,4 @@
-import { Input, Select } from '@haven/ui';
+import { Input, FormSelect } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface HousingHistoryStepProps {
@@ -74,27 +74,18 @@ export default function HousingHistoryStep({ data, errors, onChange }: HousingHi
         <p className="text-sm text-secondary-600 mb-4">
           Where was the client living immediately before entering this program?
         </p>
-        {errors.priorLivingSituation && (
-          <p className="text-sm text-red-600 mb-2">{errors.priorLivingSituation}</p>
-        )}
-        <Select
+        <FormSelect
           id="priorLivingSituation"
           label="Living Situation"
           value={data.priorLivingSituation}
           onChange={(value) => onChange({ priorLivingSituation: value })}
           required
-        >
-          <option value="">Select prior living situation</option>
-          {LIVING_SITUATIONS.map(group => (
-            <optgroup key={group.group} label={group.group}>
-              {group.options.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </Select>
+          error={errors.priorLivingSituation}
+          options={[
+            { value: '', label: 'Select prior living situation' },
+            ...LIVING_SITUATIONS.flatMap(group => group.options)
+          ]}
+        />
       </div>
 
       {/* Length of Stay */}
@@ -103,7 +94,7 @@ export default function HousingHistoryStep({ data, errors, onChange }: HousingHi
         <p className="text-sm text-secondary-600 mb-4">
           How long was the client in their prior living situation?
         </p>
-        <Select
+        <FormSelect
           id="lengthOfStay"
           label="Length of Stay"
           value={data.lengthOfStay}

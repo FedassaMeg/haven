@@ -1,4 +1,4 @@
-import { Select, FormCheckbox as Checkbox } from '@haven/ui';
+import { FormSelect, FormCheckbox } from '@haven/ui';
 import { IntakeFormData } from '../../pages/intake';
 
 interface HmisDataStepProps {
@@ -77,7 +77,7 @@ export default function HmisDataStep({ data, errors, onChange }: HmisDataStepPro
         )}
         <div className="space-y-3">
           {RACE_OPTIONS.map(option => (
-            <Checkbox
+            <FormCheckbox
               key={option.value}
               id={`race-${option.value}`}
               label={option.label}
@@ -101,7 +101,7 @@ export default function HmisDataStep({ data, errors, onChange }: HmisDataStepPro
         )}
         <div className="space-y-3">
           {GENDER_OPTIONS.map(option => (
-            <Checkbox
+            <FormCheckbox
               key={option.value}
               id={`gender-${option.value}`}
               label={option.label}
@@ -119,18 +119,21 @@ export default function HmisDataStep({ data, errors, onChange }: HmisDataStepPro
           <p className="text-sm text-secondary-600 mb-4">
             Has the client ever served in the United States Armed Forces?
           </p>
-          <Select
+          <FormSelect
             id="veteranStatus"
             label="Veteran Status"
             value={data.veteranStatus}
             onChange={(value) => onChange({ veteranStatus: value })}
             options={[
+              { value: '', label: 'Select veteran status' },
               { value: 'NO', label: 'No' },
               { value: 'YES', label: 'Yes' },
               { value: 'CLIENT_DOESNT_KNOW', label: 'Client doesn\'t know' },
               { value: 'CLIENT_PREFERS_NOT_TO_ANSWER', label: 'Client prefers not to answer' },
               { value: 'DATA_NOT_COLLECTED', label: 'Data not collected' }
             ]}
+            required
+            error={errors.veteranStatus}
           />
         </div>
       )}
@@ -142,12 +145,13 @@ export default function HmisDataStep({ data, errors, onChange }: HmisDataStepPro
           Does the client have a disabling condition that is expected to be of long-continued
           and indefinite duration and substantially impairs their ability to live independently?
         </p>
-        <Select
+        <FormSelect
           id="disablingCondition"
           label="Disabling Condition"
           value={data.disablingCondition}
           onChange={(value) => onChange({ disablingCondition: value })}
           options={[
+            { value: '', label: 'Select disabling condition status' },
             { value: 'NO', label: 'No' },
             { value: 'YES', label: 'Yes' },
             { value: 'CLIENT_DOESNT_KNOW', label: 'Client doesn\'t know' },
@@ -155,6 +159,8 @@ export default function HmisDataStep({ data, errors, onChange }: HmisDataStepPro
             { value: 'DATA_NOT_COLLECTED', label: 'Data not collected' }
           ]}
           helperText="This information helps determine program eligibility"
+          required
+          error={errors.disablingCondition}
         />
       </div>
 
