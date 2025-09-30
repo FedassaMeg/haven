@@ -55,6 +55,10 @@ public class HouseholdComposition extends AggregateRoot<HouseholdCompositionId> 
         return composition;
     }
     
+    public static HouseholdComposition reconstruct() {
+        return new HouseholdComposition();
+    }
+    
     /**
      * Add a member with effective date (supports backdating)
      */
