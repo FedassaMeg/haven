@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { ProtectedRoute, useCurrentUser } from '@haven/auth';
-import { Card, CardHeader, CardTitle, CardContent } from '@haven/ui';
-import { RestrictedNote, ConfidentialityGuardrails } from '@haven/api-client';
+import { Card, CardHeader, CardTitle, CardContent, Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@haven/ui';
+import { 
+  RestrictedNote, 
+  ConfidentialityGuardrails,
+  useRestrictedNotes,
+  useCreateRestrictedNote,
+  useSealNote,
+  useUnsealNote,
+  useUpdateRestrictedNote
+} from '@haven/api-client';
 import AppLayout from '../../../components/AppLayout';
 import ConfidentialityBanner from '../../../components/ConfidentialityBanner';
 import RestrictedNotesPanel from '../../../components/RestrictedNotesPanel';
+import SealNoteModal from '../../../components/SealNoteModal';
+import UnsealNoteModal from '../../../components/UnsealNoteModal';
 
 // Mock data for demonstration
 const mockGuardrails: ConfidentialityGuardrails = {
@@ -114,59 +124,81 @@ function ClientNotesContent() {
   const router = useRouter();
   const { user } = useCurrentUser();
   const { id: clientId } = router.query;
-  const [notes, setNotes] = useState<RestrictedNote[]>(mockNotes);
+  
+  // API hooks
+  const { data: notes = [], isLoading, error, refetch } = useRestrictedNotes(clientId as string);
+  const createNoteMutation = useCreateRestrictedNote();
+  const updateNoteMutation = useUpdateRestrictedNote();
+  const sealNoteMutation = useSealNote();
+  const unsealNoteMutation = useUnsealNote();
+  
+  // UI state
+  const [sealModalOpen, setSealModalOpen] = useState(false);
+  const [unsealModalOpen, setUnsealModalOpen] = useState(false);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 
-  const handleCreateNote = async (noteType: RestrictedNote['noteType'], content: string) => {
-    const newNote: RestrictedNote = {
-      noteId: `note-${Date.now()}`,
-      clientId: clientId as string,
-      clientName: mockGuardrails.clientName,
-      caseId: 'case-456',
-      caseNumber: 'DV-2024-001',
-      noteType,
-      content,
-      authorId: user?.id || 'current-user',
-      authorName: user?.fullName || 'Current User',
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-      visibilityScope: getDefaultVisibilityScope(noteType),
-      isSealed: false,
-      requiresSpecialHandling: ['PRIVILEGED_COUNSELING', 'ATTORNEY_CLIENT'].includes(noteType),
-      visibilityWarning: getVisibilityWarning(noteType)
-    };
-
-    setNotes(prev => [newNote, ...prev]);
+  const handleCreateNote = async (noteType: string, content: string, title: string) => {
+    try {
+      await createNoteMutation.mutateAsync({
+        clientId: clientId as string,
+        clientName: mockGuardrails.clientName,
+        caseId: 'case-456',
+        caseNumber: 'DV-2024-001',
+        noteType,
+        content,
+        title,
+        visibilityScope: getDefaultVisibilityScope(noteType)
+      });
+    } catch (error) {
+      console.error('Failed to create note:', error);
+    }
   };
 
-  const handleSealNote = async (noteId: string, reason: string) => {
-    setNotes(prev => prev.map(note => 
-      note.noteId === noteId 
-        ? {
-            ...note,
-            isSealed: true,
-            sealReason: reason,
-            sealedAt: new Date().toISOString(),
-            sealedBy: user?.id || 'current-user'
-          }
-        : note
-    ));
+  const handleSealNote = async (noteId: string, sealReason: string, legalBasis: string, isTemporary: boolean, expiresAt?: string) => {
+    try {
+      await sealNoteMutation.mutateAsync({
+        noteId,
+        data: {
+          sealReason,
+          legalBasis,
+          temporary: isTemporary,
+          expiresAt
+        }
+      });
+      setSealModalOpen(false);
+      setSelectedNoteId(null);
+    } catch (error) {
+      console.error('Failed to seal note:', error);
+    }
   };
 
-  const handleUnsealNote = async (noteId: string) => {
-    setNotes(prev => prev.map(note => 
-      note.noteId === noteId 
-        ? {
-            ...note,
-            isSealed: false,
-            sealReason: undefined,
-            sealedAt: undefined,
-            sealedBy: undefined
-          }
-        : note
-    ));
+  const handleUnsealNote = async (noteId: string, unsealReason: string, legalBasis: string) => {
+    try {
+      await unsealNoteMutation.mutateAsync({
+        noteId,
+        data: {
+          unsealReason,
+          legalBasis
+        }
+      });
+      setUnsealModalOpen(false);
+      setSelectedNoteId(null);
+    } catch (error) {
+      console.error('Failed to unseal note:', error);
+    }
   };
 
-  const getDefaultVisibilityScope = (noteType: RestrictedNote['noteType']): RestrictedNote['visibilityScope'] => {
+  const openSealModal = (noteId: string) => {
+    setSelectedNoteId(noteId);
+    setSealModalOpen(true);
+  };
+
+  const openUnsealModal = (noteId: string) => {
+    setSelectedNoteId(noteId);
+    setUnsealModalOpen(true);
+  };
+
+  const getDefaultVisibilityScope = (noteType: string): string => {
     switch (noteType) {
       case 'PRIVILEGED_COUNSELING':
       case 'COUNSELING':
@@ -186,7 +218,7 @@ function ClientNotesContent() {
     }
   };
 
-  const getVisibilityWarning = (noteType: RestrictedNote['noteType']): string | undefined => {
+  const getVisibilityWarning = (noteType: string): string | undefined => {
     switch (noteType) {
       case 'PRIVILEGED_COUNSELING':
         return '🔐 PRIVILEGED COUNSELING - Confidential therapeutic communication';
@@ -222,9 +254,36 @@ function ClientNotesContent() {
       <RestrictedNotesPanel
         notes={notes}
         onCreateNote={handleCreateNote}
-        onSealNote={handleSealNote}
-        onUnsealNote={handleUnsealNote}
-        loading={false}
+        onSealNote={openSealModal}
+        onUnsealNote={openUnsealModal}
+        loading={isLoading}
+        error={error}
+      />
+
+      {/* Seal Note Modal */}
+      <SealNoteModal
+        isOpen={sealModalOpen}
+        onClose={() => {
+          setSealModalOpen(false);
+          setSelectedNoteId(null);
+        }}
+        onSeal={(sealReason, legalBasis, isTemporary, expiresAt) =>
+          selectedNoteId && handleSealNote(selectedNoteId, sealReason, legalBasis, isTemporary, expiresAt)
+        }
+        loading={sealNoteMutation.isPending}
+      />
+
+      {/* Unseal Note Modal */}
+      <UnsealNoteModal
+        isOpen={unsealModalOpen}
+        onClose={() => {
+          setUnsealModalOpen(false);
+          setSelectedNoteId(null);
+        }}
+        onUnseal={(unsealReason, legalBasis) =>
+          selectedNoteId && handleUnsealNote(selectedNoteId, unsealReason, legalBasis)
+        }
+        loading={unsealNoteMutation.isPending}
       />
 
       {/* Compliance Information */}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute, PermissionGuard } from '@haven/auth';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Tabs, TabsList, TabsTrigger, TabsContent, Table, Select } from '@haven/ui';
-import { useComplianceOverview, useAuditLog, type ComplianceMetric, type AuditEntry } from '@haven/api-client';
+import { useComplianceOverview, useAuditLog, useHudComplianceSummary, useHudElementsByCategory, type ComplianceMetric, type AuditEntry, type ComplianceSummaryResponse, type HudDataElement } from '@haven/api-client';
 import AppLayout from '../../components/AppLayout';
 
 function ComplianceContent() {
@@ -17,6 +17,8 @@ function ComplianceContent() {
 
   const { overview, refetch } = useComplianceOverview();
   const { auditLog, loading: auditLoading } = useAuditLog(auditFilters);
+  const { summary: hudSummary, loading: hudSummaryLoading } = useHudComplianceSummary();
+  const { elements: hudElements, loading: hudElementsLoading } = useHudElementsByCategory();
 
   const getComplianceStatus = (metric: ComplianceMetric) => {
     const percentage = (metric.achieved / metric.target) * 100;
@@ -114,8 +116,9 @@ function ComplianceContent() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Compliance Overview</TabsTrigger>
+          <TabsTrigger value="hud">HUD Compliance</TabsTrigger>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
           <TabsTrigger value="funding">Funding Compliance</TabsTrigger>
           <TabsTrigger value="privacy">Privacy & Security</TabsTrigger>
@@ -286,6 +289,250 @@ function ComplianceContent() {
                 </Card>
               </div>
             </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="hud" className="mt-6">
+          {hudSummary && (
+            <>
+              {/* HUD Compliance Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-secondary-600">HUD Compliance Score</p>
+                        <p className="text-2xl font-bold text-secondary-900">{hudSummary.overallScore.toFixed(1)}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-secondary-600">Fully Implemented</p>
+                        <p className="text-2xl font-bold text-secondary-900">{hudSummary.fullyImplemented}</p>
+                        <p className="text-xs text-secondary-500">of {hudSummary.totalElements} elements</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-secondary-600">Partially Implemented</p>
+                        <p className="text-2xl font-bold text-secondary-900">{hudSummary.partiallyImplemented}</p>
+                        <p className="text-xs text-secondary-500">need completion</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-secondary-600">Not Implemented</p>
+                        <p className="text-2xl font-bold text-secondary-900">{hudSummary.notImplemented}</p>
+                        <p className="text-xs text-secondary-500">require implementation</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* HUD Categories */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>HUD Element Categories</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Object.entries(hudSummary.categories).map(([key, category]) => {
+                        const percentage = category.compliancePercentage;
+                        const getStatusColor = (pct: number) => {
+                          if (pct >= 90) return 'bg-green-500';
+                          if (pct >= 70) return 'bg-blue-500';
+                          if (pct >= 50) return 'bg-yellow-500';
+                          return 'bg-red-500';
+                        };
+                        
+                        return (
+                          <div key={key} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-secondary-900">{category.displayName}</h4>
+                              <Badge variant="outline" className={
+                                percentage >= 90 ? 'bg-green-100 text-green-800 border-green-200' :
+                                percentage >= 70 ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                percentage >= 50 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                'bg-red-100 text-red-800 border-red-200'
+                              }>
+                                {percentage >= 90 ? 'Excellent' :
+                                 percentage >= 70 ? 'Good' :
+                                 percentage >= 50 ? 'Fair' : 'Needs Work'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-secondary-600">
+                              <span>{category.implementedElements} / {category.totalElements} implemented</span>
+                              <span>{percentage.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-secondary-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${getStatusColor(percentage)}`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Implementation Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {hudSummary.notImplemented > 0 && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-red-900">Missing Elements</h4>
+                            <Badge variant="error">Critical</Badge>
+                          </div>
+                          <p className="text-sm text-red-700 mt-1">
+                            {hudSummary.notImplemented} HUD elements have no implementation
+                          </p>
+                          <Button variant="outline" size="sm" className="mt-2 border-red-300 text-red-700">
+                            View Missing Elements
+                          </Button>
+                        </div>
+                      )}
+
+                      {hudSummary.partiallyImplemented > 0 && (
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-yellow-900">Partial Implementation</h4>
+                            <Badge variant="warning">Warning</Badge>
+                          </div>
+                          <p className="text-sm text-yellow-700 mt-1">
+                            {hudSummary.partiallyImplemented} elements need UI or API completion
+                          </p>
+                          <Button variant="outline" size="sm" className="mt-2 border-yellow-300 text-yellow-700">
+                            Complete Implementation
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-blue-900">Export Matrix</h4>
+                          <Badge variant="primary">Available</Badge>
+                        </div>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Download compliance matrix for external review
+                        </p>
+                        <div className="flex space-x-2 mt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="border-blue-300 text-blue-700"
+                            onClick={() => window.open('/api/v1/compliance/matrix/export/json')}
+                          >
+                            JSON
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="border-blue-300 text-blue-700"
+                            onClick={() => window.open('/api/v1/compliance/matrix/export/yaml')}
+                          >
+                            YAML
+                          </Button>
+                        </div>
+                      </div>
+
+                      {hudSummary.overallScore >= 90 && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-green-900">Production Ready</h4>
+                            <Badge variant="success">Excellent</Badge>
+                          </div>
+                          <p className="text-sm text-green-700 mt-1">
+                            HUD compliance score meets production standards
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Matrix Updated */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Matrix Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-secondary-600">
+                        Matrix last updated: {new Date(hudSummary.lastUpdated).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-secondary-500 mt-1">
+                        This compliance matrix is automatically generated from the codebase
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline"
+                        onClick={() => window.open('/api/v1/compliance/matrix/validate')}
+                      >
+                        Validate Matrix
+                      </Button>
+                      <Button variant="outline">
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          
+          {hudSummaryLoading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="text-secondary-600 mt-2">Loading HUD compliance data...</p>
+              </div>
+            </div>
           )}
         </TabsContent>
 
