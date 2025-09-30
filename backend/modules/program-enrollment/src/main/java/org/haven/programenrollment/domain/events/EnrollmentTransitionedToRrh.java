@@ -1,5 +1,6 @@
 package org.haven.programenrollment.domain.events;
 
+import org.haven.clientprofile.domain.HouseholdCompositionId;
 import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.hmis.*;
 import java.time.Instant;
@@ -12,7 +13,7 @@ public record EnrollmentTransitionedToRrh(
     UUID clientId,
     UUID rrhProgramId,
     LocalDate residentialMoveInDate,
-    String householdId,
+    HouseholdCompositionId householdCompositionId,
     RelationshipToHeadOfHousehold relationshipToHoH,
     PriorLivingSituation priorLivingSituation,
     LengthOfStay lengthOfStay,

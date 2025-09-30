@@ -1,6 +1,7 @@
 package org.haven.programenrollment.domain;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.clientprofile.domain.HouseholdCompositionId;
 import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.CodeableConcept;
@@ -33,7 +34,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     private String entryFrom;
     
     // HMIS 2024 Comparable Database fields
-    private String householdId;
+    private HouseholdCompositionId householdCompositionId;
     private RelationshipToHeadOfHousehold hmisRelationshipToHoH;
     private PriorLivingSituation hmisPriorLivingSituation;
     private LengthOfStay hmisLengthOfStay;
@@ -296,8 +297,23 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     }
     
     // HMIS Comparable Database methods
+    public void updateHouseholdCompositionId(HouseholdCompositionId householdCompositionId) {
+        this.householdCompositionId = householdCompositionId;
+    }
+    
+    @Deprecated
     public void updateHouseholdId(String householdId) {
-        this.householdId = householdId;
+        // Legacy method - convert string to HouseholdCompositionId
+        if (householdId != null && !householdId.trim().isEmpty()) {
+            try {
+                this.householdCompositionId = HouseholdCompositionId.from(householdId);
+            } catch (IllegalArgumentException e) {
+                // If conversion fails, leave as null
+                this.householdCompositionId = null;
+            }
+        } else {
+            this.householdCompositionId = null;
+        }
     }
     
     public void updateHmisRelationshipToHoH(RelationshipToHeadOfHousehold relationship) {
@@ -317,8 +333,13 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     }
     
     // HMIS getters
+    public HouseholdCompositionId getHouseholdCompositionId() { 
+        return householdCompositionId; 
+    }
+    
     public String getHouseholdId() { 
-        return householdId != null ? householdId : id.value().toString(); 
+        // Legacy method for backward compatibility - returns UUID string
+        return householdCompositionId != null ? householdCompositionId.getValue().toString() : id.value().toString(); 
     }
     public RelationshipToHeadOfHousehold getHmisRelationshipToHoH() { 
         return hmisRelationshipToHoH != null ? hmisRelationshipToHoH : RelationshipToHeadOfHousehold.DATA_NOT_COLLECTED; 
@@ -355,7 +376,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
      * Check if enrollment meets HMIS data quality standards
      */
     public boolean meetsHmisDataQuality() {
-        return householdId != null &&
+        return householdCompositionId != null &&
                hmisRelationshipToHoH != null && hmisRelationshipToHoH.isKnownRelationship() &&
                hmisPriorLivingSituation != null &&
                hmisLengthOfStay != null && hmisLengthOfStay.isKnownLength() &&
@@ -383,7 +404,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             clientId.value(),
             rrhProgramId,
             moveInDate,
-            householdId, // Preserve household ID
+            householdCompositionId, // Preserve household composition ID
             hmisRelationshipToHoH,
             hmisPriorLivingSituation,
             hmisLengthOfStay,
@@ -404,7 +425,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
             UUID predecessorId,
             LocalDate enrollmentDate,
             LocalDate moveInDate,
-            String householdId,
+            HouseholdCompositionId householdCompositionId,
             RelationshipToHeadOfHousehold relationshipToHoH,
             PriorLivingSituation priorLivingSituation,
             LengthOfStay lengthOfStay,
@@ -418,7 +439,7 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
         enrollment.predecessorEnrollmentId = predecessorId;
         enrollment.enrollmentDate = enrollmentDate;
         enrollment.residentialMoveInDate = moveInDate;
-        enrollment.householdId = householdId;
+        enrollment.householdCompositionId = householdCompositionId;
         enrollment.hmisRelationshipToHoH = relationshipToHoH;
         enrollment.hmisPriorLivingSituation = priorLivingSituation;
         enrollment.hmisLengthOfStay = lengthOfStay;
@@ -1830,7 +1851,18 @@ public class ProgramEnrollment extends AggregateRoot<ProgramEnrollmentId> {
     }
     
     // Additional setters needed for JPA conversion (getters are already defined above)
-    public void setHouseholdId(String householdId) { this.householdId = householdId; }
+    public void setHouseholdId(String householdId) { 
+        // Convert legacy string to HouseholdCompositionId
+        if (householdId != null && !householdId.trim().isEmpty()) {
+            try {
+                this.householdCompositionId = HouseholdCompositionId.from(householdId);
+            } catch (IllegalArgumentException e) {
+                this.householdCompositionId = null;
+            }
+        } else {
+            this.householdCompositionId = null;
+        }
+    }
     public void setResidentialMoveInDate(LocalDate date) { this.residentialMoveInDate = date; }
     public void setPredecessorEnrollmentId(UUID id) { this.predecessorEnrollmentId = id; }
     public void setEnrollmentPeriod(Period period) { this.enrollmentPeriod = period; }

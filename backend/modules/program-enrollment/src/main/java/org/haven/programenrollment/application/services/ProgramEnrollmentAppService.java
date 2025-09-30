@@ -1,6 +1,8 @@
 package org.haven.programenrollment.application.services;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.clientprofile.domain.HouseholdCompositionId;
+import org.haven.clientprofile.application.services.HouseholdCompositionAppService;
 import org.haven.programenrollment.domain.Program;
 import org.haven.programenrollment.domain.ProgramEnrollment;
 import org.haven.programenrollment.domain.ProgramEnrollmentId;
@@ -24,12 +26,15 @@ public class ProgramEnrollmentAppService {
     
     private final ProgramEnrollmentRepository enrollmentRepository;
     private final ProgramRepository programRepository;
+    private final HouseholdCompositionAppService householdService;
     
     public ProgramEnrollmentAppService(
             @Lazy ProgramEnrollmentRepository enrollmentRepository,
-            @Lazy ProgramRepository programRepository) {
+            @Lazy ProgramRepository programRepository,
+            HouseholdCompositionAppService householdService) {
         this.enrollmentRepository = enrollmentRepository;
         this.programRepository = programRepository;
+        this.householdService = householdService;
     }
     
     @Transactional
@@ -100,7 +105,7 @@ public class ProgramEnrollmentAppService {
             command.thEnrollmentId(),
             command.rrhEnrollmentDate() != null ? command.rrhEnrollmentDate() : LocalDate.now(),
             command.residentialMoveInDate(),
-            thEnrollment.getHouseholdId(),
+            thEnrollment.getHouseholdCompositionId(),
             thEnrollment.getHmisRelationshipToHoH(),
             thEnrollment.getHmisPriorLivingSituation(),
             thEnrollment.getHmisLengthOfStay(),
@@ -118,7 +123,7 @@ public class ProgramEnrollmentAppService {
             command.rrhProgramId(),
             rrhEnrollment.getEnrollmentDate(),
             command.residentialMoveInDate(),
-            rrhEnrollment.getHouseholdId()
+            rrhEnrollment.getHouseholdCompositionId()
         );
     }
     
@@ -137,10 +142,10 @@ public class ProgramEnrollmentAppService {
                 e.getEnrollmentDate(),
                 e.getPredecessorEnrollmentId(),
                 e.getResidentialMoveInDate(),
-                e.getHouseholdId(),
+                e.getHouseholdCompositionId(),
                 e.getStatus().name()
             ))
-            .collect(Collectors.toList());
+            .toList();
     }
     
     @Transactional(readOnly = true) 
@@ -155,10 +160,10 @@ public class ProgramEnrollmentAppService {
                 e.getEnrollmentDate(),
                 e.getPredecessorEnrollmentId(),
                 e.getResidentialMoveInDate(),
-                e.getHouseholdId(),
+                e.getHouseholdCompositionId(),
                 e.getStatus().name()
             ))
-            .collect(Collectors.toList());
+            .toList();
     }
     
     @Transactional
@@ -191,7 +196,7 @@ public class ProgramEnrollmentAppService {
         UUID rrhProgramId,
         LocalDate enrollmentDate,
         LocalDate residentialMoveInDate,
-        String householdId
+        HouseholdCompositionId householdCompositionId
     ) {}
     
     public record EnrollmentSummary(
@@ -201,7 +206,56 @@ public class ProgramEnrollmentAppService {
         LocalDate enrollmentDate,
         UUID predecessorEnrollmentId,
         LocalDate residentialMoveInDate,
-        String householdId,
+        HouseholdCompositionId householdCompositionId,
         String status
     ) {}
+    
+    /**
+     * Resolve or create household composition for enrollment
+     * This method helps transition from legacy string-based household IDs to proper HouseholdComposition aggregates
+     */
+    public HouseholdCompositionId resolveHouseholdComposition(ClientId clientId, LocalDate enrollmentDate) {
+        // First, try to find an existing active household for this client
+        var existingHousehold = householdService.findActiveHouseholdForClient(clientId, enrollmentDate);
+        if (existingHousehold != null) {
+            return existingHousehold.getId();
+        }
+        
+        // If no existing household, create a new single-person household with this client as head
+        // This handles the migration from legacy string-based IDs to proper household compositions
+        var createCommand = new org.haven.clientprofile.application.commands.CreateHouseholdCompositionCmd(
+            clientId,
+            enrollmentDate,
+            org.haven.clientprofile.domain.HouseholdComposition.HouseholdType.SINGLE_ADULT,
+            "system",
+            "Auto-created during enrollment process"
+        );
+        
+        return householdService.handle(createCommand);
+    }
+    
+    /**
+     * Get household composition ID for enrollment, with fallback to create new one
+     */
+    public HouseholdCompositionId getOrCreateHouseholdComposition(
+            ProgramEnrollment enrollment,
+            LocalDate asOfDate) {
+        
+        // If enrollment already has a household composition ID, return it
+        if (enrollment.getHouseholdCompositionId() != null) {
+            return enrollment.getHouseholdCompositionId();
+        }
+        
+        // Otherwise, resolve or create one
+        HouseholdCompositionId compositionId = resolveHouseholdComposition(
+            enrollment.getClientId(), 
+            asOfDate != null ? asOfDate : enrollment.getEnrollmentDate()
+        );
+        
+        // Update the enrollment with the resolved household composition ID
+        enrollment.updateHouseholdCompositionId(compositionId);
+        enrollmentRepository.save(enrollment);
+        
+        return compositionId;
+    }
 }
