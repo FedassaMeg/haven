@@ -222,4 +222,32 @@ public record HmisEnrollmentProjection(
     private String formatInteger(Integer value) {
         return value != null ? value.toString() : "";
     }
+    
+    /**
+     * Create a copy with redacted prior living situation for privacy protection
+     */
+    public HmisEnrollmentProjection withRedactedPriorLiving() {
+        return new HmisEnrollmentProjection(
+            enrollmentId,
+            personalId,
+            projectId,
+            entryDate,
+            householdId,
+            relationshipToHoH,
+            PriorLivingSituation.DATA_NOT_COLLECTED, // redacted prior living
+            LengthOfStay.DATA_NOT_COLLECTED, // redacted length of stay
+            null, // redacted entry from street
+            null, // redacted months homeless
+            null, // redacted times homeless
+            disablingCondition,
+            dateCreated,
+            dateUpdated,
+            userId,
+            dateDeleted,
+            exportId,
+            predecessorEnrollmentId,
+            residentialMoveInDate,
+            projectType
+        );
+    }
 }

@@ -1,6 +1,7 @@
 package org.haven.reporting.application.services;
 
 import org.haven.reporting.domain.hmis.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -9,6 +10,7 @@ import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -20,6 +22,13 @@ import java.util.zip.ZipOutputStream;
  */
 @Service
 public class HmisCsvExportService {
+    
+    private final RestrictedNoteExportFilterService filterService;
+    
+    @Autowired
+    public HmisCsvExportService(RestrictedNoteExportFilterService filterService) {
+        this.filterService = filterService;
+    }
 
     private static final String CSV_HEADER_CLIENT = 
         "PersonalID,FirstName,MiddleName,LastName,NameSuffix,NameDataQuality,SSN,SSNDataQuality," +
@@ -53,7 +62,7 @@ public class HmisCsvExportService {
         "DomesticViolence,DateCreated,DateUpdated,UserID,DateDeleted,ExportID";
 
     /**
-     * Generate complete HMIS CSV export as ZIP file
+     * Generate complete HMIS CSV export as ZIP file with restricted note filtering
      */
     public byte[] generateHmisCsvExport(
             List<HmisClientProjection> clients,
@@ -63,28 +72,41 @@ public class HmisCsvExportService {
             List<HmisHealthAndDvProjection> healthAndDv,
             String exportId,
             LocalDate reportingPeriodStart,
-            LocalDate reportingPeriodEnd) throws IOException {
+            LocalDate reportingPeriodEnd,
+            UUID exportRequestedBy,
+            List<String> exporterRoles) throws IOException {
+        
+        // Apply restricted note filters
+        List<HmisClientProjection> filteredClients = filterService.filterClientProjections(
+            clients, exportRequestedBy, exporterRoles);
+        List<HmisEnrollmentProjection> filteredEnrollments = filterService.filterEnrollmentProjections(
+            enrollments, exportRequestedBy, exporterRoles);
+        List<HmisIncomeBenefitsProjection> filteredIncomeBenefits = filterService.filterIncomeBenefitsProjections(
+            incomeBenefits, exportRequestedBy, exporterRoles);
+        List<HmisHealthAndDvProjection> filteredHealthAndDv = filterService.filterHealthAndDvProjections(
+            healthAndDv, exportRequestedBy, exporterRoles);
         
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ZipOutputStream zipOut = new ZipOutputStream(baos)) {
             
             // Export.csv - metadata about the export
-            addExportMetadata(zipOut, exportId, reportingPeriodStart, reportingPeriodEnd);
+            addExportMetadata(zipOut, exportId, reportingPeriodStart, reportingPeriodEnd, 
+                            clients.size(), filteredClients.size(), exportRequestedBy, exporterRoles);
             
             // Client.csv
-            addClientsToZip(zipOut, clients);
+            addClientsToZip(zipOut, filteredClients);
             
             // Enrollment.csv
-            addEnrollmentsToZip(zipOut, enrollments);
+            addEnrollmentsToZip(zipOut, filteredEnrollments);
             
             // Exit.csv
             addExitsToZip(zipOut, exits);
             
             // IncomeBenefits.csv
-            addIncomeBenefitsToZip(zipOut, incomeBenefits);
+            addIncomeBenefitsToZip(zipOut, filteredIncomeBenefits);
             
             // HealthAndDV.csv
-            addHealthAndDvToZip(zipOut, healthAndDv);
+            addHealthAndDvToZip(zipOut, filteredHealthAndDv);
             
             zipOut.finish();
             return baos.toByteArray();
@@ -162,16 +184,19 @@ public class HmisCsvExportService {
     }
 
     private void addExportMetadata(ZipOutputStream zipOut, String exportId, 
-                                  LocalDate startDate, LocalDate endDate) throws IOException {
+                                  LocalDate startDate, LocalDate endDate,
+                                  int originalRecordCount, int filteredRecordCount,
+                                  UUID exportRequestedBy, List<String> exporterRoles) throws IOException {
         ZipEntry exportEntry = new ZipEntry("Export.csv");
         zipOut.putNextEntry(exportEntry);
         
         try (PrintWriter writer = new PrintWriter(zipOut)) {
             writer.println("ExportID,SourceContactFirst,SourceContactLast,SourceContactPhone," +
                           "SourceContactExtension,SourceContactEmail,ExportDate,ExportStartDate," +
-                          "ExportEndDate,SoftwareName,SoftwareVersion,ExportPeriodType,ExportDirective");
+                          "ExportEndDate,SoftwareName,SoftwareVersion,ExportPeriodType,ExportDirective," +
+                          "OriginalRecordCount,FilteredRecordCount,ExportRequestedBy,RestrictedNoteFiltering");
             
-            writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
+            writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,\"%s\",\"%s\"%n",
                 exportId,
                 "System", // SourceContactFirst
                 "Administrator", // SourceContactLast
@@ -184,8 +209,19 @@ public class HmisCsvExportService {
                 "Haven HMIS", // SoftwareName
                 "1.0", // SoftwareVersion
                 "3", // ExportPeriodType (Operating Year)
-                "1" // ExportDirective (Standard Export)
+                "1", // ExportDirective (Standard Export)
+                originalRecordCount, // OriginalRecordCount
+                filteredRecordCount, // FilteredRecordCount
+                exportRequestedBy.toString(), // ExportRequestedBy
+                "ENABLED" // RestrictedNoteFiltering
             );
+            
+            // Add filtering summary comment
+            if (originalRecordCount > filteredRecordCount) {
+                writer.printf("# %d records filtered due to restricted note visibility constraints%n", 
+                            originalRecordCount - filteredRecordCount);
+                writer.printf("# Export roles: %s%n", String.join(",", exporterRoles));
+            }
         }
         
         zipOut.closeEntry();

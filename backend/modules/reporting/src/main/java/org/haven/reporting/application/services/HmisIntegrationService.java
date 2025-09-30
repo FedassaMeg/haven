@@ -76,6 +76,9 @@ public class HmisIntegrationService {
             .collect(Collectors.toList());
         
         // Generate CSV export
+        UUID exportRequestedBy = UUID.randomUUID(); // TODO: supply actual requesting user
+        List<String> exporterRoles = List.of("HMIS_EXPORT_SERVICE"); // TODO: supply actual roles
+
         return csvExportService.generateHmisCsvExport(
             clientProjections,
             enrollmentProjections,
@@ -84,7 +87,9 @@ public class HmisIntegrationService {
             java.util.List.of(), // Empty health and DV projections
             exportId,
             reportingPeriodStart,
-            reportingPeriodEnd
+            reportingPeriodEnd,
+            exportRequestedBy,
+            exporterRoles
         );
     }
 

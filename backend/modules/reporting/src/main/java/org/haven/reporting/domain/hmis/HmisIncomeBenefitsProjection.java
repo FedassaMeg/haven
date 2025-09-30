@@ -221,4 +221,14 @@ public record HmisIncomeBenefitsProjection(
     private String formatInteger(Integer value) {
         return value != null ? value.toString() : "";
     }
+    
+    /**
+     * Income benefits typically don't require redaction for restricted notes,
+     * but included for interface consistency
+     */
+    public HmisIncomeBenefitsProjection withRedactedIncome() {
+        // Income data is usually not restricted in the same way as health/DV info
+        // Return the same instance unless specific restrictions apply
+        return this;
+    }
 }

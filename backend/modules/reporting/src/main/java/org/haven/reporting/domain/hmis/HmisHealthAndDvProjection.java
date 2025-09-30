@@ -399,4 +399,88 @@ public record HmisHealthAndDvProjection(
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.toString() : "";
     }
+    
+    /**
+     * Create a copy with redacted health information for privacy protection
+     */
+    public HmisHealthAndDvProjection withRedactedHealthInfo() {
+        return new HmisHealthAndDvProjection(
+            healthAndDvId,
+            enrollmentId,
+            personalId,
+            informationDate,
+            
+            // Redact all health insurance information
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            
+            // Redact all disability information
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            DisabilityType.DATA_NOT_COLLECTED,
+            
+            // Keep DV info - not health related
+            domesticViolence,
+            
+            dateCreated,
+            dateUpdated,
+            userId,
+            dateDeleted,
+            exportId
+        );
+    }
+    
+    /**
+     * Create a copy with redacted domestic violence information for privacy protection
+     */
+    public HmisHealthAndDvProjection withRedactedDvInfo() {
+        return new HmisHealthAndDvProjection(
+            healthAndDvId,
+            enrollmentId,
+            personalId,
+            informationDate,
+            
+            // Keep health insurance information
+            medicaid,
+            medicare,
+            schip,
+            vaMedicalServices,
+            employerProvided,
+            cobra,
+            privatePayment,
+            stateHealthInsurance,
+            indianHealthService,
+            otherInsurance,
+            noInsurance,
+            
+            // Keep disability information
+            physicalDisability,
+            developmentalDisability,
+            chronicHealthCondition,
+            hivAids,
+            mentalHealthDisorder,
+            substanceUseDisorder,
+            
+            // Redact domestic violence information
+            DomesticViolence.DATA_NOT_COLLECTED,
+            
+            dateCreated,
+            dateUpdated,
+            userId,
+            dateDeleted,
+            exportId
+        );
+    }
 }

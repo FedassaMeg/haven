@@ -184,4 +184,41 @@ public record HmisClientProjection(
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.toString() : "";
     }
+    
+    /**
+     * Create a copy with redacted name information for privacy protection
+     */
+    public HmisClientProjection withRedactedName() {
+        return new HmisClientProjection(
+            personalId,
+            "[REDACTED]", // firstName
+            null, // middleName
+            "[REDACTED]", // lastName
+            null, // nameSuffix
+            9, // nameDataQuality - Data not collected
+            ssn,
+            ssnDataQuality,
+            dateOfBirth,
+            dobDataQuality,
+            race,
+            gender,
+            otherGender,
+            veteranStatus,
+            dateCreated,
+            dateUpdated,
+            userId,
+            dateDeleted,
+            exportId
+        );
+    }
+    
+    /**
+     * Create a copy with redacted location-sensitive information
+     * This doesn't apply to Client.csv but included for consistency
+     */
+    public HmisClientProjection withRedactedLocation() {
+        // For Client.csv, location data is not typically included
+        // Return the same instance as no location redaction needed
+        return this;
+    }
 }
