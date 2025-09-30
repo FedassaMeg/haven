@@ -43,6 +43,11 @@ public interface ProgramEnrollmentRepository extends Repository<ProgramEnrollmen
      * Check if client has active enrollment in specific program
      */
     boolean hasActiveEnrollment(ClientId clientId, UUID programId);
+
+    /**
+     * Find enrollment by client and program ID
+     */
+    Optional<ProgramEnrollment> findByClientIdAndProgramId(ClientId clientId, UUID programId);
     
     /**
      * Get enrollment statistics for reporting

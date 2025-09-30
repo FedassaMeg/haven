@@ -89,11 +89,19 @@ public class ProgramEnrollmentRepositoryImpl implements ProgramEnrollmentReposit
     @Override
     public boolean hasActiveEnrollment(ClientId clientId, UUID programId) {
         return store.values().stream()
-            .anyMatch(e -> e.getClientId().equals(clientId) 
-                && e.getProgramId().equals(programId) 
+            .anyMatch(e -> e.getClientId().equals(clientId)
+                && e.getProgramId().equals(programId)
                 && e.isActive());
     }
-    
+
+    @Override
+    public Optional<ProgramEnrollment> findByClientIdAndProgramId(ClientId clientId, UUID programId) {
+        return store.values().stream()
+            .filter(e -> e.getClientId().equals(clientId) &&
+                        e.getProgramId().equals(programId))
+            .findFirst();
+    }
+
     @Override
     public EnrollmentStatistics getStatistics(UUID programId, LocalDate startDate, LocalDate endDate) {
         var enrollments = store.values().stream()

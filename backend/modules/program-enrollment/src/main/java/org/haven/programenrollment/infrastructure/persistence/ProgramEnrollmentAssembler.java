@@ -1,6 +1,7 @@
 package org.haven.programenrollment.infrastructure.persistence;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.clientprofile.domain.HouseholdCompositionId;
 import org.haven.programenrollment.domain.Program;
 import org.haven.programenrollment.domain.ProgramEnrollment;
 import org.haven.programenrollment.domain.ProgramEnrollmentId;
@@ -61,7 +62,7 @@ public class ProgramEnrollmentAssembler {
                 entity.getPredecessorEnrollmentId(),
                 entity.getEnrollmentDate(),
                 entity.getResidentialMoveInDate(),
-                entity.getHouseholdId(),
+                entity.getHouseholdId() != null ? HouseholdCompositionId.from(entity.getHouseholdId()) : null,
                 mapRelationshipToHead(entity.getRelationshipToHead()),
                 mapResidencePrior(entity.getResidencePriorToEntry()),
                 mapLengthOfStay(entity.getLengthOfStayPriorToEntry()),

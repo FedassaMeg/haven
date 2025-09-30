@@ -92,10 +92,18 @@ public class ProgramEnrollmentJpaRepositoryAdapter implements ProgramEnrollmentR
     @Override
     public boolean hasActiveEnrollment(ClientId clientId, UUID programId) {
         return jpaRepository.findByClientId(clientId.value()).stream()
-            .anyMatch(entity -> entity.getProgramId().equals(programId) && 
+            .anyMatch(entity -> entity.getProgramId().equals(programId) &&
                      entity.getStatus() == ProgramEnrollment.EnrollmentStatus.ACTIVE);
     }
-    
+
+    @Override
+    public Optional<ProgramEnrollment> findByClientIdAndProgramId(ClientId clientId, UUID programId) {
+        return jpaRepository.findByClientId(clientId.value()).stream()
+            .filter(entity -> entity.getProgramId().equals(programId))
+            .findFirst()
+            .map(assembler::toDomainObject);
+    }
+
     @Override
     public EnrollmentStatistics getStatistics(UUID programId, LocalDate startDate, LocalDate endDate) {
         // For simplicity, return basic stats - would need more sophisticated query in production
