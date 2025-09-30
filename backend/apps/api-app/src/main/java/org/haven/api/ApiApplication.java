@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = "org.haven")
-@EnableJpaRepositories(basePackages = {"org.haven.**.infrastructure.persistence", "org.haven.readmodels.infrastructure"})
-@EntityScan(basePackages = {"org.haven.**.infrastructure.persistence", "org.haven.readmodels.infrastructure", "org.haven.**.domain"})
+@EnableJpaRepositories(basePackages = {"org.haven.**.infrastructure.persistence", "org.haven.readmodels.infrastructure", "org.haven.eventstore.infrastructure"})
+@EntityScan(basePackages = {"org.haven.**.infrastructure.persistence", "org.haven.readmodels.infrastructure", "org.haven.**.domain", "org.haven.eventstore.infrastructure"})
 public class ApiApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ApiApplication.class, args);

@@ -6,7 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,18 +27,45 @@ public class SecurityConfig {
     }
     
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ClientRegistrationRepository clientRegistrations) throws Exception {
         http
             .cors(Customizer.withDefaults())
+            // NOTE: For BFF using session cookies, consider enabling CSRF with CookieCsrfTokenRepository.
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/h2-console/**").permitAll()
+                .requestMatchers(
+                    "/actuator/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/h2-console/**",
+                    "/error",
+                    // OAuth2 login endpoints
+                    "/oauth2/**",
+                    "/auth/login"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        
+            // Allow browser login via OIDC (BFF style)
+            .oauth2Login(Customizer.withDefaults())
+            // Also allow bearer JWT for API/use-cases that send tokens directly
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            // Configure OIDC logout to propagate to Keycloak
+            .logout(logout -> logout
+                .logoutUrl("/auth/logout")
+                // Allow GET for logout to simplify local dev (avoid CSRF on POST)
+                .logoutRequestMatcher(new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/auth/logout", "GET"))
+                .logoutSuccessHandler(oidcLogoutSuccessHandler(clientRegistrations))
+            );
+
         return http.build();
+    }
+
+    private OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrations) {
+        OidcClientInitiatedLogoutSuccessHandler handler = new OidcClientInitiatedLogoutSuccessHandler(clientRegistrations);
+        // Post-logout redirect; adjust as needed for your frontend
+        handler.setPostLogoutRedirectUri("{baseUrl}/");
+        return handler;
     }
     
     @Bean

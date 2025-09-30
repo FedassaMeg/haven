@@ -1,6 +1,7 @@
 package org.haven.api.config;
 
 import org.haven.clientprofile.domain.ClientDomainService.ClientDuplicationException;
+import org.haven.clientprofile.infrastructure.security.ConsentEnforcementService;
 import org.haven.casemgmt.domain.CaseDomainService.CaseDuplicationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,17 @@ public class GlobalExceptionHandler {
             Instant.now()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(ConsentEnforcementService.ConsentRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleConsentRequired(ConsentEnforcementService.ConsentRequiredException ex) {
+        var error = new ErrorResponse(
+            "CONSENT_REQUIRED",
+            ex.getMessage(),
+            HttpStatus.FORBIDDEN.value(),
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
