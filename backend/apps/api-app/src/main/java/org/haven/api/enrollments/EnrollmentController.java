@@ -57,7 +57,7 @@ public class EnrollmentController {
                 result.rrhProgramId(),
                 result.enrollmentDate(),
                 result.residentialMoveInDate(),
-                result.householdId(),
+                result.householdCompositionId() != null ? result.householdCompositionId().getValue().toString() : null,
                 "TH enrollment successfully transitioned to RRH"
             );
             
@@ -92,7 +92,7 @@ public class EnrollmentController {
                     summary.enrollmentDate(),
                     summary.predecessorEnrollmentId(),
                     summary.residentialMoveInDate(),
-                    summary.householdId(),
+                    summary.householdCompositionId() != null ? summary.householdCompositionId().getValue().toString() : null,
                     summary.status()
                 ))
                 .toList();
@@ -192,7 +192,7 @@ public class EnrollmentController {
                     summary.enrollmentDate(),
                     summary.predecessorEnrollmentId(),
                     summary.residentialMoveInDate(),
-                    summary.householdId(),
+                    summary.householdCompositionId() != null ? summary.householdCompositionId().getValue().toString() : null,
                     summary.status()
                 ))
                 .toList();
@@ -250,5 +250,48 @@ public class EnrollmentController {
     
     public record UpdateMoveInDateRequest(
         LocalDate moveInDate
+    ) {}
+    
+    @Operation(
+        summary = "Get HUD element coverage for enrollment endpoints",
+        description = "Returns which HUD data elements are covered by enrollment API endpoints"
+    )
+    @GetMapping("/hud-coverage")
+    public ResponseEntity<EnrollmentHudCoverageResponse> getHudCoverage() {
+        List<HudElementCoverage> coverages = List.of(
+            new HudElementCoverage("3.10", "Relationship to Head of Household", "/api/v1/enrollments/{id}/chain", "GET", "householdRole", true),
+            new HudElementCoverage("3.11", "Prior Living Situation", "/api/v1/enrollments/{id}/chain", "GET", "priorLivingSituation", true),
+            new HudElementCoverage("3.12", "Length of Stay", "/api/v1/enrollments/{id}/chain", "GET", "lengthOfStay", true),
+            new HudElementCoverage("3.13", "Disabling Condition", "/api/v1/enrollments/{id}/chain", "GET", "disablingCondition", true),
+            new HudElementCoverage("3.15", "Residential Move-in Date", "/api/v1/enrollments/{id}/move-in-date", "PATCH", "moveInDate", true),
+            new HudElementCoverage("3.16", "Project Exit Date", "/api/v1/enrollments/{id}/exit", "POST", "exitDate", true),
+            new HudElementCoverage("3.17", "Destination", "/api/v1/enrollments/{id}/exit", "POST", "destination", true)
+        );
+        
+        EnrollmentHudCoverageResponse response = new EnrollmentHudCoverageResponse(
+            "Enrollment API",
+            coverages,
+            coverages.stream().mapToLong(c -> c.implemented() ? 1 : 0).sum(),
+            coverages.size()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // HUD Coverage DTOs
+    public record EnrollmentHudCoverageResponse(
+        String apiName,
+        List<HudElementCoverage> elements,
+        long implementedCount,
+        long totalCount
+    ) {}
+    
+    public record HudElementCoverage(
+        String hudId,
+        String elementName,
+        String route,
+        String method,
+        String fieldName,
+        boolean implemented
     ) {}
 }
