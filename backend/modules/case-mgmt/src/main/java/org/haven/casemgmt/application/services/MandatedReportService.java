@@ -119,13 +119,17 @@ public class MandatedReportService {
         );
         
         restrictedNoteService.createRestrictedNote(
+            command.clientId(),
+            resolveClientName(command.clientId()),
             command.caseId(),
+            resolveCaseNumber(command.caseId()),
             "MANDATED_REPORT",
-            "LEGAL_PROTECTED",
             noteContent,
+            "Mandated Report: " + command.reportType().getDisplayName(),
             command.createdByUserId(),
-            List.of("SUPERVISOR", "ADMINISTRATOR", "LEGAL_COUNSEL"),
-            "Mandated Report: " + command.reportType().getDisplayName()
+            resolveUserName(command.createdByUserId()),
+            List.of(),
+            "LEGAL_TEAM"
         );
     }
     
@@ -156,10 +160,12 @@ public class MandatedReportService {
             filedByUserId
         );
         
-        restrictedNoteService.addUpdateToExistingNote(
-            reportId.toString(),
+        restrictedNoteService.updateRestrictedNote(
+            reportId,
             updateContent,
-            filedByUserId
+            filedByUserId,
+            resolveUserName(filedByUserId),
+            "Report filing status update"
         );
     }
     
@@ -183,10 +189,12 @@ public class MandatedReportService {
             command.description()
         );
         
-        restrictedNoteService.addUpdateToExistingNote(
-            command.reportId().toString(),
+        restrictedNoteService.updateRestrictedNote(
+            command.reportId(),
             noteContent,
-            command.attachedByUserId()
+            command.attachedByUserId(),
+            resolveUserName(command.attachedByUserId()),
+            "Document attachment"
         );
     }
     
@@ -206,10 +214,12 @@ public class MandatedReportService {
             Instant.now()
         );
         
-        restrictedNoteService.addUpdateToExistingNote(
-            command.reportId().toString(),
+        restrictedNoteService.updateRestrictedNote(
+            command.reportId(),
             noteContent,
-            command.updatedByUserId()
+            command.updatedByUserId(),
+            resolveUserName(command.updatedByUserId()),
+            "Status change: " + command.statusReason()
         );
     }
     
@@ -229,10 +239,24 @@ public class MandatedReportService {
             Instant.now()
         );
         
-        restrictedNoteService.addUpdateToExistingNote(
-            command.reportId().toString(),
+        restrictedNoteService.updateRestrictedNote(
+            command.reportId(),
             noteContent,
-            command.recordedByUserId()
+            command.recordedByUserId(),
+            resolveUserName(command.recordedByUserId()),
+            "Agency response recorded"
         );
+    }
+    
+    private String resolveClientName(UUID clientId) {
+        return String.format("Client-%s", clientId.toString().substring(0, 8));
+    }
+    
+    private String resolveCaseNumber(UUID caseId) {
+        return String.format("CASE-%s", caseId.toString().substring(0, 8).toUpperCase());
+    }
+    
+    private String resolveUserName(UUID userId) {
+        return String.format("User-%s", userId.toString().substring(0, 8));
     }
 }

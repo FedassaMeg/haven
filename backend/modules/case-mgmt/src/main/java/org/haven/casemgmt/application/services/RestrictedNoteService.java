@@ -1,5 +1,9 @@
 package org.haven.casemgmt.application.services;
 
+import org.haven.casemgmt.domain.RestrictedNote;
+import org.haven.casemgmt.domain.RestrictedNoteId;
+import org.haven.casemgmt.domain.RestrictedNoteRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -13,53 +17,110 @@ import java.util.UUID;
 @Service
 public class RestrictedNoteService {
     
+    private final RestrictedNoteRepository restrictedNoteRepository;
+    
+    @Autowired
+    public RestrictedNoteService(RestrictedNoteRepository restrictedNoteRepository) {
+        this.restrictedNoteRepository = restrictedNoteRepository;
+    }
+    
     /**
      * Create a new restricted note with specified access controls
      */
-    public UUID createRestrictedNote(UUID caseId, String noteType, String restrictionLevel,
-                                   String content, UUID createdByUserId, 
-                                   List<String> authorizedRoles, String title) {
+    public UUID createRestrictedNote(UUID clientId, String clientName, UUID caseId, String caseNumber,
+                                   String noteType, String content, String title, UUID createdByUserId, 
+                                   String createdByName, List<UUID> authorizedViewers, String visibilityScope) {
         
-        UUID noteId = UUID.randomUUID();
+        RestrictedNote.NoteType type = RestrictedNote.NoteType.valueOf(noteType);
+        RestrictedNote.VisibilityScope scope = visibilityScope != null ? 
+            RestrictedNote.VisibilityScope.valueOf(visibilityScope) : type.getDefaultScope();
         
-        // In production, this would integrate with the note management system
-        System.out.println(String.format(
-            "CREATING RESTRICTED NOTE:\n" +
-            "Note ID: %s\n" +
-            "Case ID: %s\n" +
-            "Type: %s\n" +
-            "Restriction Level: %s\n" +
-            "Title: %s\n" +
-            "Created By: %s\n" +
-            "Authorized Roles: %s\n" +
-            "Created At: %s\n" +
-            "Content: %s\n",
-            noteId, caseId, noteType, restrictionLevel, title, 
-            createdByUserId, authorizedRoles, Instant.now(), content
-        ));
+        RestrictedNote note = RestrictedNote.create(
+            clientId, clientName, caseId, caseNumber, type, content, title,
+            createdByUserId, createdByName, authorizedViewers, scope
+        );
         
-        return noteId;
+        restrictedNoteRepository.save(note);
+        return note.getId().value();
     }
     
     /**
      * Add update to existing note (for status changes, document attachments, etc.)
      */
-    public void addUpdateToExistingNote(String relatedId, String updateContent, UUID updatedByUserId) {
-        System.out.println(String.format(
-            "ADDING NOTE UPDATE:\n" +
-            "Related ID: %s\n" +
-            "Updated By: %s\n" +
-            "Updated At: %s\n" +
-            "Update Content: %s\n",
-            relatedId, updatedByUserId, Instant.now(), updateContent
-        ));
+    public void updateRestrictedNote(UUID noteId, String updateContent, UUID updatedByUserId, 
+                                   String updatedByName, String updateReason) {
+        RestrictedNote note = restrictedNoteRepository.findById(RestrictedNoteId.of(noteId))
+            .orElseThrow(() -> new IllegalArgumentException("Note not found: " + noteId));
+        
+        note.updateContent(updateContent, updatedByUserId, updatedByName, updateReason);
+        restrictedNoteRepository.save(note);
+    }
+    
+    /**
+     * Seal a restricted note
+     */
+    public void sealNote(UUID noteId, UUID sealedByUserId, String sealedByName, String sealReason, 
+                        String legalBasis, boolean isTemporary, Instant expiresAt) {
+        RestrictedNote note = restrictedNoteRepository.findById(RestrictedNoteId.of(noteId))
+            .orElseThrow(() -> new IllegalArgumentException("Note not found: " + noteId));
+        
+        note.seal(sealedByUserId, sealedByName, sealReason, legalBasis, isTemporary, expiresAt);
+        restrictedNoteRepository.save(note);
+    }
+    
+    /**
+     * Unseal a restricted note
+     */
+    public void unsealNote(UUID noteId, UUID unsealedByUserId, String unsealedByName, 
+                          String unsealReason, String legalBasis) {
+        RestrictedNote note = restrictedNoteRepository.findById(RestrictedNoteId.of(noteId))
+            .orElseThrow(() -> new IllegalArgumentException("Note not found: " + noteId));
+        
+        note.unseal(unsealedByUserId, unsealedByName, unsealReason, legalBasis);
+        restrictedNoteRepository.save(note);
+    }
+    
+    /**
+     * Record access to a restricted note for audit purposes
+     */
+    public void recordNoteAccess(UUID noteId, UUID accessedByUserId, String accessedByName, 
+                               List<String> userRoles, String accessMethod, String ipAddress, 
+                               String userAgent, boolean wasContentViewed, String accessReason) {
+        RestrictedNote note = restrictedNoteRepository.findById(RestrictedNoteId.of(noteId))
+            .orElseThrow(() -> new IllegalArgumentException("Note not found: " + noteId));
+        
+        note.recordAccess(accessedByUserId, accessedByName, userRoles, accessMethod, 
+                         ipAddress, userAgent, wasContentViewed, accessReason);
+        restrictedNoteRepository.save(note);
+    }
+    
+    /**
+     * Get accessible notes for a user
+     */
+    public List<RestrictedNote> getAccessibleNotesForUser(UUID userId, List<String> userRoles) {
+        return restrictedNoteRepository.findAccessibleToUser(userId, userRoles);
+    }
+    
+    /**
+     * Get accessible notes for a specific client
+     */
+    public List<RestrictedNote> getAccessibleNotesForClient(UUID clientId, UUID userId, List<String> userRoles) {
+        return restrictedNoteRepository.findByClientIdAccessibleToUser(clientId, userId, userRoles);
+    }
+    
+    /**
+     * Check if user has access to a specific note
+     */
+    public boolean hasAccess(UUID noteId, UUID userId, List<String> userRoles) {
+        return restrictedNoteRepository.hasValidAccess(noteId, userId, userRoles);
     }
     
     /**
      * Create progress note for mandated report workflow
      */
-    public UUID createWorkflowProgressNote(UUID reportId, String workflowStep, 
-                                         String progressDescription, UUID createdByUserId) {
+    public UUID createWorkflowProgressNote(UUID clientId, String clientName, UUID reportId, 
+                                         String workflowStep, String progressDescription, 
+                                         UUID createdByUserId, String createdByName) {
         
         String content = String.format(
             "MANDATED REPORT WORKFLOW PROGRESS\n\n" +
@@ -72,21 +133,18 @@ public class RestrictedNoteService {
         );
         
         return createRestrictedNote(
-            reportId, // Using report ID as case ID for simplification
-            "WORKFLOW_PROGRESS",
-            "INTERNAL_RESTRICTED",
-            content,
-            createdByUserId,
-            List.of("CASE_MANAGER", "SUPERVISOR", "ADMINISTRATOR"),
-            "Mandated Report Workflow Update"
+            clientId, clientName, reportId, "RPT-" + reportId.toString().substring(0, 8),
+            "WORKFLOW_PROGRESS", content, "Mandated Report Workflow Update",
+            createdByUserId, createdByName, null, "CASE_TEAM"
         );
     }
     
     /**
      * Create compliance note for audit trail
      */
-    public UUID createComplianceNote(UUID reportId, String complianceRequirement,
-                                   String complianceStatus, UUID createdByUserId) {
+    public UUID createComplianceNote(UUID clientId, String clientName, UUID reportId, 
+                                    String complianceRequirement, String complianceStatus, 
+                                    UUID createdByUserId, String createdByName) {
         
         String content = String.format(
             "COMPLIANCE VERIFICATION\n\n" +
@@ -100,21 +158,18 @@ public class RestrictedNoteService {
         );
         
         return createRestrictedNote(
-            reportId,
-            "COMPLIANCE_VERIFICATION",
-            "LEGAL_PROTECTED",
-            content,
-            createdByUserId,
-            List.of("SUPERVISOR", "ADMINISTRATOR", "LEGAL_COUNSEL", "COMPLIANCE_OFFICER"),
-            "Compliance Verification: " + complianceRequirement
+            clientId, clientName, reportId, "RPT-" + reportId.toString().substring(0, 8),
+            "COMPLIANCE_VERIFICATION", content, "Compliance Verification: " + complianceRequirement,
+            createdByUserId, createdByName, null, "ADMIN_ONLY"
         );
     }
     
     /**
      * Create alert note for urgent mandated report issues
      */
-    public UUID createAlertNote(UUID reportId, String alertType, String alertDescription,
-                              UUID createdByUserId, boolean requiresImmediateAttention) {
+    public UUID createAlertNote(UUID clientId, String clientName, UUID reportId, String alertType, 
+                              String alertDescription, UUID createdByUserId, String createdByName,
+                              boolean requiresImmediateAttention) {
         
         String urgencyLevel = requiresImmediateAttention ? "IMMEDIATE" : "HIGH";
         
@@ -134,21 +189,18 @@ public class RestrictedNoteService {
         );
         
         return createRestrictedNote(
-            reportId,
-            "ALERT",
-            "URGENT_RESTRICTED",
-            content,
-            createdByUserId,
-            List.of("SUPERVISOR", "ADMINISTRATOR", "ON_CALL_MANAGER"),
-            "ALERT: " + alertType
+            clientId, clientName, reportId, "RPT-" + reportId.toString().substring(0, 8),
+            "ALERT", content, "ALERT: " + alertType,
+            createdByUserId, createdByName, null, "ADMIN_ONLY"
         );
     }
     
     /**
      * Create investigation note for tracking agency response
      */
-    public UUID createInvestigationNote(UUID reportId, String investigationPhase,
-                                      String findings, UUID createdByUserId) {
+    public UUID createInvestigationNote(UUID clientId, String clientName, UUID reportId, 
+                                      String investigationPhase, String findings, 
+                                      UUID createdByUserId, String createdByName) {
         
         String content = String.format(
             "INVESTIGATION UPDATE\n\n" +
@@ -162,13 +214,9 @@ public class RestrictedNoteService {
         );
         
         return createRestrictedNote(
-            reportId,
-            "INVESTIGATION_UPDATE",
-            "LEGAL_PROTECTED",
-            content,
-            createdByUserId,
-            List.of("CASE_MANAGER", "SUPERVISOR", "ADMINISTRATOR", "LEGAL_COUNSEL"),
-            "Investigation Update: " + investigationPhase
+            clientId, clientName, reportId, "RPT-" + reportId.toString().substring(0, 8),
+            "INVESTIGATION_UPDATE", content, "Investigation Update: " + investigationPhase,
+            createdByUserId, createdByName, null, "LEGAL_TEAM"
         );
     }
 }
