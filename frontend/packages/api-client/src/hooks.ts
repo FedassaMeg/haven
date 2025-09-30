@@ -44,6 +44,19 @@ import type {
   BillingExportResponse,
   GeneratedReport,
   GenerateReportRequest,
+  HouseholdComposition,
+  HouseholdMember,
+  CreateHouseholdCompositionRequest,
+  AddHouseholdMemberRequest,
+  ConsentLedgerEntry,
+  ConsentSearchParams,
+  ConsentAuditEntry,
+  ConsentStatistics,
+  CeAssessment,
+  CreateCeAssessmentRequest,
+  CeEvent,
+  CreateCeEventRequest,
+  CeShareScope,
 } from './types';
 
 // Generic API state hook
@@ -90,6 +103,8 @@ function useApiState<T>(initialData: T | null = null): [
 // Client hooks
 export function useClients(params?: ClientSearchParams) {
   const [state, { setData, setLoading, setError }] = useApiState<Client[]>([]);
+
+  console.log(state);
   
   // Stabilize params to prevent infinite re-renders
   const paramsKey = JSON.stringify(params || {});
@@ -1089,6 +1104,146 @@ export function useComplianceOverview() {
   };
 }
 
+// HUD Compliance hooks
+export function useHudComplianceMatrix() {
+  const [state, { setData, setLoading, setError }] = useApiState<HudComplianceMatrix>();
+
+  useEffect(() => {
+    const fetchMatrix = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/v1/compliance/matrix');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const matrix: HudComplianceMatrix = await response.json();
+        setData(matrix);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchMatrix();
+  }, [setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/v1/compliance/matrix');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const matrix: HudComplianceMatrix = await response.json();
+      setData(matrix);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [setData, setLoading, setError]);
+
+  return {
+    matrix: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useHudComplianceSummary() {
+  const [state, { setData, setLoading, setError }] = useApiState<ComplianceSummaryResponse>();
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/v1/compliance/summary');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const summary: ComplianceSummaryResponse = await response.json();
+        setData(summary);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchSummary();
+  }, [setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/v1/compliance/summary');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const summary: ComplianceSummaryResponse = await response.json();
+      setData(summary);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [setData, setLoading, setError]);
+
+  return {
+    summary: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
+export function useHudElementsByCategory(category?: string) {
+  const [state, { setData, setLoading, setError }] = useApiState<HudDataElement[]>([]);
+
+  useEffect(() => {
+    const fetchElements = async () => {
+      setLoading(true);
+      try {
+        const url = new URL('/api/v1/compliance/elements', window.location.origin);
+        if (category) {
+          url.searchParams.set('category', category);
+        }
+        
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const elements: HudDataElement[] = await response.json();
+        setData(elements);
+      } catch (error) {
+        setError(handleApiError(error as ApiError));
+      }
+    };
+    
+    fetchElements();
+  }, [category, setData, setLoading, setError]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const url = new URL('/api/v1/compliance/elements', window.location.origin);
+      if (category) {
+        url.searchParams.set('category', category);
+      }
+      
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const elements: HudDataElement[] = await response.json();
+      setData(elements);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [category, setData, setLoading, setError]);
+
+  return {
+    elements: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch,
+  };
+}
+
 // Audit Log hooks
 export function useAuditLog(filters?: AuditLogFilters) {
   const [state, { setData, setLoading, setError }] = useApiState<AuditEntry[]>([]);
@@ -1962,6 +2117,384 @@ export function usePayees() {
 
   return {
     payees: state.data,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+// Household Composition Hooks
+
+export function useHouseholdComposition(householdId: string) {
+  const [state, { setData, setLoading, setError }] = useApiState<HouseholdComposition>(null);
+
+  const fetchHousehold = useCallback(async () => {
+    if (!householdId) return;
+    
+    setLoading(true);
+    try {
+      const household = await apiClient.getHouseholdComposition(householdId);
+      setData(household);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [householdId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    fetchHousehold();
+  }, [fetchHousehold]);
+
+  return {
+    household: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchHousehold,
+  };
+}
+
+export function useActiveHouseholdForClient(clientId: string, asOfDate?: string) {
+  const [state, { setData, setLoading, setError }] = useApiState<HouseholdComposition>(null);
+
+  const fetchActiveHousehold = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    try {
+      const household = await apiClient.getActiveHouseholdForClient(clientId, asOfDate);
+      setData(household);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [clientId, asOfDate, setData, setLoading, setError]);
+
+  useEffect(() => {
+    fetchActiveHousehold();
+  }, [fetchActiveHousehold]);
+
+  return {
+    household: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchActiveHousehold,
+  };
+}
+
+export function useHouseholdMembers(householdId: string, asOfDate?: string) {
+  const [state, { setData, setLoading, setError }] = useApiState<HouseholdMember[]>([]);
+
+  const fetchMembers = useCallback(async () => {
+    if (!householdId) return;
+    
+    setLoading(true);
+    try {
+      const members = await apiClient.getHouseholdMembers(householdId, asOfDate);
+      setData(members);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [householdId, asOfDate, setData, setLoading, setError]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  return {
+    members: state.data,
+    loading: state.loading,
+    error: state.error,
+    refetch: fetchMembers,
+  };
+}
+
+export function useHouseholdManagement() {
+  const [state, { setLoading, setError }] = useApiState<null>(null);
+
+  const createHousehold = useCallback(async (request: CreateHouseholdCompositionRequest) => {
+    setLoading(true);
+    try {
+      const result = await apiClient.createHouseholdComposition(request);
+      return result;
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setError]);
+
+  const addMember = useCallback(async (householdId: string, request: AddHouseholdMemberRequest) => {
+    setLoading(true);
+    try {
+      await apiClient.addHouseholdMember(householdId, request);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setError]);
+
+  const removeMember = useCallback(async (
+    householdId: string, 
+    memberId: string, 
+    request: { effectiveDate: string; recordedBy: string; reason: string }
+  ) => {
+    setLoading(true);
+    try {
+      await apiClient.removeHouseholdMember(householdId, memberId, request);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setError]);
+
+  return {
+    createHousehold,
+    addMember,
+    removeMember,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+// Consent Ledger Hooks
+export function useClientConsents(clientId: string, activeOnly: boolean = false) {
+  const [state, { setLoading, setSuccess, setError }] = useApiState<ConsentLedgerEntry[]>([]);
+
+  const fetchConsents = useCallback(async () => {
+    if (!clientId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/consent-ledger/client/${clientId}?activeOnly=${activeOnly}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch consents: ${response.statusText}`);
+      }
+      const consents = await response.json();
+      setSuccess(consents);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    } finally {
+      setLoading(false);
+    }
+  }, [clientId, activeOnly, setLoading, setSuccess, setError]);
+
+  useEffect(() => {
+    fetchConsents();
+  }, [fetchConsents]);
+
+  return {
+    consents: state.data || [],
+    loading: state.loading,
+    error: state.error,
+    refresh: fetchConsents,
+  };
+}
+
+export function useConsentSearch() {
+  const [state, { setLoading, setSuccess, setError }] = useApiState<{
+    data: ConsentLedgerEntry[];
+    pagination: any;
+  }>({ data: [], pagination: null });
+
+  const searchConsents = useCallback(async (params: ConsentSearchParams & { page?: number; size?: number }) => {
+    setLoading(true);
+    try {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+
+      const response = await fetch(`/api/consent-ledger/search?${searchParams}`);
+      if (!response.ok) {
+        throw new Error(`Failed to search consents: ${response.statusText}`);
+      }
+      const results = await response.json();
+      setSuccess(results);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setSuccess, setError]);
+
+  return {
+    results: state.data?.data || [],
+    pagination: state.data?.pagination,
+    loading: state.loading,
+    error: state.error,
+    search: searchConsents,
+  };
+}
+
+export function useConsentAuditTrail(consentId: string) {
+  const [state, { setLoading, setSuccess, setError }] = useApiState<ConsentAuditEntry[]>([]);
+
+  const fetchAuditTrail = useCallback(async () => {
+    if (!consentId) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/consent-ledger/${consentId}/audit-trail`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audit trail: ${response.statusText}`);
+      }
+      const auditTrail = await response.json();
+      setSuccess(auditTrail);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    } finally {
+      setLoading(false);
+    }
+  }, [consentId, setLoading, setSuccess, setError]);
+
+  useEffect(() => {
+    fetchAuditTrail();
+  }, [fetchAuditTrail]);
+
+  return {
+    auditTrail: state.data || [],
+    loading: state.loading,
+    error: state.error,
+    refresh: fetchAuditTrail,
+  };
+}
+
+export function useConsentStatistics() {
+  const [state, { setLoading, setSuccess, setError }] = useApiState<ConsentStatistics | null>(null);
+
+  const fetchStatistics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/consent-ledger/statistics');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch statistics: ${response.statusText}`);
+      }
+      const statistics = await response.json();
+      setSuccess(statistics);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setSuccess, setError]);
+
+  useEffect(() => {
+    fetchStatistics();
+  }, [fetchStatistics]);
+
+  return {
+    statistics: state.data,
+    loading: state.loading,
+    error: state.error,
+    refresh: fetchStatistics,
+  };
+}
+
+// Coordinated Entry Hooks
+
+export function useCeAssessments(enrollmentId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<CeAssessment[]>([]);
+
+  const fetchAssessments = useCallback(async () => {
+    if (!enrollmentId) return;
+    setLoading(true);
+    try {
+      const assessments = await apiClient.getCeAssessments(enrollmentId);
+      setData(assessments);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    fetchAssessments();
+  }, [fetchAssessments]);
+
+  return {
+    assessments: state.data || [],
+    loading: state.loading,
+    error: state.error,
+    refresh: fetchAssessments,
+  };
+}
+
+export function useCreateCeAssessment(enrollmentId: string | null) {
+  const [state, { setLoading, setError }] = useApiState<null>(null);
+
+  const createAssessment = useCallback(async (payload: CreateCeAssessmentRequest) => {
+    if (!enrollmentId) {
+      throw new Error('Enrollment ID is required to create an assessment');
+    }
+
+    setLoading(true);
+    try {
+      return await apiClient.createCeAssessment(enrollmentId, payload);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [enrollmentId, setLoading, setError]);
+
+  return {
+    createAssessment,
+    loading: state.loading,
+    error: state.error,
+  };
+}
+
+export function useCeEvents(enrollmentId: string | null) {
+  const [state, { setData, setLoading, setError }] = useApiState<CeEvent[]>([]);
+
+  const fetchEvents = useCallback(async () => {
+    if (!enrollmentId) return;
+    setLoading(true);
+    try {
+      const events = await apiClient.getCeEvents(enrollmentId);
+      setData(events);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+    }
+  }, [enrollmentId, setData, setLoading, setError]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  return {
+    events: state.data || [],
+    loading: state.loading,
+    error: state.error,
+    refresh: fetchEvents,
+  };
+}
+
+export function useCreateCeEvent(enrollmentId: string | null) {
+  const [state, { setLoading, setError }] = useApiState<null>(null);
+
+  const createEvent = useCallback(async (payload: CreateCeEventRequest) => {
+    if (!enrollmentId) {
+      throw new Error('Enrollment ID is required to record an event');
+    }
+
+    setLoading(true);
+    try {
+      return await apiClient.createCeEvent(enrollmentId, payload);
+    } catch (error) {
+      setError(handleApiError(error as ApiError));
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [enrollmentId, setLoading, setError]);
+
+  return {
+    createEvent,
     loading: state.loading,
     error: state.error,
   };

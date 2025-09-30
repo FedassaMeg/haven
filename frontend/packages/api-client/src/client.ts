@@ -39,7 +39,27 @@ import type {
   ApprovalQueueItem,
   Payee,
   FundingSource,
+  HouseholdComposition,
+  HouseholdMember,
+  CreateHouseholdCompositionRequest,
+  AddHouseholdMemberRequest,
+  CeAssessment,
+  CreateCeAssessmentRequest,
+  CeEvent,
+  CreateCeEventRequest,
 } from './types';
+
+import type {
+  RestrictedNote,
+  CreateRestrictedNoteRequest,
+  UpdateRestrictedNoteRequest,
+  SealNoteRequest,
+  UnsealNoteRequest,
+  RestrictedNoteResponse,
+  NoteAuditEntry,
+  ComplianceReport,
+  RestrictedNoteFilters
+} from './types/restrictedNotes';
 
 export class ApiClient {
   private axios: AxiosInstance;
@@ -570,6 +590,58 @@ export class ApiClient {
     return this.get<Payee>(`/api/v1/payees/${payeeId}`);
   }
 
+  // Household Composition API methods
+  async getHouseholdComposition(householdId: string): Promise<HouseholdComposition> {
+    return this.get<HouseholdComposition>(`/api/households/${householdId}`);
+  }
+
+  async getHouseholdMembers(householdId: string, asOfDate?: string): Promise<HouseholdMember[]> {
+    const params = asOfDate ? `?asOfDate=${asOfDate}` : '';
+    return this.get<HouseholdMember[]>(`/api/households/${householdId}/members${params}`);
+  }
+
+  async getActiveHouseholdForClient(clientId: string, asOfDate?: string): Promise<HouseholdComposition> {
+    const params = asOfDate ? `?asOfDate=${asOfDate}` : '';
+    return this.get<HouseholdComposition>(`/api/households/active-for-client/${clientId}${params}`);
+  }
+
+  async getHouseholdsByClient(clientId: string): Promise<HouseholdComposition[]> {
+    return this.get<HouseholdComposition[]>(`/api/households/by-member/${clientId}`);
+  }
+
+  async createHouseholdComposition(request: CreateHouseholdCompositionRequest): Promise<HouseholdComposition> {
+    return this.post<HouseholdComposition>('/api/households', request);
+  }
+
+  async addHouseholdMember(householdId: string, request: AddHouseholdMemberRequest): Promise<void> {
+    return this.post<void>(`/api/households/${householdId}/members`, request);
+  }
+
+  async removeHouseholdMember(
+    householdId: string, 
+    memberId: string, 
+    request: { effectiveDate: string; recordedBy: string; reason: string }
+  ): Promise<void> {
+    return this.delete<void>(`/api/households/${householdId}/members/${memberId}`, { data: request });
+  }
+
+  // Coordinated Entry
+  async getCeAssessments(enrollmentId: string): Promise<CeAssessment[]> {
+    return this.get<CeAssessment[]>(`/api/v1/enrollments/${enrollmentId}/ce-assessments`);
+  }
+
+  async createCeAssessment(enrollmentId: string, request: CreateCeAssessmentRequest): Promise<CeAssessment> {
+    return this.post<CeAssessment>(`/api/v1/enrollments/${enrollmentId}/ce-assessments`, request);
+  }
+
+  async getCeEvents(enrollmentId: string): Promise<CeEvent[]> {
+    return this.get<CeEvent[]>(`/api/v1/enrollments/${enrollmentId}/ce-events`);
+  }
+
+  async createCeEvent(enrollmentId: string, request: CreateCeEventRequest): Promise<CeEvent> {
+    return this.post<CeEvent>(`/api/v1/enrollments/${enrollmentId}/ce-events`, request);
+  }
+
   async createPayee(payee: Omit<Payee, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }> {
     return this.post<{ id: string }>('/api/v1/payees', payee);
   }
@@ -586,6 +658,69 @@ export class ApiClient {
 
     return this.post<{ id: string; filename: string }>('/api/v1/documents/upload', formData);
   }
+
+  // Restricted Notes API
+  restrictedNotes = {
+    getClientNotes: (clientId: string, filters?: RestrictedNoteFilters): Promise<RestrictedNote[]> => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+      }
+      const queryString = params.toString();
+      const url = `/api/clients/${clientId}/restricted-notes${queryString ? `?${queryString}` : ''}`;
+      return this.get<RestrictedNote[]>(url);
+    },
+
+    getAccessibleNotes: (filters?: RestrictedNoteFilters): Promise<RestrictedNote[]> => {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+      }
+      const queryString = params.toString();
+      const url = `/api/restricted-notes/accessible${queryString ? `?${queryString}` : ''}`;
+      return this.get<RestrictedNote[]>(url);
+    },
+
+    getNote: (noteId: string): Promise<RestrictedNote> => {
+      return this.get<RestrictedNote>(`/api/restricted-notes/${noteId}`);
+    },
+
+    createNote: (data: CreateRestrictedNoteRequest): Promise<RestrictedNoteResponse> => {
+      return this.post<RestrictedNoteResponse>('/api/restricted-notes', data);
+    },
+
+    updateNote: (noteId: string, data: UpdateRestrictedNoteRequest): Promise<RestrictedNoteResponse> => {
+      return this.put<RestrictedNoteResponse>(`/api/restricted-notes/${noteId}`, data);
+    },
+
+    sealNote: (noteId: string, data: SealNoteRequest): Promise<RestrictedNoteResponse> => {
+      return this.post<RestrictedNoteResponse>(`/api/restricted-notes/${noteId}/seal`, data);
+    },
+
+    unsealNote: (noteId: string, data: UnsealNoteRequest): Promise<RestrictedNoteResponse> => {
+      return this.post<RestrictedNoteResponse>(`/api/restricted-notes/${noteId}/unseal`, data);
+    },
+
+    getAuditTrail: (noteId: string): Promise<NoteAuditEntry[]> => {
+      return this.get<NoteAuditEntry[]>(`/api/restricted-notes/${noteId}/audit-trail`);
+    },
+
+    getComplianceReport: (noteId: string): Promise<ComplianceReport> => {
+      return this.get<ComplianceReport>(`/api/restricted-notes/${noteId}/compliance-report`);
+    },
+
+    getAccessLog: (noteId: string): Promise<NoteAuditEntry[]> => {
+      return this.get<NoteAuditEntry[]>(`/api/restricted-notes/${noteId}/access-log`);
+    }
+  };
 }
 
 // Default instance - can be customized with token refresh and auth handlers

@@ -98,9 +98,89 @@ export const CaseSchema = z.object({
   period: PeriodSchema.optional(),
 });
 
+// Household Composition schemas
+export const HouseholdMemberSchema = z.object({
+  membershipId: z.string().uuid(),
+  householdCompositionId: z.string().uuid(),
+  memberId: z.string().uuid(),
+  memberFirstName: z.string(),
+  memberLastName: z.string(),
+  memberFullName: z.string(),
+  memberDateOfBirth: z.string().optional(),
+  relationshipCode: z.string().optional(),
+  relationshipDisplay: z.string().optional(),
+  membershipStartDate: z.string(), // ISO date
+  membershipEndDate: z.string().optional(), // ISO date
+  isActive: z.boolean(),
+  isHeadOfHousehold: z.boolean(),
+  recordedBy: z.string(),
+  reason: z.string().optional(),
+  recordedAt: z.string(), // ISO datetime
+  membershipDurationDays: z.number(),
+});
+
+export const HouseholdCompositionSchema = z.object({
+  id: z.string().uuid(),
+  headOfHouseholdId: z.string().uuid(),
+  headOfHouseholdFirstName: z.string(),
+  headOfHouseholdLastName: z.string(),
+  headOfHouseholdFullName: z.string(),
+  headOfHouseholdDateOfBirth: z.string().optional(),
+  compositionDate: z.string(), // ISO date
+  householdType: z.enum([
+    'SINGLE_ADULT', 'FAMILY_WITH_CHILDREN', 'COUPLE_NO_CHILDREN', 
+    'MULTIGENERATIONAL', 'SHARED_HOUSING', 'TEMPORARY_CUSTODY', 
+    'FOSTER_CARE', 'OTHER'
+  ]),
+  notes: z.string().optional(),
+  createdAt: z.string(), // ISO datetime
+  currentHouseholdSize: z.number(),
+  totalMembersCount: z.number(),
+  activeChildrenCount: z.number(),
+  allMembers: z.array(HouseholdMemberSchema),
+  activeMembers: z.array(HouseholdMemberSchema),
+  custodyChanges: z.array(z.object({
+    membershipId: z.string().uuid(),
+    childId: z.string().uuid(),
+    childFirstName: z.string(),
+    childLastName: z.string(),
+    previousRelationshipCode: z.string().optional(),
+    newRelationshipCode: z.string(),
+    effectiveDate: z.string(), // ISO date
+    courtOrderReference: z.string().optional(),
+    recordedBy: z.string(),
+    recordedAt: z.string(), // ISO datetime
+  })),
+});
+
+export const CreateHouseholdCompositionRequestSchema = z.object({
+  headOfHouseholdId: z.string().uuid(),
+  effectiveDate: z.string(), // ISO date
+  householdType: z.enum([
+    'SINGLE_ADULT', 'FAMILY_WITH_CHILDREN', 'COUPLE_NO_CHILDREN', 
+    'MULTIGENERATIONAL', 'SHARED_HOUSING', 'TEMPORARY_CUSTODY', 
+    'FOSTER_CARE', 'OTHER'
+  ]),
+  recordedBy: z.string(),
+  notes: z.string().optional(),
+});
+
+export const AddHouseholdMemberRequestSchema = z.object({
+  memberId: z.string().uuid(),
+  relationship: CodeableConceptSchema,
+  effectiveFrom: z.string(), // ISO date
+  effectiveTo: z.string().optional(), // ISO date
+  recordedBy: z.string(),
+  reason: z.string().optional(),
+});
+
 // Inferred types from schemas
 export type HumanName = z.infer<typeof HumanNameSchema>;
 export type Address = z.infer<typeof AddressSchema>;
+export type HouseholdMember = z.infer<typeof HouseholdMemberSchema>;
+export type HouseholdComposition = z.infer<typeof HouseholdCompositionSchema>;
+export type CreateHouseholdCompositionRequest = z.infer<typeof CreateHouseholdCompositionRequestSchema>;
+export type AddHouseholdMemberRequest = z.infer<typeof AddHouseholdMemberRequestSchema>;
 export type ContactPoint = z.infer<typeof ContactPointSchema>;
 export type CodeableConcept = z.infer<typeof CodeableConceptSchema>;
 export type Period = z.infer<typeof PeriodSchema>;
@@ -702,6 +782,80 @@ export interface ComplianceOverview {
   overallScore: number;
   metrics?: ComplianceMetric[];
   lastAuditDate?: string;
+}
+
+// HUD Compliance Matrix types
+export interface HudDataElement {
+  hudId: string;
+  name: string;
+  description: string;
+  mandatory: boolean;
+  category: string;
+  owningAggregate: string;
+  dataType: string;
+  domainImplementation: ImplementationStatus;
+  apiImplementation: ImplementationStatus;
+  uiImplementation: ImplementationStatus;
+  notes: string;
+}
+
+export interface ImplementationStatus {
+  implemented: boolean;
+  location: string;
+  details: string;
+}
+
+export interface HudComplianceMatrix {
+  version: string;
+  generatedAt: string;
+  hudElements: HudDataElement[];
+  overallComplianceScore: number;
+  summary: HudComplianceSummary;
+}
+
+export interface HudComplianceSummary {
+  totalElements: number;
+  fullyImplemented: number;
+  partiallyImplemented: number;
+  notImplemented: number;
+  byCategory: Record<string, CategorySummary>;
+}
+
+export interface CategorySummary {
+  displayName: string;
+  totalElements: number;
+  implementedElements: number;
+  compliancePercentage: number;
+}
+
+export interface ElementCoverageDetail {
+  hudId: string;
+  name: string;
+  description: string;
+  mandatory: boolean;
+  category: string;
+  owningAggregate: string;
+  domainCoverage: CoverageDetail;
+  apiCoverage: CoverageDetail;
+  uiCoverage: CoverageDetail;
+  notes: string;
+}
+
+export interface CoverageDetail {
+  layer: string;
+  implemented: boolean;
+  location: string;
+  details: string;
+}
+
+export interface ComplianceSummaryResponse {
+  overallScore: number;
+  totalElements: number;
+  fullyImplemented: number;
+  partiallyImplemented: number;
+  notImplemented: number;
+  categories: Record<string, CategorySummary>;
+  lastUpdated: string;
 }
 
 export interface AuditEntry {
@@ -1369,4 +1523,221 @@ export enum FundingSourceType {
   LOCAL_FUNDING = 'LOCAL_FUNDING',
   PRIVATE_FOUNDATION = 'PRIVATE_FOUNDATION',
   OTHER = 'OTHER'
+}
+
+// Consent Management Types
+export enum ConsentType {
+  INFORMATION_SHARING = 'INFORMATION_SHARING',
+  HMIS_PARTICIPATION = 'HMIS_PARTICIPATION',
+  COURT_TESTIMONY = 'COURT_TESTIMONY',
+  MEDICAL_INFORMATION_SHARING = 'MEDICAL_INFORMATION_SHARING',
+  REFERRAL_SHARING = 'REFERRAL_SHARING',
+  RESEARCH_PARTICIPATION = 'RESEARCH_PARTICIPATION',
+  LEGAL_COUNSEL_COMMUNICATION = 'LEGAL_COUNSEL_COMMUNICATION',
+  FAMILY_CONTACT = 'FAMILY_CONTACT'
+}
+
+export enum ConsentStatus {
+  GRANTED = 'GRANTED',
+  REVOKED = 'REVOKED',
+  EXPIRED = 'EXPIRED'
+}
+
+export interface ConsentLedgerEntry {
+  id: string;
+  clientId: string;
+  consentType: ConsentType;
+  status: ConsentStatus;
+  purpose: string;
+  recipientOrganization?: string;
+  recipientContact?: string;
+  grantedAt: string;
+  expiresAt?: string;
+  revokedAt?: string;
+  grantedByUserId: string;
+  revokedByUserId?: string;
+  revocationReason?: string;
+  isVAWAProtected: boolean;
+  limitations?: string;
+  lastUpdatedAt: string;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  daysUntilExpiration: number;
+}
+
+export interface ConsentSearchParams {
+  clientId?: string;
+  consentType?: ConsentType;
+  status?: ConsentStatus;
+  recipientOrganization?: string;
+  grantedAfter?: string;
+  grantedBefore?: string;
+  includeVAWAProtected?: boolean;
+}
+
+export interface ConsentAuditEntry {
+  id: string;
+  consentId: string;
+  clientId: string;
+  eventType: string;
+  consentType?: ConsentType;
+  actingUserId?: string;
+  occurredAt: string;
+  eventData: string;
+  reason?: string;
+  recipientOrganization?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface ConsentStatistics {
+  totalConsents: number;
+  activeConsents: number;
+  revokedConsents: number;
+  expiredConsents: number;
+  expiringSoonCount: number;
+  vAWAProtectedCount: number;
+  typeBreakdown: ConsentTypeStatistics[];
+  recentActivity: RecentActivitySummary;
+}
+
+export interface ConsentTypeStatistics {
+  consentType: string;
+  totalCount: number;
+  activeCount: number;
+}
+
+export interface RecentActivitySummary {
+  consentsGrantedLast30Days: number;
+  consentsRevokedLast30Days: number;
+  consentsExpiredLast30Days: number;
+}
+
+// Coordinated Entry Types
+
+export type CeShareScope =
+  | 'COC_COORDINATED_ENTRY'
+  | 'HMIS_PARTICIPATION'
+  | 'BY_NAME_LIST'
+  | 'VAWA_RESTRICTED_PARTNERS'
+  | 'SYSTEM_PERFORMANCE'
+  | 'ADMIN_AUDIT';
+
+export type CeHashAlgorithm = 'SHA256_SALT' | 'BCRYPT';
+
+export type CeAssessmentType =
+  | 'CRISIS_NEEDS'
+  | 'HOUSING_NEEDS'
+  | 'PREVENTION'
+  | 'DIVERSION_PROBLEM_SOLVING'
+  | 'TRANSFER'
+  | 'YOUTH'
+  | 'FAMILY'
+  | 'OTHER';
+
+export type CeAssessmentLevel = 'PRE_SCREEN' | 'FULL_ASSESSMENT' | 'POST_ASSESSMENT';
+
+export type CePrioritizationStatus =
+  | 'PRIORITIZED'
+  | 'ACTIVE_NO_OPENING'
+  | 'NOT_PRIORITIZED'
+  | 'NO_LONGER_PRIORITY'
+  | 'OTHER';
+
+export type CeEventType =
+  | 'REFERRAL_TO_PREVENTION'
+  | 'REFERRAL_TO_STREET_OUTREACH'
+  | 'REFERRAL_TO_NAVIGATION'
+  | 'REFERRAL_TO_PH'
+  | 'REFERRAL_TO_RRH'
+  | 'REFERRAL_TO_ES'
+  | 'EVENT_SAFETY_PLANNING'
+  | 'EVENT_DIVERSION'
+  | 'EVENT_OTHER';
+
+export type CeEventStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CLOSED';
+
+export type CeEventResult =
+  | 'CLIENT_ACCEPTED'
+  | 'CLIENT_DECLINED'
+  | 'PROVIDER_DECLINED'
+  | 'EXPIRED'
+  | 'NO_CONTACT'
+  | 'OTHER';
+
+export interface CeAssessment {
+  id: string;
+  enrollmentId: string;
+  clientId: string;
+  assessmentDate: string;
+  assessmentType: CeAssessmentType;
+  assessmentLevel: CeAssessmentLevel | null;
+  toolUsed: string | null;
+  score: number | null;
+  prioritizationStatus: CePrioritizationStatus | null;
+  location: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  packetId: string | null;
+  consentLedgerId: string | null;
+  consentScope: CeShareScope[];
+}
+
+export interface CreateCeAssessmentRequest {
+  clientId: string;
+  assessmentDate: string;
+  assessmentType: CeAssessmentType;
+  assessmentLevel?: CeAssessmentLevel | null;
+  toolUsed?: string | null;
+  score?: number | null;
+  prioritizationStatus?: CePrioritizationStatus | null;
+  location?: string | null;
+  consentId: string;
+  consentLedgerId?: string | null;
+  shareScopes?: CeShareScope[];
+  hashAlgorithm?: CeHashAlgorithm;
+  encryptionScheme?: string;
+  encryptionKeyId: string;
+  encryptionMetadata?: Record<string, string>;
+  encryptionTags?: string[];
+  createdBy: string;
+  recipientOrganization?: string | null;
+}
+
+export interface CeEvent {
+  id: string;
+  enrollmentId: string;
+  clientId: string;
+  eventDate: string;
+  eventType: CeEventType;
+  result: CeEventResult | null;
+  status: CeEventStatus;
+  referralDestination: string | null;
+  outcomeDate: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  packetId: string | null;
+  consentLedgerId: string | null;
+  consentScope: CeShareScope[];
+}
+
+export interface CreateCeEventRequest {
+  clientId: string;
+  eventDate: string;
+  eventType: CeEventType;
+  result?: CeEventResult | null;
+  status: CeEventStatus;
+  referralDestination?: string | null;
+  outcomeDate?: string | null;
+  consentId: string;
+  consentLedgerId?: string | null;
+  shareScopes?: CeShareScope[];
+  hashAlgorithm?: CeHashAlgorithm;
+  encryptionScheme?: string;
+  encryptionKeyId: string;
+  encryptionMetadata?: Record<string, string>;
+  encryptionTags?: string[];
+  createdBy: string;
 }
