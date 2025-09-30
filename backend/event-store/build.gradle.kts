@@ -22,11 +22,16 @@ dependencies {
     implementation("org.springframework:spring-tx")
     implementation("org.springframework:spring-context")
     
+    // Spring Data JPA
+    implementation("org.springframework.data:spring-data-jpa")
+    implementation("jakarta.persistence:jakarta.persistence-api")
+    
     // Database
     implementation("org.postgresql:postgresql")
     
     // JSON handling
     implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter")

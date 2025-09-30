@@ -1,5 +1,7 @@
 package org.haven.eventstore;
 
+import org.haven.shared.events.DomainEvent;
+
 import java.util.List;
 import java.util.UUID;
 
