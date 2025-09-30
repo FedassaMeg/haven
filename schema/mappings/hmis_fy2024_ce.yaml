@@ -1,0 +1,277 @@
+version: FY2024
+status: confirmed
+source_documents:
+  - name: HMIS Standard Data Dictionary FY2024
+    url: https://files.hudexchange.info/resources/documents/HMIS-Standard-Data-Dictionary-FY2024.pdf
+  - name: HMIS CSV Specifications FY2024
+    url: https://files.hudexchange.info/resources/documents/HMIS-CSV-Specifications-FY2024.pdf
+last_verified: 2024-06-01
+mappings:
+  ce_packets:
+    target_table: ce_packets
+    hud_reference: Coordination Consent Packet (Haven extension mapping to Assessment and Event CSVs)
+    elements:
+      - id: packet.clientHash
+        name: Hashed PersonalID
+        target_column: client_hash
+        datatype: text
+        notes: Hex encoded salted hash aligning with HMIS PersonalID anonymization guidance.
+      - id: packet.hashSalt
+        name: Hash Salt
+        target_column: hash_salt
+        datatype: bytea
+        notes: Random 128-bit salt stored base64 for SHA-256 or bcrypt salt string bytes.
+      - id: packet.hashAlgorithm
+        name: Hash Algorithm
+        target_column: hash_algorithm
+        datatype: enum ce_hash_algorithm
+        values:
+          SHA256_SALT: Salted SHA-256 with 100k iterations
+          BCRYPT: BCrypt 12 rounds with embedded salt
+      - id: packet.allowedShareScopes
+        name: Allowed Share Scopes
+        target_column: allowed_share_scopes
+        datatype: ce_share_scope[]
+        values:
+          - COC_COORDINATED_ENTRY
+          - HMIS_PARTICIPATION
+          - BY_NAME_LIST
+          - VAWA_RESTRICTED_PARTNERS
+          - SYSTEM_PERFORMANCE
+          - ADMIN_AUDIT
+      - id: packet.consentStatus
+        name: Consent Status Snapshot
+        target_column: consent_status
+        datatype: varchar(50)
+        values:
+          GRANTED: Active consent available
+          REVOKED: Consent revoked, packet locked
+          EXPIRED: Consent expired, packet sealed
+          PENDING: Awaiting client decision
+          DENIED: Consent denied, packet unusable
+      - id: packet.consentVersion
+        name: Consent Version
+        target_column: consent_version
+        datatype: biginteger
+        notes: Mirrors haven.client_consents.version for optimistic locking.
+      - id: packet.encryptionScheme
+        name: Encryption Scheme
+        target_column: encryption_scheme
+        datatype: text
+        notes: Captures content cipher (default AES-256-GCM) for CE export packages.
+      - id: packet.encryptionKeyId
+        name: Encryption Key Identifier
+        target_column: encryption_key_id
+        datatype: text
+        notes: References KMS or HSM key used for CE payload at rest.
+      - id: packet.encryptionMetadata
+        name: Encryption Metadata Tags
+        target_column: encryption_metadata
+        datatype: jsonb
+        notes: Includes consentStatus, consentVersion, VAWA flag, algorithm, scheme.
+      - id: packet.encryptionTags
+        name: Encryption Tag List
+        target_column: encryption_tags
+        datatype: text[]
+        notes: Flat tags for export receipts (e.g., scope:HMIS, consent:<UUID>).
+      - id: packet.packetChecksum
+        name: Packet Integrity Checksum
+        target_column: packet_checksum
+        datatype: text
+        notes: SHA-256 checksum for transport validation.
+      - id: packet.ledgerEntryId
+        name: Consent Ledger Entry
+        target_column: ledger_entry_id
+        datatype: uuid
+        notes: Links packet snapshot to immutable consent ledger entry when exports occur.
+  ce_assessments:
+    target_table: ce_assessments
+    hud_reference: 4.20 Coordinated Entry Assessment
+    elements:
+      - id: 4.20.1
+        name: Assessment ID
+        target_column: id
+        datatype: uuid
+        notes: Internal surrogate key, mapped to HMIS AssessmentID for exports.
+      - id: 4.20.2
+        name: Assessment Date
+        target_column: assessment_date
+        datatype: date
+        constraints:
+          - must_not_exceed_current_date
+      - id: 4.20.3
+        name: Assessment Type
+        target_column: assessment_type
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.20.3 Assessment Type
+          values:
+            CRISIS_NEEDS: 1
+            HOUSING_NEEDS: 2
+            PREVENTION: 3
+            DIVERSION_PROBLEM_SOLVING: 4
+            TRANSFER: 5
+            YOUTH: 6
+            FAMILY: 7
+            OTHER: 99
+      - id: 4.20.4
+        name: Assessment Level
+        target_column: assessment_level
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.20.4 Assessment Level
+          values:
+            PRE_SCREEN: 1
+            FULL_ASSESSMENT: 2
+            POST_ASSESSMENT: 3
+      - id: 4.20.5
+        name: Assessment Location
+        target_column: location
+        datatype: text
+        notes: Free-form location description per HUD guidance.
+      - id: 4.20.6
+        name: Assessment Tool
+        target_column: tool_used
+        datatype: text
+        notes: Captures HUD-recognized tools (e.g., VI-SPDAT) for export element AssessmentTool.
+      - id: 4.20.7
+        name: Assessment Score
+        target_column: score
+        datatype: numeric(10,2)
+        notes: Includes prioritization score; matches HUD numeric requirement.
+      - id: 4.20.8
+        name: Prioritization Status
+        target_column: prioritization_status
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.20.8 Prioritization Status
+          values:
+            PRIORITIZED: 1
+            ACTIVE_NO_OPENING: 2
+            NOT_PRIORITIZED: 3
+            NO_LONGER_PRIORITY: 4
+            OTHER: 99
+      - id: 4.20.9
+        name: ClientID
+        target_column: client_id
+        datatype: uuid
+        notes: Links to clients table; exported as PersonalID in HMIS CSV.
+      - id: 4.20.10
+        name: EnrollmentID
+        target_column: enrollment_id
+        datatype: uuid
+        notes: Links CE assessment to enrollment per HUD EnrollmentID.
+  ce_events:
+    target_table: ce_events
+    hud_reference: 4.21 Coordinated Entry Event
+    elements:
+      - id: 4.21.1
+        name: Event ID
+        target_column: id
+        datatype: uuid
+        notes: Internal surrogate key, mapped to HMIS EventID.
+      - id: 4.21.2
+        name: Event Date
+        target_column: event_date
+        datatype: date
+        constraints:
+          - must_not_exceed_current_date
+      - id: 4.21.3
+        name: Event Type
+        target_column: event_type
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.21.3 Event Type
+          values:
+            REFERRAL_TO_PREVENTION: 1
+            REFERRAL_TO_STREET_OUTREACH: 2
+            REFERRAL_TO_NAVIGATION: 3
+            REFERRAL_TO_PH: 4
+            REFERRAL_TO_RRH: 5
+            REFERRAL_TO_ES: 6
+            EVENT_SAFETY_PLANNING: 7
+            EVENT_DIVERSION: 8
+            EVENT_OTHER: 99
+      - id: 4.21.4
+        name: Event Result
+        target_column: result
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.21.4 Event Result
+          values:
+            CLIENT_ACCEPTED: 1
+            CLIENT_DECLINED: 2
+            PROVIDER_DECLINED: 3
+            EXPIRED: 4
+            NO_CONTACT: 5
+            OTHER: 99
+      - id: 4.21.5
+        name: Event Status
+        target_column: status
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.21.5 Event Status
+          values:
+            PENDING: 1
+            IN_PROGRESS: 2
+            COMPLETED: 3
+            CLOSED: 4
+      - id: 4.21.6
+        name: Referral Destination
+        target_column: referral_destination
+        datatype: text
+        notes: Maps to EventLocation/ReferralDestination.
+      - id: 4.21.7
+        name: Outcome Date
+        target_column: outcome_date
+        datatype: date
+        notes: Captures completion/closure date; exported as EventOutcomeDate.
+      - id: 4.21.8
+        name: ClientID
+        target_column: client_id
+        datatype: uuid
+      - id: 4.21.9
+        name: EnrollmentID
+        target_column: enrollment_id
+        datatype: uuid
+  ce_referrals:
+    target_table: ce_events
+    hud_reference: 4.21 Coordinated Entry Referral Detail
+    normalization: Inline in ce_events table
+    elements:
+      - id: 4.21.3
+        name: Referral Event Type
+        target_column: event_type
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.21.3 Event Type
+          notes: Only referral-related codes (1-6) are used for exports to CEReferral.csv.
+      - id: 4.21.4
+        name: Referral Result
+        target_column: result
+        datatype: text
+        enumerations_reference:
+          document: HMIS Standard Data Dictionary FY2024
+          table: 4.21.4 Event Result
+      - id: 4.21.6
+        name: Referral To Organization/Project
+        target_column: referral_destination
+        datatype: text
+        notes: Stores either HMIS ProjectID or partner organization descriptor per CSV spec.
+      - id: 4.21.7
+        name: Referral Completion/Outcome Date
+        target_column: outcome_date
+        datatype: date
+        notes: Exported as ReferralOutcomeDate.
+      - id: 4.21.10
+        name: ConsentLedgerID
+        target_column: created_by
+        datatype: text
+        notes: Placeholder; to be replaced with explicit ledger link in subsequent tasks.
