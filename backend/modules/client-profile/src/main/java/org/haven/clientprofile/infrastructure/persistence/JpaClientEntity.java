@@ -2,6 +2,8 @@ package org.haven.clientprofile.infrastructure.persistence;
 
 import org.haven.clientprofile.domain.*;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -24,7 +26,7 @@ public class JpaClientEntity {
     private Instant createdAt;
 
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
-    @org.hibernate.annotations.Type(com.vladmihalcea.hibernate.type.basic.PostgreSQLEnumType.class)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "gender", columnDefinition = "gender")
     private Client.AdministrativeGender gender = Client.AdministrativeGender.UNKNOWN;
 

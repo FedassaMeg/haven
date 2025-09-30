@@ -2,7 +2,11 @@ package org.haven.clientprofile.infrastructure.persistence;
 
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.clientprofile.domain.consent.*;
+import org.haven.eventstore.EventEnvelope;
+import org.haven.eventstore.EventStore;
+import org.haven.shared.events.DomainEvent;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -10,48 +14,60 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository implementation for Consent aggregate
- * Note: This is a simplified implementation for demonstration
- * In a full event-sourced system, this would integrate with the event store
+ * Repository implementation for Consent aggregate with event sourcing
  */
 @Component
 public class ConsentRepositoryImpl implements ConsentRepository {
     
     private final JpaConsentRepository jpaRepository;
+    private final EventStore eventStore;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Autowired
-    public ConsentRepositoryImpl(JpaConsentRepository jpaRepository) {
+    public ConsentRepositoryImpl(JpaConsentRepository jpaRepository, EventStore eventStore, ApplicationEventPublisher eventPublisher) {
         this.jpaRepository = jpaRepository;
+        this.eventStore = eventStore;
+        this.eventPublisher = eventPublisher;
     }
     
     @Override
     public Optional<Consent> findById(ConsentId id) {
-        Optional<JpaConsentEntity> entity = jpaRepository.findById(id.value());
+        List<EventEnvelope<? extends DomainEvent>> events = eventStore.load(id.value());
         
-        if (entity.isPresent()) {
-            // In a real implementation, this would reconstruct from events
-            // For now, we'll return a placeholder or throw an exception
-            throw new UnsupportedOperationException(
-                "Domain reconstruction not implemented. Use event sourcing to rebuild aggregate from events."
-            );
+        if (events.isEmpty()) {
+            return Optional.empty();
         }
         
-        return Optional.empty();
+        // Reconstruct aggregate from events
+        Consent consent = Consent.reconstruct();
+        for (EventEnvelope<? extends DomainEvent> envelope : events) {
+            consent.replay(envelope.event(), envelope.sequence());
+        }
+        
+        return Optional.of(consent);
     }
     
     @Override
     public void save(Consent aggregate) {
-        // In a real event-sourced implementation, this would:
-        // 1. Extract uncommitted events from the aggregate
-        // 2. Save events to event store
-        // 3. Optionally update read model/projection
+        // Extract uncommitted events from the aggregate
+        List<DomainEvent> pendingEvents = aggregate.getPendingEvents();
         
-        // For demonstration, we'll save a simplified projection
+        if (!pendingEvents.isEmpty()) {
+            // Save events to event store with optimistic concurrency control
+            eventStore.append(aggregate.getId().value(), aggregate.getVersion() - pendingEvents.size(), pendingEvents);
+            
+            // Publish events for projection handlers
+            for (DomainEvent event : pendingEvents) {
+                eventPublisher.publishEvent(event);
+            }
+            
+            // Clear pending events after successful save
+            aggregate.clearPendingEvents();
+        }
+        
+        // Update read model/projection for fast queries
         JpaConsentEntity entity = JpaConsentEntity.fromDomain(aggregate);
         jpaRepository.save(entity);
-        
-        // Log the save operation
-        System.out.println("Consent saved: " + aggregate.getId());
     }
     
     @Override
@@ -70,10 +86,11 @@ public class ConsentRepositoryImpl implements ConsentRepository {
             clientId.value(), ConsentStatus.GRANTED, Instant.now()
         );
         
-        // In a real implementation, would reconstruct domain objects
-        throw new UnsupportedOperationException(
-            "Domain reconstruction not implemented. Use event sourcing to rebuild aggregates from events."
-        );
+        return entities.stream()
+            .map(entity -> findById(new ConsentId(entity.getId())))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
     }
     
     @Override
@@ -83,10 +100,7 @@ public class ConsentRepositoryImpl implements ConsentRepository {
         );
         
         if (entity.isPresent()) {
-            // In a real implementation, would reconstruct domain object
-            throw new UnsupportedOperationException(
-                "Domain reconstruction not implemented. Use event sourcing to rebuild aggregate from events."
-            );
+            return findById(new ConsentId(entity.get().getId()));
         }
         
         return Optional.empty();
@@ -96,10 +110,11 @@ public class ConsentRepositoryImpl implements ConsentRepository {
     public List<Consent> findAllConsentsForClient(ClientId clientId) {
         List<JpaConsentEntity> entities = jpaRepository.findByClientId(clientId.value());
         
-        // In a real implementation, would reconstruct domain objects
-        throw new UnsupportedOperationException(
-            "Domain reconstruction not implemented. Use event sourcing to rebuild aggregates from events."
-        );
+        return entities.stream()
+            .map(entity -> findById(new ConsentId(entity.getId())))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
     }
     
     @Override
@@ -108,10 +123,11 @@ public class ConsentRepositoryImpl implements ConsentRepository {
             ConsentStatus.GRANTED, startDate, endDate
         );
         
-        // In a real implementation, would reconstruct domain objects
-        throw new UnsupportedOperationException(
-            "Domain reconstruction not implemented. Use event sourcing to rebuild aggregates from events."
-        );
+        return entities.stream()
+            .map(entity -> findById(new ConsentId(entity.getId())))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
     }
     
     @Override
@@ -120,20 +136,22 @@ public class ConsentRepositoryImpl implements ConsentRepository {
             ConsentStatus.GRANTED, Instant.now()
         );
         
-        // In a real implementation, would reconstruct domain objects
-        throw new UnsupportedOperationException(
-            "Domain reconstruction not implemented. Use event sourcing to rebuild aggregates from events."
-        );
+        return entities.stream()
+            .map(entity -> findById(new ConsentId(entity.getId())))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
     }
     
     @Override
     public List<Consent> findByRecipientOrganization(String recipientOrganization) {
         List<JpaConsentEntity> entities = jpaRepository.findByRecipientOrganization(recipientOrganization);
         
-        // In a real implementation, would reconstruct domain objects
-        throw new UnsupportedOperationException(
-            "Domain reconstruction not implemented. Use event sourcing to rebuild aggregates from events."
-        );
+        return entities.stream()
+            .map(entity -> findById(new ConsentId(entity.getId())))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
     }
     
     @Override

@@ -38,6 +38,14 @@ public class Consent extends AggregateRoot<ConsentId> {
     }
     
     /**
+     * Create empty consent for event sourcing reconstruction
+     * Only to be used by the repository when replaying events
+     */
+    public static Consent reconstruct() {
+        return new Consent();
+    }
+    
+    /**
      * Grant new consent
      */
     public static Consent grant(ConsentId consentId, ClientId clientId, ConsentType consentType,
@@ -249,6 +257,24 @@ public class Consent extends AggregateRoot<ConsentId> {
     public String getRevocationReason() { return revocationReason; }
     public boolean isVAWAProtected() { return isVAWAProtected; }
     public String getLimitations() { return limitations; }
+
+    // Additional helper methods for compatibility
+    public boolean isActive() {
+        return status == ConsentStatus.GRANTED &&
+               (expiresAt == null || expiresAt.isAfter(Instant.now()));
+    }
+
+    public ConsentId getConsentId() {
+        return id;
+    }
+
+    public Instant getEffectiveDate() {
+        return grantedAt;
+    }
+
+    public Instant getExpirationDate() {
+        return expiresAt;
+    }
     
     /**
      * Domain exception for consent business rule violations

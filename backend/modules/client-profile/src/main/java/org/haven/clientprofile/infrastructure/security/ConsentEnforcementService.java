@@ -2,6 +2,7 @@ package org.haven.clientprofile.infrastructure.security;
 
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.clientprofile.domain.consent.*;
+import org.haven.clientprofile.infrastructure.persistence.ConsentLedgerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,10 +18,13 @@ import java.util.Optional;
 public class ConsentEnforcementService {
     
     private final ConsentRepository consentRepository;
+    private final ConsentLedgerRepository ledgerRepository;
     
     @Autowired
-    public ConsentEnforcementService(ConsentRepository consentRepository) {
+    public ConsentEnforcementService(ConsentRepository consentRepository, 
+                                   ConsentLedgerRepository ledgerRepository) {
         this.consentRepository = consentRepository;
+        this.ledgerRepository = ledgerRepository;
     }
     
     /**
@@ -121,6 +125,20 @@ public class ConsentEnforcementService {
             consent.expireIfNeeded();
             consentRepository.save(consent);
         }
+    }
+    
+    /**
+     * Fast validation using read model for performance-critical operations
+     * Note: This bypasses full domain logic for speed but should match domain behavior
+     */
+    public boolean hasValidConsentFast(ClientId clientId, ConsentType consentType, String recipientOrganization) {
+        return ledgerRepository.hasValidConsentFor(
+            clientId.value(), 
+            consentType, 
+            recipientOrganization, 
+            ConsentStatus.GRANTED, 
+            Instant.now()
+        );
     }
     
     /**

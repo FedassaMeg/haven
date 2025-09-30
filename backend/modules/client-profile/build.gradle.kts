@@ -34,8 +34,7 @@ dependencies {
     // PostgreSQL JDBC
     implementation("org.postgresql:postgresql")
 
-    // Hibernate Types for PostgreSQL enum support (export to consumers)
-    api("com.vladmihalcea:hibernate-types-60:2.21.1")
+    // Hibernate Types no longer needed (using Hibernate 6 native enum mapping)
     
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
