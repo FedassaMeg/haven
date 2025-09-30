@@ -1,5 +1,6 @@
 package org.haven.api.client;
 
+import io.swagger.v3.oas.annotations.Operation;
 import org.haven.clientprofile.application.services.ClientAppService;
 import org.haven.clientprofile.application.commands.*;
 import org.haven.clientprofile.application.queries.*;
@@ -126,4 +127,47 @@ public class ClientController {
         return ResponseEntity.created(
             URI.create("/api/clients/" + id + "/household-members")).build();
     }
+    
+    @Operation(
+        summary = "Get HUD element coverage for client endpoints",
+        description = "Returns which HUD data elements are covered by client API endpoints"
+    )
+    @GetMapping("/hud-coverage")
+    public ResponseEntity<ClientHudCoverageResponse> getHudCoverage() {
+        List<HudElementCoverage> coverages = List.of(
+            new HudElementCoverage("3.01", "Personal ID", "/clients/{id}", "GET", "personalId", true),
+            new HudElementCoverage("3.02", "First Name", "/clients/{id}", "GET", "name.given[0]", true),
+            new HudElementCoverage("3.03", "Last Name", "/clients/{id}", "GET", "name.family", true),
+            new HudElementCoverage("3.04", "Race", "/clients/{id}", "GET", "race", true),
+            new HudElementCoverage("3.05", "Ethnicity", "/clients/{id}", "GET", "ethnicity", false),
+            new HudElementCoverage("3.06", "Gender", "/clients/{id}", "GET", "gender", true),
+            new HudElementCoverage("3.07", "Veteran Status", "/clients/{id}", "GET", "veteranStatus", true)
+        );
+        
+        ClientHudCoverageResponse response = new ClientHudCoverageResponse(
+            "Client API",
+            coverages,
+            coverages.stream().mapToLong(c -> c.implemented() ? 1 : 0).sum(),
+            coverages.size()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    // HUD Coverage DTOs
+    public record ClientHudCoverageResponse(
+        String apiName,
+        List<HudElementCoverage> elements,
+        long implementedCount,
+        long totalCount
+    ) {}
+    
+    public record HudElementCoverage(
+        String hudId,
+        String elementName,
+        String route,
+        String method,
+        String fieldName,
+        boolean implemented
+    ) {}
 }

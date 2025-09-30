@@ -90,15 +90,24 @@ public class CaseController {
     }
     
     @PostMapping("/{id}/notes")
+    @Deprecated(since = "1.5.0", forRemoval = true)
     public ResponseEntity<Void> addNote(
             @PathVariable UUID id,
             @Valid @RequestBody AddCaseNoteCmd cmd) {
         if (!id.equals(cmd.caseId().value())) {
             return ResponseEntity.badRequest().build();
         }
+
+        // Add deprecation warning header
+        ResponseEntity<Void> response = ResponseEntity.<Void>created(URI.create("/cases/" + id + "/notes"))
+            .header("X-Deprecated", "true")
+            .header("X-Deprecation-Message", "Case notes endpoint is deprecated. Use /api/v1/service-episodes for service documentation.")
+            .header("X-Sunset", "2025-12-31")
+            .header("X-Migration-Guide", "https://docs.haven.org/migration/service-episodes")
+            .build();
+
         caseAppService.handle(cmd);
-        return ResponseEntity.created(
-            URI.create("/cases/" + id + "/notes")).build();
+        return response;
     }
     
     @PutMapping("/{id}/status")
