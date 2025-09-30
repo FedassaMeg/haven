@@ -3,6 +3,7 @@ package org.haven.shared.audit;
 import org.haven.shared.events.DomainEvent;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -26,7 +27,7 @@ public class AuditService {
         System.out.println("AUDIT: " + entry);
     }
     
-    public void logBusinessAction(UUID resourceId, String resourceType, 
+    public void logBusinessAction(UUID resourceId, String resourceType,
                                  String action, String userId, String details) {
         AuditEntry entry = new AuditEntry(
             UUID.randomUUID(),
@@ -37,8 +38,30 @@ public class AuditService {
             Instant.now(),
             details
         );
-        
-        // In real implementation, would persist to audit log  
+
+        // In real implementation, would persist to audit log
+        System.out.println("AUDIT: " + entry);
+    }
+
+    public void logAction(String action, Map<String, Object> metadata) {
+        // Extract common fields from metadata
+        UUID resourceId = metadata.containsKey("id") ?
+            UUID.fromString(metadata.get("id").toString()) : UUID.randomUUID();
+
+        String details = metadata.toString();
+        String userId = metadata.getOrDefault("userId", "system").toString();
+
+        AuditEntry entry = new AuditEntry(
+            UUID.randomUUID(),
+            resourceId,
+            action,
+            action,
+            userId,
+            Instant.now(),
+            details
+        );
+
+        // In real implementation, would persist to audit log
         System.out.println("AUDIT: " + entry);
     }
     
