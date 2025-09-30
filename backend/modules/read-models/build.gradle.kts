@@ -21,7 +21,6 @@ dependencies {
     implementation(project(":modules:client-profile"))
     implementation(project(":modules:safety-assessment"))
     implementation(project(":modules:financial-assistance"))
-    implementation(project(":modules:housing-assistance"))
     implementation(project(":modules:program-enrollment"))
     
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
