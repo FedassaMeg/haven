@@ -6,7 +6,6 @@ import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.events.DomainEvent;
 import org.haven.financialassistance.domain.events.*;
 import org.haven.financialassistance.domain.ApprovalChain;
-import org.haven.housingassistance.domain.HousingAssistance.AssistancePaymentSubtype;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -315,5 +314,15 @@ public class FinancialAssistance extends AggregateRoot<FinancialAssistanceId> {
     public boolean isOverdue() {
         return paymentDueDate != null && LocalDate.now().isAfter(paymentDueDate) && 
                status != AssistanceStatus.COMPLETED;
+    }
+
+    public enum AssistancePaymentSubtype {
+        RENT_CURRENT,
+        RENT_ARREARS,
+        UTILITY_CURRENT,
+        UTILITY_ARREARS,
+        SECURITY_DEPOSIT,
+        MOVING_COSTS,
+        OTHER
     }
 }

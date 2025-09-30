@@ -18,7 +18,6 @@ dependencies {
     api(project(":shared-kernel"))
     api(project(":modules:client-profile"))
     api(project(":modules:program-enrollment"))
-    api(project(":modules:housing-assistance"))
     
     // Spring Framework
     implementation("org.springframework:spring-context")
