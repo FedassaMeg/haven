@@ -3,6 +3,8 @@ package org.haven.casemgmt.infrastructure.persistence;
 import org.haven.casemgmt.domain.CaseRecord;
 import org.haven.casemgmt.domain.CaseId;
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.eventstore.EventStore;
+import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.CodeableConcept;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -91,24 +93,23 @@ public class JpaCaseEntity {
         );
     }
     
-    public CaseRecord toDomain() {
-        // For now, return a simplified reconstruction
-        // In a full implementation, you'd replay events from the event store
-        CodeableConcept caseType = caseTypeCode != null ? 
-            new CodeableConcept(List.of(new CodeableConcept.Coding(null, null, caseTypeCode, caseTypeDisplay, null)), caseTypeDisplay) :
-            new CodeableConcept(List.of(), "Unknown");
-        CodeableConcept priority = priorityCode != null ? 
-            new CodeableConcept(List.of(new CodeableConcept.Coding(null, null, priorityCode, priorityDisplay, null)), priorityDisplay) :
-            new CodeableConcept(List.of(), "Normal");
-        
-        CaseRecord caseRecord = CaseRecord.open(
-            new ClientId(clientId),
-            caseType,
-            priority,
-            description
-        );
-        
-        return caseRecord;
+    /**
+     * Reconstruct CaseRecord from event store
+     * CRITICAL: Do not call CaseRecord.open() as it creates new events
+     * Instead, load events from EventStore and replay them
+     */
+    public CaseRecord toDomain(EventStore eventStore) {
+        var eventEnvelopes = eventStore.load(this.id);
+
+        if (eventEnvelopes.isEmpty()) {
+            throw new IllegalStateException("No events found for case: " + this.id);
+        }
+
+        List<DomainEvent> events = eventEnvelopes.stream()
+            .map(envelope -> (DomainEvent) envelope.event())
+            .toList();
+
+        return CaseRecord.reconstruct(this.id, events);
     }
     
     // Getters and setters

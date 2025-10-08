@@ -1,0 +1,224 @@
+# HUD HMIS CSV Format - Client.csv Specification
+# Per HUD HMIS CSV Format Specifications (HDX 2024)
+
+reportType: HMIS_CSV
+sectionIdentifier: CSV-Client
+sectionName: "HMIS CSV Export - Client.csv"
+description: |
+  Client.csv contains demographic information for all clients served.
+  Core table in HUD HMIS CSV export format.
+  Used for data exchange between HMIS systems and for HUD reporting.
+
+versionIdentifier: HDX-2024
+hudNoticeReference: "HUD HMIS CSV Format Specifications v2024"
+effectiveFrom: 2024-10-01
+filingDeadline: "N/A - On-demand export"
+
+scopeFilters:
+  # Export scope determined at runtime
+  reportingPeriod:
+    type: PARAMETER_DRIVEN
+  # Can filter by CoC, project, date range, etc.
+
+inclusionLogic:
+  # Include all clients with enrollments in export period
+  includeAllClientsWithEnrollments: true
+  excludeTestData: true
+
+exclusionLogic:
+  # VAWA: Suppress DV victim data unless consent given
+  applyVawaRedaction: true
+
+requiresVawaConsentCheck: true
+allowAggregatesWithoutConsent: false
+
+dataQualityRequirements: |
+  - PersonalID required (unique identifier)
+  - First name and last name required
+  - SSN highly encouraged (or SSNDataQuality explanation)
+  - DOB required (or DOBDataQuality explanation)
+  - Race and ethnicity required
+  - Gender required
+
+fieldMappings:
+  - sourceEntity: ClientProfile
+    sourceField: clientId
+    targetHudElement: "CSV:Client.PersonalID"
+    csvFieldName: PersonalID
+    csvFieldOrder: 1
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "Unique 32-character identifier"
+
+  - sourceEntity: ClientProfile
+    sourceField: firstName
+    targetHudElement: "CSV:Client.FirstName"
+    csvFieldName: FirstName
+    csvFieldOrder: 2
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: REDACT
+    validationRules: "Max 50 characters"
+
+  - sourceEntity: ClientProfile
+    sourceField: middleName
+    targetHudElement: "CSV:Client.MiddleName"
+    csvFieldName: MiddleName
+    csvFieldOrder: 3
+    targetDataType: String
+    requiredFlag: O
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: REDACT
+
+  - sourceEntity: ClientProfile
+    sourceField: lastName
+    targetHudElement: "CSV:Client.LastName"
+    csvFieldName: LastName
+    csvFieldOrder: 4
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: REDACT
+    validationRules: "Max 50 characters"
+
+  - sourceEntity: ClientProfile
+    sourceField: nameSuffix
+    targetHudElement: "CSV:Client.NameSuffix"
+    csvFieldName: NameSuffix
+    csvFieldOrder: 5
+    targetDataType: String
+    requiredFlag: O
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: REDACT
+
+  - sourceEntity: ClientProfile
+    sourceField: nameDataQuality
+    targetHudElement: "CSV:Client.NameDataQuality"
+    csvFieldName: NameDataQuality
+    csvFieldOrder: 6
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Code List 1.4: 1=Full name, 2=Partial, 8=Client doesn't know, 9=Client refused, 99=Data not collected"
+
+  - sourceEntity: ClientProfile
+    sourceField: ssn
+    targetHudElement: "CSV:Client.SSN"
+    csvFieldName: SSN
+    csvFieldOrder: 7
+    targetDataType: String
+    requiredFlag: C
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: SUPPRESS
+    validationRules: "9 digits, no formatting; blank if not collected"
+
+  - sourceEntity: ClientProfile
+    sourceField: ssnDataQuality
+    targetHudElement: "CSV:Client.SSNDataQuality"
+    csvFieldName: SSNDataQuality
+    csvFieldOrder: 8
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Code List 1.4"
+
+  - sourceEntity: ClientProfile
+    sourceField: dateOfBirth
+    targetHudElement: "CSV:Client.DOB"
+    csvFieldName: DOB
+    csvFieldOrder: 9
+    targetDataType: Date
+    requiredFlag: C
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: REDACT
+    validationRules: "YYYY-MM-DD format"
+
+  - sourceEntity: ClientProfile
+    sourceField: dobDataQuality
+    targetHudElement: "CSV:Client.DOBDataQuality"
+    csvFieldName: DOBDataQuality
+    csvFieldOrder: 10
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Code List 1.4"
+
+  - sourceEntity: ClientProfile
+    sourceField: race
+    targetHudElement: "CSV:Client.Race"
+    csvFieldName: Race
+    csvFieldOrder: 11
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    transformationRule: RACE_NONE_DEFAULT
+    validationRules: "HUD Code List 1.6: 1-5 race codes, 8=Doesn't know, 9=Refused, 99=Not collected"
+
+  - sourceEntity: ClientProfile
+    sourceField: ethnicity
+    targetHudElement: "CSV:Client.Ethnicity"
+    csvFieldName: Ethnicity
+    csvFieldOrder: 12
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Code List 1.5: 0=Non-Hispanic, 1=Hispanic, 8=Doesn't know, 9=Refused, 99=Not collected"
+
+  - sourceEntity: ClientProfile
+    sourceField: gender
+    targetHudElement: "CSV:Client.Gender"
+    csvFieldName: Gender
+    csvFieldOrder: 13
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    transformationRule: GENDER_NONE_DEFAULT
+    validationRules: "HUD Code List 1.3"
+
+  - sourceEntity: ClientProfile
+    sourceField: veteranStatus
+    targetHudElement: "CSV:Client.VeteranStatus"
+    csvFieldName: VeteranStatus
+    csvFieldOrder: 14
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Element 4.07: 0=No, 1=Yes, 8=Doesn't know, 9=Refused, 99=Not collected"
+
+  - sourceEntity: ClientProfile
+    sourceField: dateCreated
+    targetHudElement: "CSV:Client.DateCreated"
+    csvFieldName: DateCreated
+    csvFieldOrder: 15
+    targetDataType: DateTime
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "YYYY-MM-DD HH:MM:SS format"
+
+  - sourceEntity: ClientProfile
+    sourceField: dateUpdated
+    targetHudElement: "CSV:Client.DateUpdated"
+    csvFieldName: DateUpdated
+    csvFieldOrder: 16
+    targetDataType: DateTime
+    requiredFlag: R
+    vawaSensitiveField: false
+
+transformations:
+  vawaClientRedaction:
+    ruleName: VAWA_CLIENT_CSV_REDACTION
+    description: Redact client PII when DV victim without consent
+    expression: |
+      CASE
+        WHEN dv_victim = true AND consent_given = false THEN NULL
+        ELSE ${fieldValue}
+      END
+    appliesTo:
+      - FirstName
+      - MiddleName
+      - LastName
+      - NameSuffix
+      - SSN
+      - DOB

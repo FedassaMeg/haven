@@ -1,0 +1,121 @@
+# System Performance Measures - Metric 1a: Length of Time Persons Remain Homeless
+# Per Notice CPD-17-01
+
+reportType: SYSTEM_PERFORMANCE_MEASURES
+sectionIdentifier: Metric1a
+sectionName: "Length of Time Persons Remain Homeless - Change in the average and median length of time persons are homeless"
+description: |
+  Measures the average and median length of time persons remain homeless.
+  Critical indicator of homeless system performance and housing placement efficiency.
+  Compares current reporting period to prior year.
+
+versionIdentifier: SPM-v2.0
+hudNoticeReference: "Notice CPD-17-01 - System Performance Measures"
+effectiveFrom: 2024-10-01
+filingDeadline: "Annually with CoC Application"
+
+scopeFilters:
+  # CoC-wide measure (all projects in CoC)
+  scope: COC_WIDE
+  reportingPeriod:
+    type: FISCAL_YEAR
+  cocCodes:
+    - "${cocCode}" # Parameterized per CoC
+
+inclusionLogic:
+  # ES, SH, TH, and Street Outreach
+  projectTypes:
+    - 1  # ES - Entry/Exit
+    - 2  # TH
+    - 4  # Street Outreach
+    - 8  # Safe Haven
+  # Active during reporting period
+  enrollmentOverlapsReportPeriod: true
+  excludeTestData: true
+
+exclusionLogic:
+  # Exclude PH projects (PSH, RRH) - they don't count toward time homeless
+  excludeProjectTypes:
+    - 3  # PSH
+    - 13 # RRH
+  # Exclude persons with no valid date data
+  excludeInvalidDates: true
+
+aggregateRules:
+  metrics:
+    - name: AverageDaysHomeless
+      expression: AVG(days_homeless_current_period)
+      description: Mean length of time homeless in current period
+
+    - name: MedianDaysHomeless
+      expression: PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_homeless_current_period)
+      description: Median length of time homeless in current period
+
+    - name: AverageDaysHomelessPriorYear
+      expression: AVG(days_homeless_prior_period)
+      description: Mean length of time homeless in prior year
+
+    - name: MedianDaysHomelessPriorYear
+      expression: PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_homeless_prior_period)
+      description: Median length of time homeless in prior year
+
+    - name: ChangeInAverage
+      expression: (AVG(days_homeless_current_period) - AVG(days_homeless_prior_period))
+      description: Year-over-year change in average
+
+    - name: PercentChangeInAverage
+      expression: ((AVG(days_homeless_current_period) - AVG(days_homeless_prior_period)) * 100.0 / NULLIF(AVG(days_homeless_prior_period), 0))
+      description: Percent change in average
+
+requiresVawaConsentCheck: false
+allowAggregatesWithoutConsent: true
+
+dataQualityRequirements: |
+  - Valid enrollment and exit dates required
+  - DateToStreetESSH must be present or calculable
+  - TimesHomelessPastThreeYears and MonthsHomelessPastThreeYears preferred for chronic calculation
+
+fieldMappings:
+  - sourceEntity: Enrollment
+    sourceField: clientId
+    targetHudElement: "SPM:Metric1a.PersonalID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: enrollmentDate
+    targetHudElement: "SPM:Metric1a.EntryDate"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: exitDate
+    targetHudElement: "SPM:Metric1a.ExitDate"
+    targetDataType: Date
+    requiredFlag: C
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: dateToStreetESSH
+    targetHudElement: "SPM:Metric1a.DateToStreetESSH"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+    description: "Date client became homeless (HUD Element 3.917.3)"
+
+transformations:
+  daysHomelessCalculation:
+    ruleName: DAYS_HOMELESS_SPM_METRIC1A
+    description: Calculate days homeless for SPM Metric 1a
+    expression: |
+      DATEDIFF(
+        COALESCE(exit_date, report_end_date),
+        GREATEST(date_to_street_essh, report_start_date)
+      )
+    parameters:
+      - date_to_street_essh
+      - exit_date
+      - report_start_date
+      - report_end_date

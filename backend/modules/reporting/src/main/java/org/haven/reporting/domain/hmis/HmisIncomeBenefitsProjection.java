@@ -17,8 +17,13 @@ public record HmisIncomeBenefitsProjection(
     String enrollmentId,
     HmisPersonalId personalId,
     LocalDate informationDate,
-    
-    // Income data
+    Integer dataCollectionStage, // FY2024: 1=Start, 2=Update, 3=Exit, 4=Minor turns 18, 5=Annual
+
+    // Income summary (4.02.1)
+    Integer incomeFromAnySource, // FY2024: Overall income status
+    Integer benefitsFromAnySource, // FY2024: Overall benefits status (4.03.1)
+
+    // Income data (4.02.2 - 4.02.16)
     Integer totalMonthlyIncome,
     DisabilityType earnedIncome,
     Integer earnedIncomeAmount,
@@ -50,15 +55,17 @@ public record HmisIncomeBenefitsProjection(
     Integer alimonyIncomeAmount,
     DisabilityType otherIncomeSource,
     Integer otherIncomeAmount,
-    
-    // Benefits data
+    String otherIncomeSourceIdentify, // FY2024: Free text specify field
+
+    // Benefits data (4.03.2 - 4.03.7)
     DisabilityType snap,
     DisabilityType wic,
     DisabilityType tanfChildCare,
     DisabilityType tanfTransportation,
     DisabilityType otherTanf,
     DisabilityType otherBenefitsSource,
-    
+    String otherBenefitsSourceIdentify, // FY2024: Free text specify field
+
     LocalDate dateCreated,
     LocalDate dateUpdated,
     String userId,
@@ -95,6 +102,9 @@ public record HmisIncomeBenefitsProjection(
             personalId,
             LocalDate.now(),
             (Integer) null,
+            99, // incomeFromAnySource - DATA_NOT_COLLECTED
+            99, // benefitsFromAnySource - DATA_NOT_COLLECTED
+            (Integer) null, // totalMonthlyIncome
             DisabilityType.DATA_NOT_COLLECTED,
             (Integer) null,
             DisabilityType.DATA_NOT_COLLECTED,
@@ -125,12 +135,14 @@ public record HmisIncomeBenefitsProjection(
             (Integer) null,
             DisabilityType.DATA_NOT_COLLECTED,
             (Integer) null,
+            null, // otherIncomeSourceIdentify
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
             DisabilityType.DATA_NOT_COLLECTED,
+            null, // otherBenefitsSourceIdentify
             LocalDate.now(),
             LocalDate.now(),
             userId,

@@ -1,0 +1,121 @@
+# CoC APR Question 23c: Exit Destination - Permanent Housing
+# Per 24 CFR 578.103 and HUD APR Programming Specifications
+
+reportType: CoC_APR
+sectionIdentifier: Q23c
+sectionName: "Destination at Program Exit - Permanent Housing Destinations"
+description: |
+  Count of persons exiting to permanent housing destinations during the operating year.
+  Key performance metric for homeless system effectiveness.
+  Categorizes exits by permanent housing type per HUD destination code list.
+
+versionIdentifier: APR-FY2024
+hudNoticeReference: "Notice CPD-23-08 - FY2023 CoC Program Competition"
+effectiveFrom: 2024-10-01
+filingDeadline: "90 days after fiscal year end"
+
+scopeFilters:
+  fundingSources:
+    - CoC
+  reportingPeriod:
+    type: FISCAL_YEAR
+
+inclusionLogic:
+  # Only persons with exits during reporting period
+  exitDuringReportPeriod: true
+  excludeTestData: true
+  # Minimum stay of 1 night
+  minimumStayDays: 1
+  projectTypes:
+    - 1  # ES
+    - 2  # TH
+    - 3  # PSH
+    - 8  # Safe Haven
+    - 13 # RRH
+    - 6  # SSO
+
+exclusionLogic:
+  excludeNonCoCFunded: true
+  excludeProjectTypes:
+    - 14 # Coordinated Entry
+  # Exclude non-leavers (still enrolled)
+  excludeNullExitDates: true
+
+aggregateRules:
+  # Categorize by destination type
+  groupBy:
+    - DestinationCategory
+
+  metrics:
+    - name: TotalExitsToPermanent
+      expression: COUNT(DISTINCT CASE WHEN destination IN (3, 10, 11, 19, 20, 21, 22, 23, 26, 28, 31, 33, 34) THEN client_id END)
+      description: Total exits to permanent housing
+
+    - name: ExitsToOwnedByClient
+      expression: COUNT(DISTINCT CASE WHEN destination IN (10, 11) THEN client_id END)
+      description: Owned by client (with or without subsidy)
+
+    - name: ExitsToRentalWithSubsidy
+      expression: COUNT(DISTINCT CASE WHEN destination IN (3, 31, 33, 34) THEN client_id END)
+      description: Rental with subsidy (PSH, RRH, HCV, etc.)
+
+    - name: ExitsToRentalNoSubsidy
+      expression: COUNT(DISTINCT CASE WHEN destination = 28 THEN client_id END)
+      description: Rental without subsidy
+
+    - name: SuccessfulExitRate
+      expression: (COUNT(DISTINCT CASE WHEN destination IN (3, 10, 11, 19, 20, 21, 22, 23, 26, 28, 31, 33, 34) THEN client_id END) * 100.0 / COUNT(DISTINCT client_id))
+      description: Percentage exiting to permanent housing
+
+requiresVawaConsentCheck: false
+allowAggregatesWithoutConsent: true
+
+dataQualityRequirements: |
+  - Exit date must be within reporting period
+  - Destination code must be valid per HUD Code List 4.12
+  - Less than 5% "Client doesn't know" or "Data not collected" responses
+
+fieldMappings:
+  - sourceEntity: Enrollment
+    sourceField: clientId
+    targetHudElement: "APR:Q23c.PersonalID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: exitDate
+    targetHudElement: "APR:Q23c.ExitDate"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "Must be within reporting period"
+
+  - sourceEntity: Enrollment
+    sourceField: destinationCode
+    targetHudElement: "APR:Q23c.Destination"
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "Valid HUD Code List 4.12 value"
+
+  - sourceEntity: Enrollment
+    sourceField: projectId
+    targetHudElement: "APR:Q23c.ProjectID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+transformations:
+  destinationCategorization:
+    ruleName: DESTINATION_CATEGORY_MAPPING
+    description: Map destination codes to categories
+    expression: |
+      CASE
+        WHEN destination IN (3, 31, 33, 34) THEN 'Rental with Subsidy'
+        WHEN destination IN (10, 11) THEN 'Owned by Client'
+        WHEN destination = 28 THEN 'Rental without Subsidy'
+        WHEN destination IN (19, 20, 21, 22, 23, 26) THEN 'Other Permanent'
+        WHEN destination IN (1, 2, 14, 15, 16, 18, 27, 29, 32, 36) THEN 'Temporary or Institutional'
+        WHEN destination IN (8, 9, 17, 24, 25, 30, 37, 99) THEN 'Unknown/Other'
+      END

@@ -3,14 +3,12 @@ package org.haven.casemgmt.domain;
 import org.haven.clientprofile.domain.ClientId;
 import org.haven.clientprofile.domain.ClientRepository;
 import org.haven.shared.vo.CodeableConcept;
-import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
 /**
  * Domain service for complex case management business logic
  */
-@Service
 public class CaseDomainService {
     
     private final CaseRepository caseRepository;

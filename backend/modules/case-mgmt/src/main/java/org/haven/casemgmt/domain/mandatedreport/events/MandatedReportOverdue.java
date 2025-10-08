@@ -8,25 +8,27 @@ import java.util.UUID;
 /**
  * Event fired when mandated report becomes overdue
  */
-public record MandatedReportOverdue(
-    UUID reportId,
-    UUID caseId,
-    Instant filingDeadline,
-    Instant overdueAt
-) implements DomainEvent {
-    
-    @Override
-    public Instant occurredAt() {
+
+public class MandatedReportOverdue extends DomainEvent {
+    private final UUID caseId;
+    private final Instant overdueAt;
+
+    public MandatedReportOverdue(UUID reportId, UUID caseId, Instant filingDeadline, Instant overdueAt) {
+        super(reportId, filingDeadline);
+        this.caseId = caseId;
+        this.overdueAt = overdueAt;
+    }
+
+    public UUID caseId() {
+        return caseId;
+    }
+
+    public Instant overdueAt() {
         return overdueAt;
     }
-    
-    @Override
-    public String eventType() {
-        return "MandatedReportOverdue";
-    }
-    
-    @Override
-    public UUID aggregateId() {
-        return reportId;
-    }
+
+
+    // JavaBean-style getters
+    public UUID getCaseId() { return caseId; }
+    public Instant getOverdueAt() { return overdueAt; }
 }

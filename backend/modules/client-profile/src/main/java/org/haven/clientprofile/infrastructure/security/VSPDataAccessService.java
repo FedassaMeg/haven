@@ -1,6 +1,13 @@
 package org.haven.clientprofile.infrastructure.security;
 
 import org.haven.clientprofile.domain.DataSystem;
+import org.haven.clientprofile.infrastructure.persistence.JpaVSPAuditLogRepository;
+import org.haven.clientprofile.infrastructure.persistence.VSPAuditLogEntity;
+import org.haven.shared.security.AccessContext;
+import org.haven.shared.security.ConfidentialityPolicyService;
+import org.haven.shared.security.PolicyDecision;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,11 +20,18 @@ import java.util.UUID;
  */
 @Service
 public class VSPDataAccessService {
-    
+
+    private static final Logger logger = LoggerFactory.getLogger(VSPDataAccessService.class);
     private final PIIRedactionService redactionService;
-    
-    public VSPDataAccessService(PIIRedactionService redactionService) {
+    private final JpaVSPAuditLogRepository auditLogRepository;
+    private final ConfidentialityPolicyService policyService;
+
+    public VSPDataAccessService(PIIRedactionService redactionService,
+                                JpaVSPAuditLogRepository auditLogRepository,
+                                ConfidentialityPolicyService policyService) {
         this.redactionService = redactionService;
+        this.auditLogRepository = auditLogRepository;
+        this.policyService = policyService;
     }
     
     /**
@@ -48,23 +62,14 @@ public class VSPDataAccessService {
     }
     
     /**
-     * Validates VSP user can access specific client data
-     * Enforces ComparableDB-only restriction
+     * Check VSP access using centralized policy service
      */
-    public boolean canVSPAccessClient(UUID clientId, List<String> userRoles) {
-        if (!isVSPUser(userRoles)) {
-            return true; // Non-VSP access handled by normal permissions
-        }
-        
-        // Check if client is restricted to ComparableDB only
+    public PolicyDecision checkVSPAccess(UUID clientId, AccessContext context) {
+        boolean isDVVictim = isDVVictim(clientId);
         ClientDataSystemRestriction restriction = getClientDataSystemRestriction(clientId);
-        
-        if (restriction.getDataSystem() == DataSystem.HMIS && 
-            !restriction.isComparableDbAccessAllowed()) {
-            return false; // VSP cannot access HMIS-only clients
-        }
-        
-        return true;
+        String dataSystem = restriction.getDataSystem().name();
+
+        return policyService.canVSPAccessClient(clientId, isDVVictim, dataSystem, context);
     }
     
     /**
@@ -82,18 +87,47 @@ public class VSPDataAccessService {
     }
     
     /**
-     * Logs VSP data access attempt for audit
+     * Logs VSP data access attempt for audit (VAWA/HUD compliance)
      */
-    public void logVSPDataAccess(UUID userId, UUID clientId, String dataType, 
+    public void logVSPDataAccess(UUID userId, UUID clientId, String dataType,
                                boolean accessGranted, String reason) {
-        
-        VSPAccessAuditLog logEntry = new VSPAccessAuditLog(
-            userId, clientId, dataType, accessGranted, reason, 
-            java.time.Instant.now()
+
+        VSPAuditLogEntity auditLog = new VSPAuditLogEntity(
+            UUID.randomUUID(),
+            userId,
+            clientId,
+            dataType,
+            accessGranted,
+            reason,
+            java.time.Instant.now(),
+            null, // IP address - could be enriched from request context
+            null, // Session ID - could be enriched from request context
+            true, // Redaction applied for VSP
+            isDVVictim(clientId) // Check if VAWA protected
         );
-        
-        // This would be persisted to audit table
-        System.out.println("VSP_ACCESS_LOG: " + logEntry);
+
+        // Persist to database for compliance
+        try {
+            auditLogRepository.save(auditLog);
+            logger.debug("VSP access audit log saved: user={}, client={}, granted={}",
+                userId, clientId, accessGranted);
+        } catch (Exception e) {
+            // Log error but don't fail the business operation
+            logger.error("Failed to persist VSP audit log: user={}, client={}",
+                userId, clientId, e);
+            // Fall back to console logging for critical visibility
+            System.err.println("VSP_AUDIT_PERSISTENCE_FAILED: userId=" + userId +
+                ", clientId=" + clientId + ", accessGranted=" + accessGranted);
+        }
+    }
+
+    /**
+     * Check if client is a DV victim requiring VAWA protection
+     */
+    private boolean isDVVictim(UUID clientId) {
+        // This would query the confidentiality guardrails or DV flags
+        // For now, return false as placeholder
+        return false;
     }
     
     /**

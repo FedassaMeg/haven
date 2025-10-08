@@ -5,20 +5,26 @@ import org.haven.casemgmt.domain.CaseRecord.CaseStatus;
 import java.time.Instant;
 import java.util.UUID;
 
-public record CaseStatusChanged(
-    UUID caseId,
-    CaseStatus oldStatus,
-    CaseStatus newStatus,
-    Instant occurredAt
-) implements DomainEvent {
-    
-    @Override
-    public UUID aggregateId() {
-        return caseId;
+public class CaseStatusChanged extends DomainEvent {
+    private final CaseStatus oldStatus;
+    private final CaseStatus newStatus;
+
+    public CaseStatusChanged(UUID caseId, CaseStatus oldStatus, CaseStatus newStatus, Instant occurredAt) {
+        super(caseId, occurredAt);
+        this.oldStatus = oldStatus;
+        this.newStatus = newStatus;
     }
-    
-    @Override
-    public String eventType() {
-        return "CaseStatusChanged";
+
+    public CaseStatus oldStatus() {
+        return oldStatus;
     }
+
+    public CaseStatus newStatus() {
+        return newStatus;
+    }
+
+
+    // JavaBean-style getters
+    public CaseStatus getOldStatus() { return oldStatus; }
+    public CaseStatus getNewStatus() { return newStatus; }
 }

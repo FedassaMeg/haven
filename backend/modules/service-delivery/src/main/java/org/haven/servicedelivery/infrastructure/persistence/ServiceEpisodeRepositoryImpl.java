@@ -1,9 +1,11 @@
 package org.haven.servicedelivery.infrastructure.persistence;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.eventstore.EventStore;
 import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.haven.servicedelivery.domain.ServiceEpisodeId;
 import org.haven.servicedelivery.domain.ServiceEpisodeRepository;
+import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.services.FundingSource;
 import org.springframework.stereotype.Component;
 
@@ -13,11 +15,13 @@ import java.util.Optional;
 
 @Component
 public class ServiceEpisodeRepositoryImpl implements ServiceEpisodeRepository {
-    
+
     private final JpaServiceEpisodeRepository jpaRepository;
-    
-    public ServiceEpisodeRepositoryImpl(JpaServiceEpisodeRepository jpaRepository) {
+    private final EventStore eventStore;
+
+    public ServiceEpisodeRepositoryImpl(JpaServiceEpisodeRepository jpaRepository, EventStore eventStore) {
         this.jpaRepository = jpaRepository;
+        this.eventStore = eventStore;
     }
     
     @Override
@@ -109,10 +113,22 @@ public class ServiceEpisodeRepositoryImpl implements ServiceEpisodeRepository {
             .toList();
     }
     
+    /**
+     * Reconstruct ServiceEpisode from event store
+     * CRITICAL: Do not call ServiceEpisode.create() as it creates new events
+     * Instead, load events from EventStore and replay them
+     */
     private ServiceEpisode toDomain(JpaServiceEpisodeEntity entity) {
-        // This would need to reconstruct the ServiceEpisode from the entity
-        // For now, return null to avoid compilation errors
-        // TODO: Implement proper domain reconstruction
-        return null;
+        var eventEnvelopes = eventStore.load(entity.getId());
+
+        if (eventEnvelopes.isEmpty()) {
+            throw new IllegalStateException("No events found for service episode: " + entity.getId());
+        }
+
+        List<DomainEvent> events = eventEnvelopes.stream()
+            .map(envelope -> (DomainEvent) envelope.event())
+            .toList();
+
+        return ServiceEpisode.reconstruct(entity.getId(), events);
     }
 }

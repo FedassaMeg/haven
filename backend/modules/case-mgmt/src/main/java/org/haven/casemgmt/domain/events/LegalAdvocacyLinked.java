@@ -4,28 +4,37 @@ import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-public record LegalAdvocacyLinked(
-    UUID caseId,
-    UUID legalAdvocacyId,
-    String linkedBy,
-    String reason,
-    Instant occurredAt
-) implements DomainEvent {
-    
-    public LegalAdvocacyLinked {
+public class LegalAdvocacyLinked extends DomainEvent {
+    private final UUID legalAdvocacyId;
+    private final String linkedBy;
+    private final String reason;
+
+    public LegalAdvocacyLinked(UUID caseId, UUID legalAdvocacyId, String linkedBy, String reason, Instant occurredAt) {
+        super(caseId, occurredAt != null ? occurredAt : Instant.now());
         if (caseId == null) throw new IllegalArgumentException("Case ID cannot be null");
         if (legalAdvocacyId == null) throw new IllegalArgumentException("Legal advocacy ID cannot be null");
         if (linkedBy == null || linkedBy.trim().isEmpty()) throw new IllegalArgumentException("Linked by cannot be null or empty");
-        if (occurredAt == null) occurredAt = Instant.now();
+
+        this.legalAdvocacyId = legalAdvocacyId;
+        this.linkedBy = linkedBy;
+        this.reason = reason;
     }
-    
-    @Override
-    public UUID aggregateId() {
-        return caseId;
+
+    public UUID legalAdvocacyId() {
+        return legalAdvocacyId;
     }
-    
-    @Override
-    public String eventType() {
-        return "LegalAdvocacyLinked";
+
+    public String linkedBy() {
+        return linkedBy;
     }
+
+    public String reason() {
+        return reason;
+    }
+
+
+    // JavaBean-style getters
+    public UUID getLegalAdvocacyId() { return legalAdvocacyId; }
+    public String getLinkedBy() { return linkedBy; }
+    public String getReason() { return reason; }
 }

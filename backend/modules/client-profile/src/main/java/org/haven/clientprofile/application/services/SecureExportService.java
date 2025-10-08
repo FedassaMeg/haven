@@ -193,13 +193,23 @@ public class SecureExportService {
             return false;
         }
         
-        // Check client-specific restrictions
+        // Check client-specific restrictions using new policy service
         for (UUID clientId : clientIds) {
-            if (!vspDataAccessService.canVSPAccessClient(clientId, context.getUserRoles())) {
+            org.haven.shared.security.AccessContext accessCtx = org.haven.shared.security.AccessContext.fromRoleStrings(
+                    context.getUserId(),
+                    "System User",
+                    context.getUserRoles(),
+                    "VSP bulk export validation",
+                    "0.0.0.0",
+                    context.getSessionId(),
+                    "SecureExportService"
+            );
+            org.haven.shared.security.PolicyDecision decision = vspDataAccessService.checkVSPAccess(clientId, accessCtx);
+            if (decision.isDenied()) {
                 return false;
             }
         }
-        
+
         return true;
     }
     

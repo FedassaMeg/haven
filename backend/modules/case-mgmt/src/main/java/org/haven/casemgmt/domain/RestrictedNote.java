@@ -160,47 +160,6 @@ public class RestrictedNote extends AggregateRoot<RestrictedNoteId> {
         apply(event);
     }
     
-    public boolean isVisibleTo(UUID userId, List<String> userRoles) {
-        if (isSealed && !userId.equals(sealedBy)) {
-            return false;
-        }
-        
-        if (authorizedViewers != null && !authorizedViewers.isEmpty()) {
-            return authorizedViewers.contains(userId);
-        }
-        
-        if (noteType == NoteType.PRIVILEGED_COUNSELING) {
-            return userRoles.contains("DV_COUNSELOR") || userRoles.contains("LICENSED_CLINICIAN") || 
-                   userId.equals(authorId);
-        }
-        
-        switch (visibilityScope) {
-            case PUBLIC:
-                return true;
-            case CASE_TEAM:
-                return userRoles.contains("CASE_MANAGER") || userRoles.contains("SUPERVISOR");
-            case CLINICAL_ONLY:
-                return userRoles.contains("CLINICIAN") || userRoles.contains("THERAPIST") || 
-                       userRoles.contains("COUNSELOR") || userRoles.contains("DV_COUNSELOR");
-            case LEGAL_TEAM:
-                return userRoles.contains("LEGAL_ADVOCATE") || userRoles.contains("ATTORNEY");
-            case SAFETY_TEAM:
-                return userRoles.contains("SAFETY_SPECIALIST") || userRoles.contains("CRISIS_COUNSELOR");
-            case MEDICAL_TEAM:
-                return userRoles.contains("NURSE") || userRoles.contains("DOCTOR") || 
-                       userRoles.contains("MEDICAL_ADVOCATE");
-            case ADMIN_ONLY:
-                return userRoles.contains("ADMINISTRATOR") || userRoles.contains("SUPERVISOR");
-            case AUTHOR_ONLY:
-                return userId.equals(authorId);
-            case ATTORNEY_CLIENT:
-                return userRoles.contains("ATTORNEY") || userId.equals(authorId);
-            case CUSTOM:
-                return authorizedViewers != null && authorizedViewers.contains(userId);
-            default:
-                return false;
-        }
-    }
     
     public boolean requiresSpecialHandling() {
         return visibilityScope == VisibilityScope.ATTORNEY_CLIENT || 

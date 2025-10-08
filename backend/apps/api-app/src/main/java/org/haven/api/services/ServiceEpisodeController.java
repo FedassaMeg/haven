@@ -115,8 +115,8 @@ public class ServiceEpisodeController {
     public ResponseEntity<ServiceEpisodeResponse> getServiceEpisode(@PathVariable UUID episodeId) {
         var episode = serviceDeliveryService.getServiceEpisode(ServiceEpisodeId.of(episodeId))
             .orElseThrow(() -> new ServiceEpisodeNotFoundException(episodeId));
-        
-        return ResponseEntity.ok(ServiceEpisodeResponse.fromDomain(episode));
+
+        return ResponseEntity.ok(ServiceEpisodeResponse.fromDTO(episode));
     }
 
     /**
@@ -127,9 +127,9 @@ public class ServiceEpisodeController {
     public ResponseEntity<List<ServiceEpisodeResponse>> getServicesForClient(@PathVariable UUID clientId) {
         var services = serviceDeliveryService.getServicesForClient(clientId);
         var responses = services.stream()
-            .map(ServiceEpisodeResponse::fromDomain)
+            .map(ServiceEpisodeResponse::fromDTO)
             .toList();
-        
+
         return ResponseEntity.ok(responses);
     }
 
@@ -141,9 +141,9 @@ public class ServiceEpisodeController {
     public ResponseEntity<List<ServiceEpisodeResponse>> getServicesForEnrollment(@PathVariable String enrollmentId) {
         var services = serviceDeliveryService.getServicesForEnrollment(enrollmentId);
         var responses = services.stream()
-            .map(ServiceEpisodeResponse::fromDomain)
+            .map(ServiceEpisodeResponse::fromDTO)
             .toList();
-        
+
         return ResponseEntity.ok(responses);
     }
 
@@ -179,9 +179,9 @@ public class ServiceEpisodeController {
             courtOrderedOnly,
             followUpRequired
         ));
-        
+
         var responses = services.stream()
-            .map(ServiceEpisodeResponse::fromDomain)
+            .map(ServiceEpisodeResponse::fromDTO)
             .toList();
         
         return ResponseEntity.ok(responses);
@@ -194,9 +194,9 @@ public class ServiceEpisodeController {
     public ResponseEntity<List<ServiceEpisodeResponse>> getServicesRequiringFollowUp() {
         var services = serviceDeliveryService.getServicesRequiringFollowUp();
         var responses = services.stream()
-            .map(ServiceEpisodeResponse::fromDomain)
+            .map(ServiceEpisodeResponse::fromDTO)
             .toList();
-        
+
         return ResponseEntity.ok(responses);
     }
 

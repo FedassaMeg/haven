@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class RestrictedNoteCreated implements DomainEvent {
+public class RestrictedNoteCreated extends DomainEvent {
     private final UUID noteId;
     private final UUID clientId;
     private final String clientName;
@@ -16,15 +16,15 @@ public class RestrictedNoteCreated implements DomainEvent {
     private final String content;
     private final UUID authorId;
     private final String authorName;
-    private final Instant createdAt;
     private final List<UUID> authorizedViewers;
     private final String visibilityScope;
     private final String title;
-    
-    public RestrictedNoteCreated(UUID noteId, UUID clientId, String clientName, UUID caseId, 
-                               String caseNumber, String noteType, String content, UUID authorId, 
-                               String authorName, Instant createdAt, List<UUID> authorizedViewers, 
+
+    public RestrictedNoteCreated(UUID noteId, UUID clientId, String clientName, UUID caseId,
+                               String caseNumber, String noteType, String content, UUID authorId,
+                               String authorName, Instant createdAt, List<UUID> authorizedViewers,
                                String visibilityScope, String title) {
+        super(noteId, createdAt);
         this.noteId = noteId;
         this.clientId = clientId;
         this.clientName = clientName;
@@ -34,27 +34,32 @@ public class RestrictedNoteCreated implements DomainEvent {
         this.content = content;
         this.authorId = authorId;
         this.authorName = authorName;
-        this.createdAt = createdAt;
         this.authorizedViewers = authorizedViewers;
         this.visibilityScope = visibilityScope;
         this.title = title;
     }
-    
-    @Override
-    public UUID aggregateId() {
-        return noteId;
-    }
-    
-    @Override
-    public Instant occurredAt() {
-        return createdAt;
-    }
-    
+
     @Override
     public String eventType() {
         return "RestrictedNoteCreated";
     }
-    
+
+    // Record-style accessors (for backward compatibility)
+    public UUID noteId() { return noteId; }
+    public UUID clientId() { return clientId; }
+    public String clientName() { return clientName; }
+    public UUID caseId() { return caseId; }
+    public String caseNumber() { return caseNumber; }
+    public String noteType() { return noteType; }
+    public String content() { return content; }
+    public UUID authorId() { return authorId; }
+    public String authorName() { return authorName; }
+    public Instant createdAt() { return getOccurredOn(); }
+    public List<UUID> authorizedViewers() { return authorizedViewers; }
+    public String visibilityScope() { return visibilityScope; }
+    public String title() { return title; }
+
+    // JavaBean-style getters
     public UUID getNoteId() { return noteId; }
     public UUID getClientId() { return clientId; }
     public String getClientName() { return clientName; }
@@ -64,7 +69,7 @@ public class RestrictedNoteCreated implements DomainEvent {
     public String getContent() { return content; }
     public UUID getAuthorId() { return authorId; }
     public String getAuthorName() { return authorName; }
-    public Instant getCreatedAt() { return createdAt; }
+    public Instant getCreatedAt() { return getOccurredOn(); }
     public List<UUID> getAuthorizedViewers() { return authorizedViewers; }
     public String getVisibilityScope() { return visibilityScope; }
     public String getTitle() { return title; }

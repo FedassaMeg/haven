@@ -8,26 +8,34 @@ import java.util.UUID;
 /**
  * Event fired when a document is removed from a mandated report
  */
-public record DocumentDetached(
-    UUID reportId,
-    UUID documentId,
-    String reason,
-    UUID removedByUserId,
-    Instant removedAt
-) implements DomainEvent {
-    
-    @Override
-    public Instant occurredAt() {
-        return removedAt;
+
+public class DocumentDetached extends DomainEvent {
+    private final UUID documentId;
+    private final String reason;
+    private final UUID removedByUserId;
+
+    public DocumentDetached(UUID reportId, UUID documentId, String reason, UUID removedByUserId, Instant removedAt) {
+        super(reportId, removedAt);
+        this.documentId = documentId;
+        this.reason = reason;
+        this.removedByUserId = removedByUserId;
     }
-    
-    @Override
-    public String eventType() {
-        return "DocumentDetached";
+
+    public UUID documentId() {
+        return documentId;
     }
-    
-    @Override
-    public UUID aggregateId() {
-        return reportId;
+
+    public String reason() {
+        return reason;
     }
+
+    public UUID removedByUserId() {
+        return removedByUserId;
+    }
+
+
+    // JavaBean-style getters
+    public UUID getDocumentId() { return documentId; }
+    public String getReason() { return reason; }
+    public UUID getRemovedByUserId() { return removedByUserId; }
 }

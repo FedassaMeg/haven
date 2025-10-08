@@ -5,19 +5,31 @@ import org.haven.shared.vo.Address;
 import java.time.Instant;
 import java.util.UUID;
 
-public record ClientAddressAdded(
-    UUID clientId,
-    Address address,
-    Instant occurredAt
-) implements DomainEvent {
-    
-    @Override
-    public UUID aggregateId() {
+public class ClientAddressAdded extends DomainEvent {
+    private final UUID clientId;
+    private final Address address;
+
+    public ClientAddressAdded(UUID clientId, Address address, Instant occurredAt) {
+        super(clientId, occurredAt);
+        this.clientId = clientId;
+        this.address = address;
+    }
+
+    // Record-style accessors (for backward compatibility)
+    public UUID clientId() {
         return clientId;
     }
-    
-    @Override
-    public String eventType() {
-        return "ClientAddressAdded";
+
+    public Address address() {
+        return address;
+    }
+
+    // JavaBean-style getters
+    public UUID getClientId() {
+        return clientId;
+    }
+
+    public Address getAddress() {
+        return address;
     }
 }

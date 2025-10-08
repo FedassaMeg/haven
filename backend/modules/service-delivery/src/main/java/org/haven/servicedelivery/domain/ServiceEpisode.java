@@ -98,10 +98,10 @@ public class ServiceEpisode extends AggregateRoot<ServiceEpisodeId> {
             String serviceDescription,
             boolean isConfidential,
             String createdBy) {
-        
+
         ServiceEpisodeId episodeId = ServiceEpisodeId.generate();
         ServiceEpisode episode = new ServiceEpisode();
-        
+
         episode.apply(new ServiceEpisodeCreated(
             episodeId.value(),
             clientId.value(),
@@ -120,8 +120,21 @@ public class ServiceEpisode extends AggregateRoot<ServiceEpisodeId> {
             createdBy,
             Instant.now()
         ));
-        
+
         return episode;
+    }
+
+    /**
+     * Reconstruct aggregate from event history without creating new events
+     * Used when loading from repository
+     */
+    public static ServiceEpisode reconstruct(UUID episodeId, List<DomainEvent> events) {
+        ServiceEpisode aggregate = new ServiceEpisode();
+        aggregate.id = new ServiceEpisodeId(episodeId);
+        for (int i = 0; i < events.size(); i++) {
+            aggregate.replay(events.get(i), i + 1);
+        }
+        return aggregate;
     }
 
     public void startService(LocalDateTime startTime, String location) {

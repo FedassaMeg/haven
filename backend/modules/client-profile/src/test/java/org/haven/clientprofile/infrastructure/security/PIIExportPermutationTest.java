@@ -1,28 +1,29 @@
 package org.haven.clientprofile.infrastructure.security;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.haven.clientprofile.domain.Client;
 import org.haven.clientprofile.domain.pii.PIIAccessContext;
 import org.haven.clientprofile.domain.pii.PIIAccessLevel;
 // Note: These would normally be imported from the reporting module
 // For this test, we'll focus on the PII redaction aspects
 import org.haven.clientprofile.domain.Client.AdministrativeGender;
+import org.haven.shared.security.DeterministicIdGenerator;
+import org.haven.shared.security.KeycloakTokenVerificationService;
 import org.haven.shared.vo.HumanName;
 import org.haven.shared.vo.hmis.HmisPersonalId;
-import org.haven.shared.security.DeterministicIdGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mock;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,6 +35,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("PII Export Permutation Test Matrix")
 class PIIExportPermutationTest {
 
+    @Mock
+    private JwtDecoder jwtDecoder;
+
     private PIIRedactionService piiRedactionService;
     private DeterministicIdGenerator idGenerator;
     private Client testClient;
@@ -41,7 +45,13 @@ class PIIExportPermutationTest {
 
     @BeforeEach
     void setUp() {
-        piiRedactionService = new PIIRedactionService();
+        KeycloakTokenVerificationService tokenService = new KeycloakTokenVerificationService(
+                jwtDecoder,
+                "http://localhost:8081/realms/haven",
+                "haven-backend",
+                new SimpleMeterRegistry()
+        );
+        piiRedactionService = new PIIRedactionService(tokenService);
         idGenerator = new DeterministicIdGenerator();
         
         // Create test client with full PII data

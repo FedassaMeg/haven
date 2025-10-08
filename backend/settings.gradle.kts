@@ -15,6 +15,7 @@ include("modules:reporting")
 include("modules:financial-assistance")
 include("modules:safety-assessment")
 include("modules:read-models")
+include("modules:reporting-metadata")
 include("modules:document-mgmt")
 
 // applications

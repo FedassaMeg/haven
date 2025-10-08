@@ -1,0 +1,152 @@
+# Point-in-Time Count Specification
+# Annual enumeration of sheltered and unsheltered homeless persons
+
+reportType: PIT_HIC
+sectionIdentifier: PIT-S1
+sectionName: "Point-in-Time Count - Sheltered and Unsheltered Persons"
+description: |
+  Annual count of sheltered and unsheltered homeless persons on a single night in January.
+  Required for all CoCs annually.
+  Provides snapshot data on homeless population characteristics.
+
+versionIdentifier: PIT-2025
+hudNoticeReference: "HUD PIT Count Standards and Methodologies"
+effectiveFrom: 2025-01-01
+filingDeadline: "60 days after PIT count date"
+
+scopeFilters:
+  # Point-in-time = single night count
+  reportingPeriod:
+    type: SINGLE_NIGHT
+    description: "Last Thursday of January (or week containing last Wednesday)"
+  cocCodes:
+    - "${cocCode}"
+
+inclusionLogic:
+  # All persons enrolled on PIT count date in ES, SH, or TH
+  projectTypes:
+    - 1  # ES - Entry/Exit
+    - 2  # TH
+    - 8  # Safe Haven
+  # Plus unsheltered persons identified during count
+  includeUnsheltered: true
+  # Active enrollment on count date
+  enrolledOnCountDate: true
+
+exclusionLogic:
+  # Exclude PH (PSH, RRH) - not homeless on count night
+  excludeProjectTypes:
+    - 3  # PSH
+    - 13 # RRH
+  excludeTestData: true
+
+aggregateRules:
+  groupBy:
+    - HouseholdType # Individual, Family with Children, etc.
+    - ShelterStatus # Sheltered ES, Sheltered TH, Unsheltered
+
+  metrics:
+    - name: TotalHomelessPersons
+      expression: COUNT(DISTINCT client_id)
+      description: Total persons counted
+
+    - name: ShelteredPersons
+      expression: COUNT(DISTINCT CASE WHEN shelter_status IN ('ES', 'TH', 'SH') THEN client_id END)
+      description: Sheltered count
+
+    - name: UnshelteredPersons
+      expression: COUNT(DISTINCT CASE WHEN shelter_status = 'Unsheltered' THEN client_id END)
+      description: Unsheltered count
+
+    - name: ChronicHomeless
+      expression: COUNT(DISTINCT CASE WHEN chronic_homeless = true THEN client_id END)
+      description: Chronically homeless individuals
+
+    - name: Veterans
+      expression: COUNT(DISTINCT CASE WHEN veteran_status = true THEN client_id END)
+      description: Veterans
+
+    - name: Families
+      expression: COUNT(DISTINCT CASE WHEN household_type = 'Family' THEN household_id END)
+      description: Households with children
+
+requiresVawaConsentCheck: true
+allowAggregatesWithoutConsent: true
+
+dataQualityRequirements: |
+  - PersonalID required for all persons
+  - Age/DOB required
+  - Household type required
+  - Veteran status required
+  - Chronic homeless status required for individuals
+
+fieldMappings:
+  - sourceEntity: Enrollment
+    sourceField: clientId
+    targetHudElement: "PIT:S1.PersonalID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: ClientProfile
+    sourceField: dateOfBirth
+    targetHudElement: "PIT:S1.DOB"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: ClientProfile
+    sourceField: veteranStatus
+    targetHudElement: "PIT:S1.VeteranStatus"
+    targetDataType: Boolean
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "HUD Element 4.07"
+
+  - sourceEntity: Enrollment
+    sourceField: householdType
+    targetHudElement: "PIT:S1.HouseholdType"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "Individual, Family, or Unknown"
+
+  - sourceEntity: Enrollment
+    sourceField: chronicHomeless
+    targetHudElement: "PIT:S1.ChronicHomeless"
+    targetDataType: Boolean
+    requiredFlag: C
+    vawaSensitiveField: false
+    description: "Required for individuals only"
+
+  - sourceEntity: Enrollment
+    sourceField: dvVictimStatus
+    targetHudElement: "PIT:S1.DomesticViolenceVictim"
+    targetDataType: Boolean
+    requiredFlag: O
+    vawaSensitiveField: true
+    vawaSuppressionBehavior: AGGREGATE_ONLY
+    description: "VAWA protected - aggregate counts only, no individual-level data"
+
+  - sourceEntity: ClientProfile
+    sourceField: race
+    targetHudElement: "PIT:S1.Race"
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    transformationRule: RACE_NONE_DEFAULT
+
+  - sourceEntity: ClientProfile
+    sourceField: ethnicity
+    targetHudElement: "PIT:S1.Ethnicity"
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: ClientProfile
+    sourceField: gender
+    targetHudElement: "PIT:S1.Gender"
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    transformationRule: GENDER_NONE_DEFAULT

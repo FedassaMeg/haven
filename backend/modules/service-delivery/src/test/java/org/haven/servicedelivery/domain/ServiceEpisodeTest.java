@@ -1,13 +1,18 @@
 package org.haven.servicedelivery.domain;
 
 import org.haven.clientprofile.domain.ClientId;
+import org.haven.servicedelivery.domain.events.*;
+import org.haven.shared.events.DomainEvent;
 import org.haven.shared.vo.services.ServiceDeliveryMode;
 import org.haven.shared.vo.services.ServiceType;
 import org.haven.shared.vo.services.FundingSource;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -234,5 +239,97 @@ public class ServiceEpisodeTest {
             false,
             "test-user"
         );
+    }
+
+    @Test
+    void testReconstructFromEvents() {
+        // Given
+        UUID episodeId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        String enrollmentId = UUID.randomUUID().toString();
+        ServiceType serviceType = ServiceType.CRISIS_INTERVENTION;
+        ServiceDeliveryMode deliveryMode = ServiceDeliveryMode.IN_PERSON;
+        FundingSource fundingSource = FundingSource.vawa("VAWA-2024", "VAWA Grant");
+        Instant now = Instant.now();
+
+        List<DomainEvent> events = new ArrayList<>();
+        events.add(new ServiceEpisodeCreated(
+            episodeId, clientId, enrollmentId, "PROG-001", "Test Program",
+            serviceType, deliveryMode, LocalDate.now(), 60,
+            "PROV-001", "Test Provider", fundingSource,
+            "Test description", false, "user-123", now
+        ));
+        events.add(new ServiceStarted(episodeId, LocalDateTime.now(), "Office A", now));
+
+        // When
+        ServiceEpisode reconstructed = ServiceEpisode.reconstruct(episodeId, events);
+
+        // Then
+        assertNotNull(reconstructed);
+        assertEquals(new ServiceEpisodeId(episodeId), reconstructed.getId());
+        assertEquals(new ClientId(clientId), reconstructed.getClientId());
+        assertEquals(enrollmentId, reconstructed.getEnrollmentId());
+        assertEquals(serviceType, reconstructed.getServiceType());
+        assertEquals(deliveryMode, reconstructed.getDeliveryMode());
+        assertEquals(ServiceEpisode.ServiceCompletionStatus.IN_PROGRESS, reconstructed.getCompletionStatus());
+        assertEquals(2, reconstructed.getVersion());
+        assertTrue(reconstructed.getPendingEvents().isEmpty()); // No pending events after reconstruction
+    }
+
+    @Test
+    void testReconstructWithoutCreatingNewEvents() {
+        // Given - create an episode and capture its events
+        ServiceEpisode original = createTestServiceEpisode();
+        List<DomainEvent> events = new ArrayList<>(original.getPendingEvents());
+        UUID episodeId = original.getId().value();
+
+        // When - reconstruct from the same events
+        ServiceEpisode reconstructed = ServiceEpisode.reconstruct(episodeId, events);
+
+        // Then
+        assertEquals(original.getId(), reconstructed.getId());
+        assertEquals(original.getClientId(), reconstructed.getClientId());
+        assertEquals(original.getServiceType(), reconstructed.getServiceType());
+        assertEquals(original.getCompletionStatus(), reconstructed.getCompletionStatus());
+        assertTrue(reconstructed.getPendingEvents().isEmpty()); // Critical: no new events queued
+    }
+
+    @Test
+    void testReconstructCompleteLifecycle() {
+        // Given
+        UUID episodeId = UUID.randomUUID();
+        UUID clientId = UUID.randomUUID();
+        String enrollmentId = UUID.randomUUID().toString();
+        ServiceType serviceType = ServiceType.CASE_MANAGEMENT;
+        ServiceDeliveryMode deliveryMode = ServiceDeliveryMode.IN_PERSON;
+        FundingSource fundingSource = FundingSource.hudCoc("HUD-COC-2024", "HUD CoC");
+        Instant now = Instant.now();
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusHours(1);
+
+        List<DomainEvent> events = new ArrayList<>();
+        events.add(new ServiceEpisodeCreated(
+            episodeId, clientId, enrollmentId, "PROG-001", "Test Program",
+            serviceType, deliveryMode, LocalDate.now(), 60,
+            "PROV-001", "Test Provider", fundingSource,
+            "Test description", false, "user-123", now
+        ));
+        events.add(new ServiceStarted(episodeId, startTime, "Office A", now));
+        events.add(new ServiceCompleted(
+            episodeId, endTime, 60, "Client made progress",
+            ServiceEpisode.ServiceCompletionStatus.COMPLETED, "Good session", 50.0, now
+        ));
+
+        // When
+        ServiceEpisode reconstructed = ServiceEpisode.reconstruct(episodeId, events);
+
+        // Then
+        assertEquals(ServiceEpisode.ServiceCompletionStatus.COMPLETED, reconstructed.getCompletionStatus());
+        assertTrue(reconstructed.isCompleted());
+        assertFalse(reconstructed.isInProgress());
+        assertEquals("Client made progress", reconstructed.getServiceOutcome());
+        assertEquals(Integer.valueOf(60), reconstructed.getActualDurationMinutes());
+        assertEquals(Double.valueOf(50.0), reconstructed.getTotalBillableAmount());
+        assertEquals(3, reconstructed.getVersion());
     }
 }

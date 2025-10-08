@@ -5,19 +5,26 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record ServiceStarted(
-    UUID episodeId,
-    LocalDateTime startTime,
-    String location,
-    Instant occurredAt
-) implements DomainEvent {
-    @Override
-    public UUID aggregateId() {
-        return episodeId;
+public class ServiceStarted extends DomainEvent {
+    private final LocalDateTime startTime;
+    private final String location;
+
+    public ServiceStarted(UUID episodeId, LocalDateTime startTime, String location, Instant occurredAt) {
+        super(episodeId, occurredAt);
+        this.startTime = startTime;
+        this.location = location;
     }
-    
-    @Override
-    public String eventType() {
-        return "ServiceStarted";
+
+    public LocalDateTime startTime() {
+        return startTime;
     }
+
+    public String location() {
+        return location;
+    }
+
+
+    // JavaBean-style getters
+    public LocalDateTime getStartTime() { return startTime; }
+    public String getLocation() { return location; }
 }

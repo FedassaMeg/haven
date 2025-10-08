@@ -8,25 +8,27 @@ import java.util.UUID;
 /**
  * Event fired when a follow-up action is added to a mandated report
  */
-public record FollowUpActionAdded(
-    UUID reportId,
-    String action,
-    UUID addedByUserId,
-    Instant addedAt
-) implements DomainEvent {
-    
-    @Override
-    public Instant occurredAt() {
-        return addedAt;
+
+public class FollowUpActionAdded extends DomainEvent {
+    private final String action;
+    private final UUID addedByUserId;
+
+    public FollowUpActionAdded(UUID reportId, String action, UUID addedByUserId, Instant addedAt) {
+        super(reportId, addedAt);
+        this.action = action;
+        this.addedByUserId = addedByUserId;
     }
-    
-    @Override
-    public String eventType() {
-        return "FollowUpActionAdded";
+
+    public String action() {
+        return action;
     }
-    
-    @Override
-    public UUID aggregateId() {
-        return reportId;
+
+    public UUID addedByUserId() {
+        return addedByUserId;
     }
+
+
+    // JavaBean-style getters
+    public String getAction() { return action; }
+    public UUID getAddedByUserId() { return addedByUserId; }
 }

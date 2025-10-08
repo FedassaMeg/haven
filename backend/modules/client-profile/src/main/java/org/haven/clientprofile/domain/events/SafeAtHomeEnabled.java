@@ -4,22 +4,25 @@ import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-public record SafeAtHomeEnabled(
-    UUID clientId,
-    Instant occurredAt
-) implements DomainEvent {
-    
+public class SafeAtHomeEnabled extends DomainEvent {
+    private final UUID clientId;
+
+    public SafeAtHomeEnabled(UUID clientId, Instant occurredAt) {
+        super(clientId, occurredAt);
+        this.clientId = clientId;
+    }
+
     public SafeAtHomeEnabled(UUID clientId) {
         this(clientId, Instant.now());
     }
-    
-    @Override
-    public UUID aggregateId() {
+
+    // Record-style accessors (for backward compatibility)
+    public UUID clientId() {
         return clientId;
     }
-    
-    @Override
-    public String eventType() {
-        return "SafeAtHomeEnabled";
+
+    // JavaBean-style getters
+    public UUID getClientId() {
+        return clientId;
     }
 }

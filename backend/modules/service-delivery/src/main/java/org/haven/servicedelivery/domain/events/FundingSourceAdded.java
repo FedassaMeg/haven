@@ -5,19 +5,26 @@ import org.haven.shared.vo.services.FundingSource;
 import java.time.Instant;
 import java.util.UUID;
 
-public record FundingSourceAdded(
-    UUID episodeId,
-    FundingSource fundingSource,
-    double allocationPercentage,
-    Instant occurredAt
-) implements DomainEvent {
-    @Override
-    public UUID aggregateId() {
-        return episodeId;
+public class FundingSourceAdded extends DomainEvent {
+    private final FundingSource fundingSource;
+    private final double allocationPercentage;
+
+    public FundingSourceAdded(UUID episodeId, FundingSource fundingSource, double allocationPercentage, Instant occurredAt) {
+        super(episodeId, occurredAt);
+        this.fundingSource = fundingSource;
+        this.allocationPercentage = allocationPercentage;
     }
 
-    @Override
-    public String eventType() {
-        return "FundingSourceAdded";
+    public FundingSource fundingSource() {
+        return fundingSource;
     }
+
+    public double allocationPercentage() {
+        return allocationPercentage;
+    }
+
+
+    // JavaBean-style getters
+    public FundingSource getFundingSource() { return fundingSource; }
+    public double getAllocationPercentage() { return allocationPercentage; }
 }

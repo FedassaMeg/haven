@@ -1,13 +1,11 @@
 package org.haven.clientprofile.domain;
 
 import org.haven.shared.vo.HumanName;
-import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
  * Domain service for complex client business logic
  */
-@Service
 public class ClientDomainService {
     
     private final ClientRepository clientRepository;

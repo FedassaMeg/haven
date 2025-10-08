@@ -2,7 +2,6 @@ package org.haven.servicedelivery.application.services;
 
 import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.haven.shared.vo.services.*;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,9 +10,9 @@ import java.util.stream.Collectors;
 
 /**
  * Service Reporting Service
+ * Domain service - framework independent
  * Generates statistics and reports for service delivery
  */
-@Service
 public class ServiceReportingService {
 
     /**

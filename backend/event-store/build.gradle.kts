@@ -32,7 +32,10 @@ dependencies {
     // JSON handling
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
-    
+
+    // Reflection utilities for event scanning
+    implementation("org.reflections:reflections:0.10.2")
+
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-core")

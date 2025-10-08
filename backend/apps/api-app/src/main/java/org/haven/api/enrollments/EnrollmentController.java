@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.haven.programenrollment.application.services.ProgramEnrollmentAppService;
 import org.haven.programenrollment.application.services.ProgramEnrollmentAppService.*;
+import org.haven.servicedelivery.application.queries.CombinedServiceHistoryDTO;
 import org.haven.servicedelivery.application.services.ServiceDeliveryAppService;
 import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.springframework.http.HttpStatus;
@@ -114,28 +115,28 @@ public class EnrollmentController {
             @PathVariable UUID enrollmentId) {
         
         try {
-            ServiceDeliveryAppService.CombinedServiceHistory history = 
+            CombinedServiceHistoryDTO history =
                 serviceDeliveryAppService.getCombinedServiceHistory(enrollmentId);
-            
+
             List<ServiceEpisodeSummary> serviceSummaries = history.allServices().stream()
                 .map(service -> new ServiceEpisodeSummary(
-                    service.getId().value(),
-                    UUID.fromString(service.getEnrollmentId()),
-                    service.getServiceType().name(),
-                    service.getServiceDate(),
-                    service.getPrimaryProviderName(),
-                    service.getServiceDescription()
+                    service.episodeId(),
+                    service.clientId(),
+                    service.serviceType().name(),
+                    service.serviceDate(),
+                    service.primaryProviderName(),
+                    service.programName()
                 ))
                 .toList();
-            
+
             CombinedServicesResponse response = new CombinedServicesResponse(
                 enrollmentId,
                 serviceSummaries,
                 history.totalServiceCount(),
-                String.format("Retrieved %d services across %d enrollments", 
+                String.format("Retrieved %d services across %d enrollments",
                     history.totalServiceCount(), history.enrollmentChain().size())
             );
-            
+
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

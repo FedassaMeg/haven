@@ -1,5 +1,11 @@
 package org.haven.clientprofile.infrastructure.config;
 
+import org.haven.clientprofile.domain.ClientDomainService;
+import org.haven.clientprofile.domain.ClientRepository;
+import org.haven.clientprofile.domain.pii.PIIAccessRepository;
+import org.haven.clientprofile.domain.pii.PIIAccessService;
+import org.haven.clientprofile.domain.pii.PIIAuditRepository;
+import org.haven.clientprofile.domain.pii.PIIAuditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -60,9 +66,38 @@ public class SecurityConfiguration {
      */
     public record SecurityAuditConfig(
         boolean enablePIIAccessLogging,
-        boolean enableSafeAtHomeAccessLogging, 
+        boolean enableSafeAtHomeAccessLogging,
         boolean enableVSPAccessLogging,
         boolean enableExportAuditLogging,
         int auditRetentionDays
     ) {}
+
+    /**
+     * Wire ClientDomainService with its dependencies.
+     * This keeps the domain layer free of framework annotations.
+     */
+    @Bean
+    public ClientDomainService clientDomainService(ClientRepository clientRepository) {
+        return new ClientDomainService(clientRepository);
+    }
+
+    /**
+     * Wire PIIAuditService with its dependencies.
+     * This keeps the domain layer free of framework annotations.
+     */
+    @Bean
+    public PIIAuditService piiAuditService(PIIAuditRepository auditRepository) {
+        return new PIIAuditService(auditRepository);
+    }
+
+    /**
+     * Wire PIIAccessService with its dependencies.
+     * This keeps the domain layer free of framework annotations.
+     */
+    @Bean
+    public PIIAccessService piiAccessService(
+            PIIAccessRepository accessRepository,
+            PIIAuditService auditService) {
+        return new PIIAccessService(accessRepository, auditService);
+    }
 }

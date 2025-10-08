@@ -6,25 +6,45 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-public record FinancialLedgerClosed(
-    UUID ledgerId,
-    String reason,
-    BigDecimal finalDebits,
-    BigDecimal finalCredits,
-    BigDecimal finalBalance,
-    String closedBy,
-    Instant occurredAt
-) implements DomainEvent {
+public class FinancialLedgerClosed extends DomainEvent {
+    private final String reason;
+    private final BigDecimal finalDebits;
+    private final BigDecimal finalCredits;
+    private final BigDecimal finalBalance;
+    private final String closedBy;
 
-    @Override
-    public UUID aggregateId() {
-        return ledgerId;
+    public FinancialLedgerClosed(
+        UUID ledgerId,
+        String reason,
+        BigDecimal finalDebits,
+        BigDecimal finalCredits,
+        BigDecimal finalBalance,
+        String closedBy,
+        Instant occurredAt
+    ) {
+        super(ledgerId, occurredAt);
+        this.reason = reason;
+        this.finalDebits = finalDebits;
+        this.finalCredits = finalCredits;
+        this.finalBalance = finalBalance;
+        this.closedBy = closedBy;
     }
 
-    @Override
-    public String eventType() {
-        return "FinancialLedgerClosed";
-    }
+    // JavaBean style getters
+    public UUID getLedgerId() { return getAggregateId(); }
+    public String getReason() { return reason; }
+    public BigDecimal getFinalDebits() { return finalDebits; }
+    public BigDecimal getFinalCredits() { return finalCredits; }
+    public BigDecimal getFinalBalance() { return finalBalance; }
+    public String getClosedBy() { return closedBy; }
+
+    // Record style getters
+    public UUID ledgerId() { return getAggregateId(); }
+    public String reason() { return reason; }
+    public BigDecimal finalDebits() { return finalDebits; }
+    public BigDecimal finalCredits() { return finalCredits; }
+    public BigDecimal finalBalance() { return finalBalance; }
+    public String closedBy() { return closedBy; }
 
     public static FinancialLedgerClosed create(UUID ledgerId, String reason, BigDecimal finalDebits,
                                              BigDecimal finalCredits, BigDecimal finalBalance, String closedBy) {

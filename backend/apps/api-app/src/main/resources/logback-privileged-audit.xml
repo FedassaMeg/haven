@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <!--
+        Logback configuration for privileged action auditing.
+
+        This configuration defines a separate appender for privileged audit events
+        that emits structured JSON logs tagged for SIEM ingestion.
+
+        SIEM Integration:
+        - All privileged audit logs are tagged with "pii_audit" prefix
+        - JSON format for structured ingestion
+        - Separate file for easy sidecar collection
+        - Retention: 7 years per SOX compliance
+
+        Usage:
+        Include this file in your main logback-spring.xml:
+        <include resource="logback-privileged-audit.xml"/>
+    -->
+
+    <!-- JSON encoder for structured logging -->
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>requestId</includeMdcKeyName>
+        <includeMdcKeyName>auditEventId</includeMdcKeyName>
+        <includeMdcKeyName>siemTag</includeMdcKeyName>
+        <customFields>{"application":"haven","environment":"${ENVIRONMENT:-local}"}</customFields>
+        <fieldNames>
+            <timestamp>@timestamp</timestamp>
+            <version>[ignore]</version>
+            <levelValue>[ignore]</levelValue>
+        </fieldNames>
+    </encoder>
+
+    <!-- Appender for privileged audit events - writes to dedicated file -->
+    <appender name="PRIVILEGED_AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH:-logs}/privileged-audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover -->
+            <fileNamePattern>${LOG_PATH:-logs}/privileged-audit.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Keep 7 years of history per SOX compliance -->
+            <maxHistory>2555</maxHistory>
+            <!-- Total size cap: 100GB -->
+            <totalSizeCap>100GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>auditEventId</includeMdcKeyName>
+            <includeMdcKeyName>siemTag</includeMdcKeyName>
+            <customFields>{"application":"haven","log_type":"privileged_audit","environment":"${ENVIRONMENT:-local}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- Appender for SIEM sidecar collection (JSON Lines format) -->
+    <appender name="SIEM_COLLECTOR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH:-logs}/siem/pii-audit.jsonl</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Hourly rollover for SIEM collection -->
+            <fileNamePattern>${LOG_PATH:-logs}/siem/pii-audit.%d{yyyy-MM-dd-HH}.jsonl</fileNamePattern>
+            <!-- Keep 30 days in SIEM sidecar directory -->
+            <maxHistory>720</maxHistory>
+            <totalSizeCap>50GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>auditEventId</includeMdcKeyName>
+            <includeMdcKeyName>siemTag</includeMdcKeyName>
+            <customFields>{"application":"haven","log_type":"siem_pii_audit","siem_routing":"pii_audit","environment":"${ENVIRONMENT:-local}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- Async appender for performance -->
+    <appender name="ASYNC_PRIVILEGED_AUDIT" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="PRIVILEGED_AUDIT_FILE" />
+    </appender>
+
+    <appender name="ASYNC_SIEM_COLLECTOR" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="SIEM_COLLECTOR" />
+    </appender>
+
+    <!-- Console appender for development (with color) -->
+    <appender name="PRIVILEGED_AUDIT_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%logger{36}) - %msg %X{siemTag}%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Logger for privileged audit events -->
+    <logger name="PRIVILEGED_AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_PRIVILEGED_AUDIT" />
+        <appender-ref ref="ASYNC_SIEM_COLLECTOR" />
+        <appender-ref ref="PRIVILEGED_AUDIT_CONSOLE" />
+    </logger>
+
+    <!-- Logger for the PrivilegedAuditService itself -->
+    <logger name="org.haven.shared.audit.PrivilegedAuditService" level="DEBUG" additivity="false">
+        <appender-ref ref="ASYNC_PRIVILEGED_AUDIT" />
+        <appender-ref ref="PRIVILEGED_AUDIT_CONSOLE" />
+    </logger>
+</included>

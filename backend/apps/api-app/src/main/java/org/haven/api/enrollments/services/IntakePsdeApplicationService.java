@@ -3,6 +3,10 @@ package org.haven.api.enrollments.services;
 import org.haven.api.enrollments.dto.IntakePsdeRequest;
 import org.haven.api.enrollments.dto.IntakePsdeResponse;
 import org.haven.programenrollment.domain.IntakePsdeRecord;
+import org.haven.programenrollment.domain.IntakePsdeRepository;
+import org.haven.programenrollment.domain.ProgramEnrollment;
+import org.haven.programenrollment.domain.ProgramEnrollmentId;
+import org.haven.programenrollment.domain.ProgramEnrollmentRepository;
 import org.haven.programenrollment.application.validation.IntakePsdeValidationService;
 import org.haven.programenrollment.application.services.IntakePsdeAuditLogger;
 import org.haven.shared.vo.hmis.DvRedactionFlag;
@@ -21,16 +25,20 @@ public class IntakePsdeApplicationService {
     private final IntakePsdeDtoMapper dtoMapper;
     private final IntakePsdeValidationService validationService;
     private final IntakePsdeAuditLogger auditLogger;
-    // TODO: Add repository when available
-    // private final IntakePsdeRepository repository;
+    private final IntakePsdeRepository repository;
+    private final ProgramEnrollmentRepository enrollmentRepository;
 
     public IntakePsdeApplicationService(
             IntakePsdeDtoMapper dtoMapper,
             IntakePsdeValidationService validationService,
-            IntakePsdeAuditLogger auditLogger) {
+            IntakePsdeAuditLogger auditLogger,
+            IntakePsdeRepository repository,
+            ProgramEnrollmentRepository enrollmentRepository) {
         this.dtoMapper = dtoMapper;
         this.validationService = validationService;
         this.auditLogger = auditLogger;
+        this.repository = repository;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     /**
@@ -41,8 +49,11 @@ public class IntakePsdeApplicationService {
             IntakePsdeRequest request,
             String collectedBy) {
 
-        // TODO: Look up clientId from enrollment
-        UUID clientId = UUID.randomUUID(); // Placeholder
+        // Look up enrollment to get client ID
+        ProgramEnrollment enrollment = enrollmentRepository.findById(ProgramEnrollmentId.of(enrollmentId))
+            .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
+
+        UUID clientId = enrollment.getClientId().value();
 
         // Convert request to domain object
         IntakePsdeRecord record = dtoMapper.requestToRecord(request, enrollmentId, clientId);
@@ -53,8 +64,16 @@ public class IntakePsdeApplicationService {
             throw new IllegalArgumentException("Validation failed: " + validationResult.getErrorSummary());
         }
 
-        // TODO: Persist record
-        // record = repository.save(record);
+        // Persist record
+        record = repository.save(record);
+
+        // Log audit event
+        auditLogger.logRecordCreation(
+            record.getRecordId().toString(),
+            collectedBy,
+            clientId.toString(),
+            enrollmentId.toString()
+        );
 
         // Convert to response DTO
         return dtoMapper.recordToResponse(record);
@@ -64,47 +83,44 @@ public class IntakePsdeApplicationService {
      * Get all PSDE records for an enrollment
      */
     public List<IntakePsdeResponse> getAllPsdeRecords(String enrollmentId) {
-        // TODO: Implement repository lookup
-        // List<IntakePsdeRecord> records = repository.findByEnrollmentId(UUID.fromString(enrollmentId));
-        // return records.stream()
-        //     .map(dtoMapper::recordToResponse)
-        //     .toList();
-
-        // Placeholder implementation
-        return List.of();
+        ProgramEnrollmentId programEnrollmentId = ProgramEnrollmentId.of(UUID.fromString(enrollmentId));
+        List<IntakePsdeRecord> records = repository.findActiveByEnrollmentId(programEnrollmentId);
+        return records.stream()
+            .map(dtoMapper::recordToResponse)
+            .toList();
     }
 
     /**
      * Get PSDE record by enrollment and record ID
      */
     public IntakePsdeResponse getPsdeRecord(String enrollmentId, String recordId) {
-        // TODO: Implement repository lookup
-        // IntakePsdeRecord record = repository.findByEnrollmentIdAndRecordId(
-        //     UUID.fromString(enrollmentId),
-        //     UUID.fromString(recordId)
-        // );
-        // if (record == null) {
-        //     return null;
-        // }
-        // return dtoMapper.recordToResponse(record);
+        IntakePsdeRecord record = repository.findActiveByRecordId(UUID.fromString(recordId))
+            .orElse(null);
 
-        // Placeholder - delegate to single ID method for now
-        return getPsdeRecord(UUID.fromString(recordId));
+        if (record == null) {
+            return null;
+        }
+
+        // Verify the record belongs to the specified enrollment
+        if (!record.getEnrollmentId().value().equals(UUID.fromString(enrollmentId))) {
+            return null;
+        }
+
+        return dtoMapper.recordToResponse(record);
     }
 
     /**
      * Get PSDE record by ID
      */
     public IntakePsdeResponse getPsdeRecord(UUID recordId) {
-        // TODO: Implement repository lookup
-        // IntakePsdeRecord record = repository.findById(recordId);
-        // if (record == null) {
-        //     return null;
-        // }
-        // return dtoMapper.recordToResponse(record);
+        IntakePsdeRecord record = repository.findActiveByRecordId(recordId)
+            .orElse(null);
 
-        // Placeholder implementation
-        throw new UnsupportedOperationException("Repository implementation needed");
+        if (record == null) {
+            return null;
+        }
+
+        return dtoMapper.recordToResponse(record);
     }
 
     /**
@@ -115,40 +131,42 @@ public class IntakePsdeApplicationService {
             IntakePsdeRequest request,
             String updatedBy) {
 
-        // TODO: Implement repository lookup and update
-        // IntakePsdeRecord existingRecord = repository.findById(recordId);
-        // if (existingRecord == null) {
-        //     throw new IllegalArgumentException("Record not found");
-        // }
+        // Find existing record
+        IntakePsdeRecord existingRecord = repository.findActiveByRecordId(recordId)
+            .orElseThrow(() -> new IllegalArgumentException("Record not found: " + recordId));
 
         // Apply updates to existing record
-        // dtoMapper.applyUpdatesToRecord(existingRecord, request);
+        dtoMapper.applyUpdatesToRecord(existingRecord, request);
 
         // Validate updated record
-        // var validationResult = validationService.validateIntakePsdeRecord(existingRecord);
-        // if (validationResult.hasErrors()) {
-        //     throw new IllegalArgumentException("Validation failed: " + validationResult.getErrorSummary());
-        // }
+        var validationResult = validationService.validateIntakePsdeRecord(existingRecord);
+        if (validationResult.hasErrors()) {
+            throw new IllegalArgumentException("Validation failed: " + validationResult.getErrorSummary());
+        }
 
-        // repository.save(existingRecord);
-        // return dtoMapper.recordToResponse(existingRecord);
+        // Persist updated record
+        existingRecord = repository.save(existingRecord);
 
-        // Placeholder implementation
-        throw new UnsupportedOperationException("Repository implementation needed");
+        // Log audit event
+        auditLogger.logRecordUpdate(
+            existingRecord.getRecordId().toString(),
+            updatedBy,
+            "PSDE_UPDATE",
+            new String[]{"intakePsdeData"}
+        );
+
+        return dtoMapper.recordToResponse(existingRecord);
     }
 
     /**
      * Get all PSDE records for an enrollment
      */
     public List<IntakePsdeResponse> getPsdeRecordsForEnrollment(UUID enrollmentId) {
-        // TODO: Implement repository lookup
-        // List<IntakePsdeRecord> records = repository.findByEnrollmentId(new ProgramEnrollmentId(enrollmentId));
-        // return records.stream()
-        //     .map(dtoMapper::recordToResponse)
-        //     .toList();
-
-        // Placeholder implementation
-        throw new UnsupportedOperationException("Repository implementation needed");
+        ProgramEnrollmentId programEnrollmentId = ProgramEnrollmentId.of(enrollmentId);
+        List<IntakePsdeRecord> records = repository.findActiveByEnrollmentId(programEnrollmentId);
+        return records.stream()
+            .map(dtoMapper::recordToResponse)
+            .toList();
     }
 
     /**
@@ -161,39 +179,67 @@ public class IntakePsdeApplicationService {
             String reason,
             String updatedBy) {
 
-        // TODO: Implement repository lookup and update
-        // IntakePsdeRecord record = repository.findById(recordId);
-        // if (record == null) {
-        //     throw new IllegalArgumentException("Record not found");
-        // }
+        // Find existing record
+        IntakePsdeRecord record = repository.findActiveByRecordId(recordId)
+            .orElseThrow(() -> new IllegalArgumentException("Record not found: " + recordId));
 
         // Update VAWA confidentiality settings
-        // DvRedactionFlag redactionFlag = DvRedactionFlag.valueOf(redactionLevel);
-        // record.updateDomesticViolenceInformation(
-        //     record.getDomesticViolence(),
-        //     record.getDomesticViolenceRecency(),
-        //     record.getCurrentlyFleeingDomesticViolence(),
-        //     redactionFlag,
-        //     confidentialityRequested
-        // );
+        DvRedactionFlag redactionFlag = DvRedactionFlag.valueOf(redactionLevel);
+        record.updateDomesticViolenceInformation(
+            record.getDomesticViolence(),
+            record.getDomesticViolenceRecency(),
+            record.getCurrentlyFleeingDomesticViolence(),
+            redactionFlag,
+            confidentialityRequested
+        );
 
-        // repository.save(record);
-        // return dtoMapper.recordToResponse(record);
+        // Persist updated record
+        record = repository.save(record);
 
-        // Placeholder implementation
-        throw new UnsupportedOperationException("Repository implementation needed");
+        // Log audit event
+        auditLogger.logVawaConfidentialityChange(
+            record.getRecordId().toString(),
+            updatedBy,
+            !confidentialityRequested, // old value (inverse of new)
+            confidentialityRequested,  // new value
+            reason
+        );
+
+        return dtoMapper.recordToResponse(record);
     }
 
     /**
      * Get data quality summary for enrollment
      */
     public DataQualitySummary getDataQualitySummary(UUID enrollmentId) {
-        // TODO: Implement data quality analysis
-        // List<IntakePsdeRecord> records = repository.findByEnrollmentId(new ProgramEnrollmentId(enrollmentId));
-        // return analyzeDataQuality(records);
+        ProgramEnrollmentId programEnrollmentId = ProgramEnrollmentId.of(enrollmentId);
+        List<IntakePsdeRecord> records = repository.findActiveByEnrollmentId(programEnrollmentId);
 
-        // Placeholder implementation
-        return new DataQualitySummary(0, 0, 0, 0, "0%");
+        if (records.isEmpty()) {
+            return new DataQualitySummary(0, 0, 0, 0, "N/A");
+        }
+
+        int totalRecords = records.size();
+        long recordsMeetingQuality = records.stream()
+            .filter(IntakePsdeRecord::meetsHmisDataQuality)
+            .count();
+        long recordsWithDvData = records.stream()
+            .filter(r -> r.getDomesticViolence() != null)
+            .count();
+        long highSensitivityDvCases = records.stream()
+            .filter(IntakePsdeRecord::isHighSensitivityDvCase)
+            .count();
+
+        String qualityPercentage = String.format("%.1f%%",
+            (recordsMeetingQuality * 100.0) / totalRecords);
+
+        return new DataQualitySummary(
+            totalRecords,
+            (int) recordsMeetingQuality,
+            (int) recordsWithDvData,
+            (int) highSensitivityDvCases,
+            qualityPercentage
+        );
     }
 
     /**

@@ -40,12 +40,20 @@ public abstract class AggregateRoot<ID extends Identifier> {
 
     public ID getId() { return id; }
     public long getVersion() { return version; }
-    
-    public List<DomainEvent> getPendingEvents() { 
-        return List.copyOf(pendingEvents); 
+
+    public List<DomainEvent> getPendingEvents() {
+        return List.copyOf(pendingEvents);
     }
-    
-    public void clearPendingEvents() { 
-        pendingEvents.clear(); 
+
+    public List<DomainEvent> getUncommittedEvents() {
+        return List.copyOf(pendingEvents);
+    }
+
+    public void clearPendingEvents() {
+        pendingEvents.clear();
+    }
+
+    public void markEventsAsCommitted() {
+        pendingEvents.clear();
     }
 }

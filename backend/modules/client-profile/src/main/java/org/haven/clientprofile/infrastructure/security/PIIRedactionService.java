@@ -3,25 +3,231 @@ package org.haven.clientprofile.infrastructure.security;
 import org.haven.clientprofile.domain.pii.PIIAccessContext;
 import org.haven.clientprofile.domain.pii.PIIAccessLevel;
 import org.haven.clientprofile.domain.pii.PIICategory;
+import org.haven.shared.security.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * Service for applying "minimum necessary" redaction to PII data
- * Implements HIPAA-style data minimization principles
+ * Enhanced PII Redaction Service with Keycloak token verification
+ * Implements role-based and consent-based redaction policies
+ * Supports dynamic permission changes with cache invalidation
  */
 @Service
 public class PIIRedactionService {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(PIIRedactionService.class);
+
+    private final KeycloakTokenVerificationService tokenVerificationService;
+    private final DeterministicIdGenerator idGenerator;
+
+    @Autowired
+    public PIIRedactionService(KeycloakTokenVerificationService tokenVerificationService) {
+        this.tokenVerificationService = tokenVerificationService;
+        this.idGenerator = new DeterministicIdGenerator(); // Use default salt
+    }
+
+    /**
+     * Apply redaction based on JWT token verification
+     * Validates token, extracts roles/scopes, and applies appropriate redaction
+     * @param data Data to redact
+     * @param token JWT token string
+     * @param clientId Client ID for audit purposes
+     * @return Redacted data
+     * @throws TokenAuthenticationException if token is invalid
+     */
+    public <T> T applyRedactionWithToken(T data, String token, UUID clientId) {
+        // Verify token
+        KeycloakTokenVerificationService.TokenVerificationResult result = tokenVerificationService.verifyToken(token);
+
+        if (!result.isValid()) {
+            log.warn("Token verification failed: {}", result.getErrorMessage());
+            throw new TokenAuthenticationException(result.getErrorMessage(), result.getHttpStatusCode());
+        }
+
+        Jwt jwt = result.getJwt();
+
+        // Extract roles and consent scopes
+        List<String> roleStrings = tokenVerificationService.extractRoleClaims(jwt);
+        List<String> consentScopes = tokenVerificationService.extractConsentScopes(jwt);
+
+        // Convert role strings to UserRole enums
+        List<UserRole> userRoles = new ArrayList<>();
+        for (String roleString : roleStrings) {
+            try {
+                userRoles.add(UserRole.valueOf(roleString.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                log.debug("Unknown role in token: {}", roleString);
+            }
+        }
+
+        // Create redaction permission
+        RedactionPermission permission = RedactionPermission.from(userRoles, consentScopes);
+
+        log.info("Applying redaction for user {} with roles {} and scopes {} (default level: {})",
+                tokenVerificationService.extractUsername(jwt),
+                userRoles,
+                consentScopes,
+                permission.getDefaultRedactionLevel());
+
+        // Apply redaction based on permission
+        return applyRedactionWithPermission(data, permission, clientId);
+    }
+
+    /**
+     * Apply redaction based on RedactionPermission (internal method)
+     * Supports caching based on permission hash
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T applyRedactionWithPermission(T data, RedactionPermission permission, UUID clientId) {
+        if (data == null) return null;
+
+        try {
+            // Create a copy to avoid modifying original
+            T redactedData = (T) cloneObject(data);
+
+            Class<?> clazz = redactedData.getClass();
+            Field[] fields = clazz.getDeclaredFields();
+
+            for (Field field : fields) {
+                field.setAccessible(true);
+
+                RedactionPermission.FieldType fieldType = classifyFieldForPermission(field.getName());
+                RedactionPermission.RedactionLevel level = permission.getRedactionLevelForField(fieldType);
+
+                Object originalValue = field.get(redactedData);
+                Object redactedValue = applyRedactionLevel(field, originalValue, level);
+
+                field.set(redactedData, redactedValue);
+            }
+
+            return redactedData;
+
+        } catch (Exception e) {
+            log.error("Failed to apply redaction", e);
+            throw new RedactionException("Failed to apply redaction", e);
+        }
+    }
+
+    /**
+     * Classify field for permission-based redaction
+     */
+    private RedactionPermission.FieldType classifyFieldForPermission(String fieldName) {
+        String lowerField = fieldName.toLowerCase();
+
+        // DV-specific sensitive notes
+        if (lowerField.contains("dv") && (lowerField.contains("note") || lowerField.contains("confidential"))) {
+            return RedactionPermission.FieldType.SENSITIVE_DV_NOTE;
+        }
+
+        // Medical information
+        if (lowerField.contains("medical") || lowerField.contains("diagnosis") ||
+            lowerField.contains("treatment") || lowerField.contains("medication")) {
+            return RedactionPermission.FieldType.MEDICAL_INFO;
+        }
+
+        // Legal information
+        if (lowerField.contains("legal") || lowerField.contains("court") ||
+            lowerField.contains("attorney") || lowerField.contains("testimony")) {
+            return RedactionPermission.FieldType.LEGAL_INFO;
+        }
+
+        // Direct identifiers
+        if (lowerField.contains("ssn") || lowerField.contains("socialsecurity") ||
+            lowerField.contains("firstname") || lowerField.contains("lastname") ||
+            lowerField.contains("fullname") || lowerField.contains("legalname")) {
+            return RedactionPermission.FieldType.DIRECT_IDENTIFIER;
+        }
+
+        // Contact info
+        if (lowerField.contains("email") || lowerField.contains("phone") ||
+            lowerField.contains("address") || lowerField.contains("contact")) {
+            return RedactionPermission.FieldType.CONTACT_INFO;
+        }
+
+        // Default to service data
+        return RedactionPermission.FieldType.SERVICE_DATA;
+    }
+
+    /**
+     * Apply specific redaction level to a field value
+     */
+    private Object applyRedactionLevel(Field field, Object value, RedactionPermission.RedactionLevel level) {
+        if (value == null) return null;
+
+        return switch (level) {
+            case NO_REDACTION -> value;
+            case MINIMAL -> applyMinimalRedaction(field, value);
+            case PARTIAL -> applyPartialRedaction(field, value);
+            case HASH_ONLY -> applyHashOnlyRedaction(field, value);
+            case FULL_REDACTION -> null;
+        };
+    }
+
+    private Object applyMinimalRedaction(Field field, Object value) {
+        if (!(value instanceof String str)) {
+            return value;
+        }
+
+        String lowerField = field.getName().toLowerCase();
+        if (lowerField.contains("ssn")) {
+            // Show last 4 digits: ***-**-1234
+            if (str.length() >= 4) {
+                return "***-**-" + str.substring(str.length() - 4);
+            }
+        }
+        return value; // Most fields pass through with minimal redaction
+    }
+
+    private Object applyPartialRedaction(Field field, Object value) {
+        if (!(value instanceof String str)) {
+            return getRedactedValue(field, value);
+        }
+
+        return getRedactedString(field.getName(), str);
+    }
+
+    private Object applyHashOnlyRedaction(Field field, Object value) {
+        if (value instanceof String str) {
+            // Hash string using deterministic ID generator
+            UUID tempUuid = UUID.nameUUIDFromBytes(str.getBytes());
+            return idGenerator.generateHashedPersonalId(tempUuid);
+        } else if (value instanceof UUID uuid) {
+            return idGenerator.generateHashedPersonalId(uuid);
+        }
+        return "[HASHED]";
+    }
+
+    /**
+     * Invalidate permission cache for a user when roles or consent changes
+     * Called when role assignment changes or consent is withdrawn
+     */
+    @CacheEvict(value = "redactionPermissions", key = "#userId")
+    public void invalidatePermissionCache(UUID userId) {
+        log.info("Invalidated redaction permission cache for user: {}", userId);
+    }
+
+    /**
+     * Invalidate all permission caches (e.g., on policy change)
+     */
+    @CacheEvict(value = "redactionPermissions", allEntries = true)
+    public void invalidateAllPermissionCaches() {
+        log.info("Invalidated all redaction permission caches");
+    }
+
     /**
      * Applies redaction to any object based on user's access context
      * Default behavior follows "minimum necessary" principle
+     * @deprecated Use applyRedactionWithToken for JWT-based authentication
      */
+    @Deprecated(since = "2.0", forRemoval = false)
     @SuppressWarnings("unchecked")
     public <T> T applyRedaction(T data, PIIAccessContext context, UUID clientId) {
         if (data == null) return null;
@@ -309,9 +515,25 @@ public class PIIRedactionService {
         public RedactionException(String message) {
             super(message);
         }
-        
+
         public RedactionException(String message, Throwable cause) {
             super(message, cause);
+        }
+    }
+
+    /**
+     * Exception for token authentication failures
+     */
+    public static class TokenAuthenticationException extends RuntimeException {
+        private final int httpStatusCode;
+
+        public TokenAuthenticationException(String message, int httpStatusCode) {
+            super(message);
+            this.httpStatusCode = httpStatusCode;
+        }
+
+        public int getHttpStatusCode() {
+            return httpStatusCode;
         }
     }
 }

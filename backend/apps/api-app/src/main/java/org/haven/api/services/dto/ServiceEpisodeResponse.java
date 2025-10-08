@@ -1,5 +1,6 @@
 package org.haven.api.services.dto;
 
+import org.haven.servicedelivery.application.queries.ServiceEpisodeDTO;
 import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.haven.shared.vo.services.*;
 
@@ -58,7 +59,7 @@ public record ServiceEpisodeResponse(
     String createdBy,
     String lastModifiedBy
 ) {
-    
+
     public static ServiceEpisodeResponse fromDomain(ServiceEpisode episode) {
         return new ServiceEpisodeResponse(
             episode.getId().value(),
@@ -110,6 +111,58 @@ public record ServiceEpisodeResponse(
             episode.getLastModifiedAt(),
             episode.getCreatedBy(),
             episode.getLastModifiedBy()
+        );
+    }
+
+    public static ServiceEpisodeResponse fromDTO(ServiceEpisodeDTO dto) {
+        return new ServiceEpisodeResponse(
+            dto.episodeId(),
+            dto.clientId(),
+            dto.enrollmentId(),
+            dto.programId(),
+            dto.programName(),
+            dto.serviceType(),
+            dto.serviceCategory(),
+            dto.deliveryMode(),
+            dto.serviceDate(),
+            null, // startTime
+            null, // endTime
+            dto.plannedDurationMinutes(),
+            dto.actualDurationMinutes(),
+            dto.primaryProviderId(),
+            dto.primaryProviderName(),
+            List.of(), // additionalProviderIds
+            null, // primaryFundingSource
+            List.of(), // additionalFundingSources
+            null, // onBehalfOfOrganization
+            dto.isBillable(),
+            null, // billingCode
+            null, // billingRate
+            null, // totalBillableAmount
+            null, // serviceDescription
+            null, // serviceGoals
+            null, // serviceOutcome
+            dto.isCompleted() ? ServiceEpisode.ServiceCompletionStatus.COMPLETED : ServiceEpisode.ServiceCompletionStatus.IN_PROGRESS,
+            dto.requiresFollowUp() ? "Yes" : "No",
+            null, // followUpDate
+            null, // notes
+            dto.isConfidential(),
+            null, // confidentialityReason
+            false, // isRestrictedAccess
+            List.of(), // authorizedViewerIds
+            null, // serviceLocation
+            null, // serviceLocationAddress
+            false, // isOffSite
+            null, // contextNotes
+            dto.isCourtOrdered(),
+            null, // courtOrderNumber
+            false, // requiresDocumentation
+            List.of(), // attachedDocumentIds
+            null, // qualityAssuranceNotes
+            null, // createdAt
+            null, // lastModifiedAt
+            null, // createdBy
+            null  // lastModifiedBy
         );
     }
     

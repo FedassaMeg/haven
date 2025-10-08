@@ -1,0 +1,116 @@
+# CoC APR Question 4a: Persons Served
+# Per 24 CFR 578.103 and HUD APR Programming Specifications
+
+reportType: CoC_APR
+sectionIdentifier: Q04a
+sectionName: "Persons Served - Number of Unduplicated Persons Served in HMIS during the Operating Year"
+description: |
+  Total unduplicated count of persons served during the operating year.
+  Includes all persons with active enrollments during the reporting period,
+  regardless of entry or exit dates.
+
+versionIdentifier: APR-FY2024
+hudNoticeReference: "Notice CPD-23-08 - FY2023 CoC Program Competition"
+effectiveFrom: 2024-10-01
+filingDeadline: "90 days after fiscal year end"
+
+scopeFilters:
+  # Only CoC-funded projects per 24 CFR 578.103
+  fundingSources:
+    - CoC
+  # Report period
+  reportingPeriod:
+    type: FISCAL_YEAR
+    description: "October 1 - September 30"
+
+inclusionLogic:
+  # Include persons with any enrollment overlapping the operating year
+  enrollmentOverlapsReportPeriod: true
+  # Exclude test/demo data
+  excludeTestData: true
+  # Include all project types eligible for CoC funding
+  projectTypes:
+    - 1  # ES - Entry/Exit
+    - 2  # TH
+    - 3  # PSH
+    - 8  # Safe Haven
+    - 13 # RRH
+    - 6  # SSO
+
+exclusionLogic:
+  # Exclude non-CoC projects
+  excludeNonCoCFunded: true
+  # Exclude coordinated entry projects (reported separately)
+  excludeProjectTypes:
+    - 14 # Coordinated Entry
+
+aggregateRules:
+  metrics:
+    - name: TotalPersonsServed
+      expression: COUNT(DISTINCT client_id)
+      description: Unduplicated count of persons
+
+    - name: TotalAdults
+      expression: COUNT(DISTINCT CASE WHEN age_at_entry >= 18 THEN client_id END)
+      description: Adults (18+)
+
+    - name: TotalChildren
+      expression: COUNT(DISTINCT CASE WHEN age_at_entry < 18 THEN client_id END)
+      description: Children (under 18)
+
+    - name: TotalHouseholdsServed
+      expression: COUNT(DISTINCT household_id)
+      description: Unduplicated households
+
+requiresVawaConsentCheck: false
+allowAggregatesWithoutConsent: true
+
+dataQualityRequirements: |
+  - PersonalID must be present for all persons
+  - Age must be calculable (DOB or approximate age)
+  - Household ID must be present and valid
+
+fieldMappings:
+  - sourceEntity: Enrollment
+    sourceField: clientId
+    targetHudElement: "APR:Q04a.PersonalID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: enrollmentDate
+    targetHudElement: "APR:Q04a.EntryDate"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: exitDate
+    targetHudElement: "APR:Q04a.ExitDate"
+    targetDataType: Date
+    requiredFlag: C
+    vawaSensitiveField: false
+
+  - sourceEntity: Enrollment
+    sourceField: householdId
+    targetHudElement: "APR:Q04a.HouseholdID"
+    targetDataType: String
+    requiredFlag: R
+    vawaSensitiveField: false
+
+  - sourceEntity: ClientProfile
+    sourceField: dateOfBirth
+    targetHudElement: "APR:Q04a.DOB"
+    targetDataType: Date
+    requiredFlag: R
+    vawaSensitiveField: false
+    transformationRule: AGE_AT_ENROLLMENT
+
+  - sourceEntity: Enrollment
+    sourceField: relationshipToHoH
+    targetHudElement: "APR:Q04a.RelationshipToHoH"
+    targetDataType: Integer
+    requiredFlag: R
+    vawaSensitiveField: false
+    validationRules: "Must be 1-5 per HUD Code List 4.02.3"

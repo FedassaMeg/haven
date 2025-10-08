@@ -5,7 +5,11 @@ import org.haven.casemgmt.domain.RestrictedNoteId;
 import org.haven.casemgmt.domain.RestrictedNoteRepository;
 import org.haven.eventstore.EventEnvelope;
 import org.haven.eventstore.EventStore;
+import org.haven.shared.audit.*;
 import org.haven.shared.events.DomainEvent;
+import org.haven.shared.security.AccessContext;
+import org.haven.shared.security.ConfidentialityPolicyService;
+import org.haven.shared.security.PolicyDecision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -23,12 +27,20 @@ public class EventSourcedRestrictedNoteRepository implements RestrictedNoteRepos
     private final EventStore eventStore;
     private final RestrictedNoteReadModelRepository readModelRepository;
     private final ApplicationEventPublisher eventPublisher;
-    
+    private final ConfidentialityPolicyService policyService;
+    private final PrivilegedAuditService privilegedAuditService;
+
     @Autowired
-    public EventSourcedRestrictedNoteRepository(EventStore eventStore, RestrictedNoteReadModelRepository readModelRepository, ApplicationEventPublisher eventPublisher) {
+    public EventSourcedRestrictedNoteRepository(EventStore eventStore,
+                                               RestrictedNoteReadModelRepository readModelRepository,
+                                               ApplicationEventPublisher eventPublisher,
+                                               ConfidentialityPolicyService policyService,
+                                               PrivilegedAuditService privilegedAuditService) {
         this.eventStore = eventStore;
         this.readModelRepository = readModelRepository;
         this.eventPublisher = eventPublisher;
+        this.policyService = policyService;
+        this.privilegedAuditService = privilegedAuditService;
     }
     
     @Override
@@ -50,15 +62,18 @@ public class EventSourcedRestrictedNoteRepository implements RestrictedNoteRepos
     @Override
     public void save(RestrictedNote aggregate) {
         List<DomainEvent> pendingEvents = aggregate.getPendingEvents();
-        
+
         if (!pendingEvents.isEmpty()) {
             eventStore.append(aggregate.getId().value(), aggregate.getVersion() - pendingEvents.size(), pendingEvents);
-            
+
             // Publish events for projection handlers
             for (DomainEvent event : pendingEvents) {
                 eventPublisher.publishEvent(event);
             }
-            
+
+            // Emit privileged audit events for DV note operations
+            auditDomainEvents(aggregate, pendingEvents);
+
             aggregate.clearPendingEvents();
         }
     }
@@ -185,7 +200,33 @@ public class EventSourcedRestrictedNoteRepository implements RestrictedNoteRepos
     @Override
     public boolean hasValidAccess(UUID noteId, UUID userId, List<String> userRoles) {
         Optional<RestrictedNote> note = findById(RestrictedNoteId.of(noteId));
-        return note.isPresent() && note.get().isVisibleTo(userId, userRoles);
+        if (note.isEmpty()) {
+            return false;
+        }
+
+        RestrictedNote n = note.get();
+        AccessContext context = AccessContext.fromRoleStrings(
+                userId,
+                "System User", // Username not available in repository context
+                userRoles,
+                "Repository access check",
+                "0.0.0.0",
+                "repository-session",
+                "Repository"
+        );
+
+        PolicyDecision decision = policyService.canAccessNote(
+                n.getNoteId(),
+                n.getAuthorId(),
+                n.getNoteType().name(),
+                n.getVisibilityScope().name(),
+                n.isSealed(),
+                n.getSealedBy(),
+                n.getAuthorizedViewers(),
+                context
+        );
+
+        return decision.isAllowed();
     }
     
     private Optional<RestrictedNote> reconstructFromReadModel(RestrictedNoteReadModel readModel) {
@@ -260,11 +301,100 @@ public class EventSourcedRestrictedNoteRepository implements RestrictedNoteRepos
         if (readModel.isSealed()) {
             return userRoles.contains("ADMINISTRATOR") || userRoles.contains("COMPLIANCE_OFFICER");
         }
-        
+
         if (readModel.getVisibilityScope() == RestrictedNoteReadModel.VisibilityScope.AUTHOR_ONLY) {
             return readModel.getAuthorId().equals(userId);
         }
-        
+
         return allowedScopes.contains(readModel.getVisibilityScope());
+    }
+
+    /**
+     * Emit privileged audit events for DV note domain events
+     */
+    private void auditDomainEvents(RestrictedNote aggregate, List<DomainEvent> events) {
+        for (DomainEvent event : events) {
+            switch (event.eventType()) {
+                case "RestrictedNoteCreated" -> auditNoteWrite(aggregate, event, PrivilegedActionType.DV_NOTE_WRITE);
+                case "RestrictedNoteUpdated" -> auditNoteWrite(aggregate, event, PrivilegedActionType.DV_NOTE_WRITE);
+                case "RestrictedNoteSealed" -> auditNoteSeal(aggregate, event);
+                case "RestrictedNoteUnsealed" -> auditNoteUnseal(aggregate, event);
+                case "RestrictedNoteAccessed" -> auditNoteRead(aggregate, event);
+            }
+        }
+    }
+
+    private void auditNoteWrite(RestrictedNote note, DomainEvent event, PrivilegedActionType actionType) {
+        privilegedAuditService.logAction(
+            PrivilegedAuditEvent.builder()
+                .eventType(actionType)
+                .outcome(AuditOutcome.SUCCESS)
+                .actorId(note.getAuthorId())
+                .actorUsername(note.getAuthorName())
+                .actorRoles(List.of("CASE_MANAGER")) // Would be extracted from context in production
+                .resourceType("RestrictedNote")
+                .resourceId(note.getNoteId())
+                .resourceDescription(note.getNoteType().getDescription() + ": " + note.getTitle())
+                .justification("DV note documentation for client " + note.getClientName())
+                .addMetadata("noteType", note.getNoteType().name())
+                .addMetadata("visibilityScope", note.getVisibilityScope().name())
+                .addMetadata("clientId", note.getClientId().toString())
+                .addMetadata("caseId", note.getCaseId().toString())
+                .build()
+        );
+    }
+
+    private void auditNoteSeal(RestrictedNote note, DomainEvent event) {
+        privilegedAuditService.logAction(
+            PrivilegedAuditEvent.builder()
+                .eventType(PrivilegedActionType.DV_NOTE_SEAL)
+                .outcome(AuditOutcome.SUCCESS)
+                .actorId(note.getSealedBy())
+                .actorUsername(note.getSealedByName())
+                .actorRoles(List.of("ADMINISTRATOR")) // Would be extracted from context
+                .resourceType("RestrictedNote")
+                .resourceId(note.getNoteId())
+                .resourceDescription(note.getTitle())
+                .justification(note.getSealReason())
+                .addMetadata("sealedAt", note.getSealedAt().toString())
+                .addMetadata("isTemporary", note.isTemporary())
+                .addMetadata("expiresAt", note.getExpiresAt() != null ? note.getExpiresAt().toString() : null)
+                .build()
+        );
+    }
+
+    private void auditNoteUnseal(RestrictedNote note, DomainEvent event) {
+        privilegedAuditService.logAction(
+            PrivilegedAuditEvent.builder()
+                .eventType(PrivilegedActionType.DV_NOTE_UNSEAL)
+                .outcome(AuditOutcome.SUCCESS)
+                .actorId(note.getSealedBy()) // Would need to track unsealer separately
+                .actorUsername(note.getSealedByName())
+                .actorRoles(List.of("ADMINISTRATOR"))
+                .resourceType("RestrictedNote")
+                .resourceId(note.getNoteId())
+                .resourceDescription(note.getTitle())
+                .justification("Note unsealed for access")
+                .addMetadata("previouslySealedBy", note.getSealedBy())
+                .build()
+        );
+    }
+
+    private void auditNoteRead(RestrictedNote note, DomainEvent event) {
+        privilegedAuditService.logAction(
+            PrivilegedAuditEvent.builder()
+                .eventType(PrivilegedActionType.DV_NOTE_READ)
+                .outcome(AuditOutcome.SUCCESS)
+                .actorId(note.getAuthorId()) // Would be extracted from access context
+                .actorUsername(note.getAuthorName())
+                .actorRoles(List.of("CASE_MANAGER"))
+                .resourceType("RestrictedNote")
+                .resourceId(note.getNoteId())
+                .resourceDescription(note.getTitle())
+                .justification("Case review access")
+                .addMetadata("noteType", note.getNoteType().name())
+                .addMetadata("isSealed", note.isSealed())
+                .build()
+        );
     }
 }

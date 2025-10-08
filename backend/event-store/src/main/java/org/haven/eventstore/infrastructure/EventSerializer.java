@@ -4,16 +4,66 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.haven.shared.events.DomainEvent;
+import org.reflections.Reflections;
+import org.reflections.util.ConfigurationBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Event serializer with dynamic event type registration.
+ * Automatically discovers all DomainEvent implementations in the org.haven package.
+ */
 @Component("consentEventSerializer")
 public class EventSerializer {
-    
+
+    private static final Logger logger = LoggerFactory.getLogger(EventSerializer.class);
+
     private final ObjectMapper objectMapper;
-    
+    private final Map<String, Class<? extends DomainEvent>> eventTypeMap;
+
     public EventSerializer() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        this.eventTypeMap = new ConcurrentHashMap<>();
+    }
+
+    /**
+     * Auto-register all DomainEvent implementations found in org.haven package.
+     * This eliminates the need to manually update the serializer for each new event type.
+     */
+    @PostConstruct
+    void registerEvents() {
+        logger.info("Scanning for DomainEvent implementations in org.haven package...");
+
+        Reflections reflections = new Reflections(
+            new ConfigurationBuilder()
+                .forPackages("org.haven")
+        );
+
+        Set<Class<? extends DomainEvent>> eventClasses = reflections.getSubTypesOf(DomainEvent.class);
+
+        for (Class<? extends DomainEvent> eventClass : eventClasses) {
+            try {
+                // Get the event type from a temporary instance
+                DomainEvent instance = eventClass.getDeclaredConstructor().newInstance();
+                String eventType = instance.eventType();
+                eventTypeMap.put(eventType, eventClass);
+                logger.debug("Registered event type: {} -> {}", eventType, eventClass.getName());
+            } catch (Exception e) {
+                // If we can't instantiate with no-args constructor, use simple class name
+                String eventType = eventClass.getSimpleName();
+                eventTypeMap.put(eventType, eventClass);
+                logger.debug("Registered event type (fallback): {} -> {}", eventType, eventClass.getName());
+            }
+        }
+
+        logger.info("Registered {} DomainEvent types", eventTypeMap.size());
     }
     
     public String serialize(DomainEvent event) {
@@ -27,28 +77,33 @@ public class EventSerializer {
     @SuppressWarnings("unchecked")
     public <T extends DomainEvent> T deserialize(String eventData, String eventType) {
         try {
-            Class<?> eventClass = Class.forName(getFullClassName(eventType));
+            Class<? extends DomainEvent> eventClass = eventTypeMap.get(eventType);
+            if (eventClass == null) {
+                throw new IllegalArgumentException(
+                    "Unknown event type: " + eventType + ". Available types: " + eventTypeMap.keySet()
+                );
+            }
             return (T) objectMapper.readValue(eventData, eventClass);
         } catch (Exception e) {
             throw new EventSerializationException("Failed to deserialize event: " + eventType, e);
         }
     }
-    
-    private String getFullClassName(String eventType) {
-        // Map event types to their full class names
-        return switch (eventType) {
-            case "ConsentGranted" -> "org.haven.clientprofile.domain.consent.events.ConsentGranted";
-            case "ConsentRevoked" -> "org.haven.clientprofile.domain.consent.events.ConsentRevoked";
-            case "ConsentUpdated" -> "org.haven.clientprofile.domain.consent.events.ConsentUpdated";
-            case "ConsentExtended" -> "org.haven.clientprofile.domain.consent.events.ConsentExtended";
-            case "ConsentExpired" -> "org.haven.clientprofile.domain.consent.events.ConsentExpired";
-            case "RestrictedNoteCreated" -> "org.haven.casemgmt.domain.events.RestrictedNoteCreated";
-            case "RestrictedNoteUpdated" -> "org.haven.casemgmt.domain.events.RestrictedNoteUpdated";
-            case "RestrictedNoteSealed" -> "org.haven.casemgmt.domain.events.RestrictedNoteSealed";
-            case "RestrictedNoteUnsealed" -> "org.haven.casemgmt.domain.events.RestrictedNoteUnsealed";
-            case "RestrictedNoteAccessed" -> "org.haven.casemgmt.domain.events.RestrictedNoteAccessed";
-            default -> throw new IllegalArgumentException("Unknown event type: " + eventType);
-        };
+
+    /**
+     * Manually register an event type.
+     * Useful for testing or runtime registration of external event types.
+     */
+    public void registerEventType(String eventType, Class<? extends DomainEvent> eventClass) {
+        eventTypeMap.put(eventType, eventClass);
+        logger.info("Manually registered event type: {} -> {}", eventType, eventClass.getName());
+    }
+
+    /**
+     * Get all registered event types.
+     * Useful for debugging and monitoring.
+     */
+    public Set<String> getRegisteredEventTypes() {
+        return eventTypeMap.keySet();
     }
     
     public static class EventSerializationException extends RuntimeException {

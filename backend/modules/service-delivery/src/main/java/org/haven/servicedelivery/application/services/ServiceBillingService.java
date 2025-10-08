@@ -2,7 +2,6 @@ package org.haven.servicedelivery.application.services;
 
 import org.haven.servicedelivery.domain.ServiceEpisode;
 import org.haven.shared.vo.services.FundingSource;
-import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -13,9 +12,9 @@ import java.util.stream.Collectors;
 
 /**
  * Service Billing Service
+ * Domain service - framework independent
  * Handles billing calculation and tracking for service episodes
  */
-@Service
 public class ServiceBillingService {
 
     private final BillingRateRepository billingRateRepository;

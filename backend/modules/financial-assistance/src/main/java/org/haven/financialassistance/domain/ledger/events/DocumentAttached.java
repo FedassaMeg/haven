@@ -5,25 +5,45 @@ import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.UUID;
 
-public record DocumentAttached(
-    UUID ledgerId,
-    String documentId,
-    String documentName,
-    String documentType,
-    byte[] documentContent,
-    String uploadedBy,
-    Instant occurredAt
-) implements DomainEvent {
+public class DocumentAttached extends DomainEvent {
+    private final String documentId;
+    private final String documentName;
+    private final String documentType;
+    private final byte[] documentContent;
+    private final String uploadedBy;
 
-    @Override
-    public UUID aggregateId() {
-        return ledgerId;
+    public DocumentAttached(
+        UUID ledgerId,
+        String documentId,
+        String documentName,
+        String documentType,
+        byte[] documentContent,
+        String uploadedBy,
+        Instant occurredAt
+    ) {
+        super(ledgerId, occurredAt);
+        this.documentId = documentId;
+        this.documentName = documentName;
+        this.documentType = documentType;
+        this.documentContent = documentContent;
+        this.uploadedBy = uploadedBy;
     }
 
-    @Override
-    public String eventType() {
-        return "DocumentAttached";
-    }
+    // JavaBean style getters
+    public UUID getLedgerId() { return getAggregateId(); }
+    public String getDocumentId() { return documentId; }
+    public String getDocumentName() { return documentName; }
+    public String getDocumentType() { return documentType; }
+    public byte[] getDocumentContent() { return documentContent; }
+    public String getUploadedBy() { return uploadedBy; }
+
+    // Record style getters
+    public UUID ledgerId() { return getAggregateId(); }
+    public String documentId() { return documentId; }
+    public String documentName() { return documentName; }
+    public String documentType() { return documentType; }
+    public byte[] documentContent() { return documentContent; }
+    public String uploadedBy() { return uploadedBy; }
 
     public static DocumentAttached create(UUID ledgerId, String documentId, String documentName,
                                         String documentType, byte[] documentContent, String uploadedBy) {

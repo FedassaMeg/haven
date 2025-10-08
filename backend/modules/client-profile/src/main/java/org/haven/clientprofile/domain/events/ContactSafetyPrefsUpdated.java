@@ -5,23 +5,35 @@ import org.haven.clientprofile.domain.ContactSafetyPrefs;
 import java.time.Instant;
 import java.util.UUID;
 
-public record ContactSafetyPrefsUpdated(
-    UUID clientId,
-    ContactSafetyPrefs contactSafetyPrefs,
-    Instant occurredAt
-) implements DomainEvent {
-    
+public class ContactSafetyPrefsUpdated extends DomainEvent {
+    private final UUID clientId;
+    private final ContactSafetyPrefs contactSafetyPrefs;
+
+    public ContactSafetyPrefsUpdated(UUID clientId, ContactSafetyPrefs contactSafetyPrefs, Instant occurredAt) {
+        super(clientId, occurredAt);
+        this.clientId = clientId;
+        this.contactSafetyPrefs = contactSafetyPrefs;
+    }
+
     public ContactSafetyPrefsUpdated(UUID clientId, ContactSafetyPrefs contactSafetyPrefs) {
         this(clientId, contactSafetyPrefs, Instant.now());
     }
-    
-    @Override
-    public UUID aggregateId() {
+
+    // Record-style accessors (for backward compatibility)
+    public UUID clientId() {
         return clientId;
     }
-    
-    @Override
-    public String eventType() {
-        return "ContactSafetyPrefsUpdated";
+
+    public ContactSafetyPrefs contactSafetyPrefs() {
+        return contactSafetyPrefs;
+    }
+
+    // JavaBean-style getters
+    public UUID getClientId() {
+        return clientId;
+    }
+
+    public ContactSafetyPrefs getContactSafetyPrefs() {
+        return contactSafetyPrefs;
     }
 }

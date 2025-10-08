@@ -1,10 +1,7 @@
 package org.haven.clientprofile.domain.pii;
 
-import org.springframework.stereotype.Service;
-
 import java.util.UUID;
 
-@Service
 public class PIIAuditService {
     
     private final PIIAuditRepository auditRepository;

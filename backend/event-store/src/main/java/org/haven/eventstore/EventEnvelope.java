@@ -10,4 +10,11 @@ public record EventEnvelope<EV extends DomainEvent>(
     long sequence,
     Instant recordedAt,
     EV event
-) {}
+) {
+    /**
+     * JavaBean-style getter for backward compatibility
+     */
+    public EV getEvent() {
+        return event;
+    }
+}

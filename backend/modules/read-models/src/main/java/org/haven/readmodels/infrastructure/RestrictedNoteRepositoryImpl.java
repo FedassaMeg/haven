@@ -1,6 +1,9 @@
 package org.haven.readmodels.infrastructure;
 
 import org.haven.readmodels.domain.RestrictedNote;
+import org.haven.shared.security.AccessContext;
+import org.haven.shared.security.ConfidentialityPolicyService;
+import org.haven.shared.security.PolicyDecision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -17,10 +20,13 @@ import java.util.stream.Collectors;
 public class RestrictedNoteRepositoryImpl implements RestrictedNoteRepository {
     
     private final JpaRestrictedNoteRepository jpaRepository;
-    
+    private final ConfidentialityPolicyService policyService;
+
     @Autowired
-    public RestrictedNoteRepositoryImpl(JpaRestrictedNoteRepository jpaRepository) {
+    public RestrictedNoteRepositoryImpl(JpaRestrictedNoteRepository jpaRepository,
+                                       ConfidentialityPolicyService policyService) {
         this.jpaRepository = jpaRepository;
+        this.policyService = policyService;
     }
     
     @Override
@@ -109,19 +115,63 @@ public class RestrictedNoteRepositoryImpl implements RestrictedNoteRepository {
     @Override
     public Page<RestrictedNote> findAccessibleToUser(UUID userId, List<String> userRoles, Pageable pageable) {
         Page<JpaRestrictedNoteEntity> entityPage = jpaRepository.findAccessibleToUser(userId, pageable);
+        AccessContext context = AccessContext.fromRoleStrings(
+                userId,
+                "System User",
+                userRoles,
+                "Repository access check",
+                "0.0.0.0",
+                "repository-session",
+                "Repository"
+        );
+
         List<RestrictedNote> notes = entityPage.getContent().stream()
                 .map(JpaRestrictedNoteEntity::toDomain)
-                .filter(note -> note.isVisibleTo(userId, userRoles))
+                .filter(note -> {
+                    PolicyDecision decision = policyService.canAccessNote(
+                            note.getNoteId(),
+                            note.getAuthorId(),
+                            note.getNoteType().name(),
+                            note.getVisibilityScope().name(),
+                            note.getIsSealed() != null && note.getIsSealed(),
+                            note.getSealedBy(),
+                            note.getAuthorizedViewers(),
+                            context
+                    );
+                    return decision.isAllowed();
+                })
                 .collect(Collectors.toList());
         return new PageImpl<>(notes, pageable, entityPage.getTotalElements());
     }
-    
+
     @Override
     public Page<RestrictedNote> findByClientIdAccessibleToUser(UUID clientId, UUID userId, List<String> userRoles, Pageable pageable) {
         Page<JpaRestrictedNoteEntity> entityPage = jpaRepository.findByClientIdAccessibleToUser(clientId, userId, pageable);
+        AccessContext context = AccessContext.fromRoleStrings(
+                userId,
+                "System User",
+                userRoles,
+                "Repository access check",
+                "0.0.0.0",
+                "repository-session",
+                "Repository"
+        );
+
         List<RestrictedNote> notes = entityPage.getContent().stream()
                 .map(JpaRestrictedNoteEntity::toDomain)
-                .filter(note -> note.isVisibleTo(userId, userRoles))
+                .filter(note -> {
+                    PolicyDecision decision = policyService.canAccessNote(
+                            note.getNoteId(),
+                            note.getAuthorId(),
+                            note.getNoteType().name(),
+                            note.getVisibilityScope().name(),
+                            note.getIsSealed() != null && note.getIsSealed(),
+                            note.getSealedBy(),
+                            note.getAuthorizedViewers(),
+                            context
+                    );
+                    return decision.isAllowed();
+                })
                 .collect(Collectors.toList());
         return new PageImpl<>(notes, pageable, entityPage.getTotalElements());
     }
