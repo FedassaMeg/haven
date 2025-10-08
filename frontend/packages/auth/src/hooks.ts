@@ -70,7 +70,6 @@ export function useCurrentUser() {
     initials,
     isAdmin: user?.roles.includes(UserRole.ADMIN) || false,
     isCaseManager: user?.roles.includes(UserRole.CASE_MANAGER) || false,
-    isSocialWorker: user?.roles.includes(UserRole.SOCIAL_WORKER) || false,
     isSupervisor: user?.roles.includes(UserRole.SUPERVISOR) || false,
   };
 }

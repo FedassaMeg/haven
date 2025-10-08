@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+/**
+ * Date/Time Format Standards:
+ * - LocalDate (backend): "2024-01-15" -> ISO date string (frontend)
+ * - LocalDateTime (backend): "2024-01-15T14:30:00" -> ISO datetime string (frontend)
+ * - Instant (backend): "2024-01-15T14:30:00Z" -> ISO datetime with timezone (frontend)
+ *
+ * All dates are serialized/deserialized using ISO-8601 format via Jackson on backend.
+ */
+
 // API Response types
 export interface ApiResponse<T> {
   data: T;
@@ -555,6 +564,44 @@ export type QuickCaseManagementServiceRequest = z.infer<typeof QuickCaseManageme
 export type UpdateOutcomeRequest = z.infer<typeof UpdateOutcomeRequestSchema>;
 export type ServiceSearchCriteria = z.infer<typeof ServiceSearchCriteriaSchema>;
 export type ServiceStatistics = z.infer<typeof ServiceStatisticsSchema>;
+
+// Service Episode Response Types
+export interface CreateServiceEpisodeResponse {
+  episodeId: string;
+}
+
+// TH/RRH Transition Types
+export interface TransitionToRrhRequest {
+  rrhProgramId: string;
+  rrhEnrollmentDate: string;
+  residentialMoveInDate?: string;
+}
+
+export interface TransitionToRrhResponse {
+  rrhEnrollmentId: string;
+  clientId: string;
+  rrhProgramId: string;
+  enrollmentDate: string;
+  residentialMoveInDate?: string;
+  householdId?: string;
+  message: string;
+}
+
+export interface CombinedServicesResponse {
+  enrollmentId: string;
+  services: ServiceEpisodeSummary[];
+  totalServiceCount: number;
+  message: string;
+}
+
+export interface ServiceEpisodeSummary {
+  id: string;
+  enrollmentId: string;
+  serviceType: string;
+  serviceDate: string;
+  providedBy: string;
+  description: string;
+}
 
 export const UpdateCaseStatusRequestSchema = z.object({
   newStatus: z.enum(['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'CLOSED', 'CANCELLED']),
@@ -1573,6 +1620,8 @@ export interface ConsentSearchParams {
   grantedAfter?: string;
   grantedBefore?: string;
   includeVAWAProtected?: boolean;
+  page?: number;
+  size?: number;
 }
 
 export interface ConsentAuditEntry {
@@ -1611,6 +1660,14 @@ export interface RecentActivitySummary {
   consentsGrantedLast30Days: number;
   consentsRevokedLast30Days: number;
   consentsExpiredLast30Days: number;
+}
+
+export interface PaginatedConsentResponse {
+  content: ConsentLedgerEntry[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 // Coordinated Entry Types

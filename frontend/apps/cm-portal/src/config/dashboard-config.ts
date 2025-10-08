@@ -241,16 +241,6 @@ export function getDashboardConfig(userRoles: string[]): RoleDashboardConfig {
     };
   }
   
-  // Check for social worker role
-  if (userRoles.includes(UserRole.SOCIAL_WORKER)) {
-    // Social workers get case manager-like view
-    return {
-      ...DEFAULT_DASHBOARD_CONFIGS[UserRole.CASE_MANAGER],
-      role: UserRole.SOCIAL_WORKER,
-      description: 'Social Worker focused view with client cases and resources'
-    };
-  }
-  
   // Return default configuration
   return DEFAULT_DASHBOARD_CONFIGS.default;
 }

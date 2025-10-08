@@ -253,36 +253,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Define permission matrix
       const permissionMatrix: Record<string, Record<string, string[]>> = {
         [ResourceType.CLIENT]: {
-          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.INTAKE_SPECIALIST],
           [ActionType.READ]: [
             UserRole.CASE_MANAGER,
-            UserRole.SOCIAL_WORKER,
             UserRole.SUPERVISOR,
-            UserRole.VIEWER,
+            UserRole.REPORT_VIEWER,
+            UserRole.COUNSELOR,
+            UserRole.ADVOCATE,
           ],
-          [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.UPDATE]: [UserRole.CASE_MANAGER],
           [ActionType.DELETE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
         },
         [ResourceType.CASE]: {
-          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.CREATE]: [UserRole.CASE_MANAGER, UserRole.INTAKE_SPECIALIST],
           [ActionType.READ]: [
             UserRole.CASE_MANAGER,
-            UserRole.SOCIAL_WORKER,
             UserRole.SUPERVISOR,
-            UserRole.VIEWER,
+            UserRole.REPORT_VIEWER,
+            UserRole.COUNSELOR,
+            UserRole.ADVOCATE,
           ],
-          [ActionType.UPDATE]: [UserRole.CASE_MANAGER, UserRole.SOCIAL_WORKER],
+          [ActionType.UPDATE]: [UserRole.CASE_MANAGER],
           [ActionType.ASSIGN]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
           [ActionType.CLOSE]: [UserRole.CASE_MANAGER, UserRole.SUPERVISOR],
         },
         [ResourceType.REPORT]: {
           [ActionType.READ]: [
             UserRole.CASE_MANAGER,
-            UserRole.SOCIAL_WORKER,
             UserRole.SUPERVISOR,
-            UserRole.VIEWER,
+            UserRole.REPORT_VIEWER,
+            UserRole.DATA_ANALYST,
+            UserRole.COMPLIANCE_AUDITOR,
           ],
-          [ActionType.CREATE]: [UserRole.SUPERVISOR],
+          [ActionType.CREATE]: [UserRole.SUPERVISOR, UserRole.DATA_ANALYST],
         },
       };
 

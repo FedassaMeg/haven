@@ -79,10 +79,18 @@ export interface Role {
 // Common roles in healthcare systems
 export enum UserRole {
   ADMIN = 'admin',
-  CASE_MANAGER = 'case-manager',
-  SOCIAL_WORKER = 'social-worker',
   SUPERVISOR = 'supervisor',
-  VIEWER = 'viewer',
+  CASE_MANAGER = 'case-manager',
+  INTAKE_SPECIALIST = 'intake-specialist',
+  CE_INTAKE = 'ce-intake',
+  DV_ADVOCATE = 'dv-advocate',
+  COMPLIANCE_AUDITOR = 'compliance-auditor',
+  EXEC = 'exec',
+  REPORT_VIEWER = 'report-viewer',
+  EXTERNAL_PARTNER = 'external-partner',
+  COUNSELOR = 'counselor',
+  ADVOCATE = 'advocate',
+  DATA_ANALYST = 'data-analyst',
 }
 
 // Common permissions

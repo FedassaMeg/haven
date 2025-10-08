@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from 'next/document';
+import { Toaster } from '@haven/ui';
 
 export default function Document() {
   return (
@@ -15,6 +16,7 @@ export default function Document() {
       </Head>
       <body>
         <Main />
+        <Toaster />
         <NextScript />
       </body>
     </Html>

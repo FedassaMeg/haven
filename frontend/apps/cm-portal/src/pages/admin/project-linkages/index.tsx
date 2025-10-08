@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -23,8 +23,8 @@ import {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger
-} from '@/components/ui';
+  TabsTrigger,
+} from "@haven/ui/src/components";
 import {
   Plus,
   Edit,
@@ -35,13 +35,13 @@ import {
   CheckCircle,
   XCircle,
   Link,
-  Unlink
-} from 'lucide-react';
-import { ProjectLinkageForm } from './components/ProjectLinkageForm';
-import { DataQualityDashboard } from './components/DataQualityDashboard';
-import { AuditTrailView } from './components/AuditTrailView';
-import { projectLinkageApi } from '@/lib/api/project-linkage-api';
-import { toast } from '@/components/ui/use-toast';
+  Unlink,
+} from "lucide-react";
+import { ProjectLinkageForm } from "../../../components/ProjectLinkageForm";
+import { DataQualityDashboard } from "../../../components/DataQualityDashboard";
+import { AuditTrailView } from "../../../components/AuditTrailView";
+import { projectLinkageApi } from "@haven/api-client/src/project-linkage-api";
+import { toast } from "sonner";
 
 interface ProjectLinkage {
   linkageId: string;
@@ -53,7 +53,7 @@ interface ProjectLinkage {
   rrhProjectName: string;
   linkageEffectiveDate: string;
   linkageEndDate?: string;
-  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+  status: "ACTIVE" | "REVOKED" | "EXPIRED";
   linkageReason: string;
   linkageNotes?: string;
   createdBy: string;
@@ -64,11 +64,15 @@ interface ProjectLinkage {
 
 export default function ProjectLinkagesPage() {
   const [linkages, setLinkages] = useState<ProjectLinkage[]>([]);
-  const [filteredLinkages, setFilteredLinkages] = useState<ProjectLinkage[]>([]);
+  const [filteredLinkages, setFilteredLinkages] = useState<ProjectLinkage[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedLinkage, setSelectedLinkage] = useState<ProjectLinkage | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedLinkage, setSelectedLinkage] = useState<ProjectLinkage | null>(
+    null
+  );
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
@@ -88,31 +92,27 @@ export default function ProjectLinkagesPage() {
       // For now, we'll use placeholder data
       const mockLinkages: ProjectLinkage[] = [
         {
-          linkageId: '1',
-          thProjectId: 'th-1',
-          rrhProjectId: 'rrh-1',
-          thHudProjectId: 'TH-2024-001',
-          rrhHudProjectId: 'RRH-2024-001',
-          thProjectName: 'Downtown Transitional Housing',
-          rrhProjectName: 'City Rapid Rehousing Program',
-          linkageEffectiveDate: '2024-01-01',
-          status: 'ACTIVE',
-          linkageReason: 'Coordinated continuum of care',
-          linkageNotes: 'Joint program serving families with children',
-          createdBy: 'Program Manager',
-          lastModifiedBy: 'Program Manager',
-          createdAt: '2024-01-01T08:00:00Z',
-          lastModifiedAt: '2024-01-01T08:00:00Z'
-        }
+          linkageId: "1",
+          thProjectId: "th-1",
+          rrhProjectId: "rrh-1",
+          thHudProjectId: "TH-2024-001",
+          rrhHudProjectId: "RRH-2024-001",
+          thProjectName: "Downtown Transitional Housing",
+          rrhProjectName: "City Rapid Rehousing Program",
+          linkageEffectiveDate: "2024-01-01",
+          status: "ACTIVE",
+          linkageReason: "Coordinated continuum of care",
+          linkageNotes: "Joint program serving families with children",
+          createdBy: "Program Manager",
+          lastModifiedBy: "Program Manager",
+          createdAt: "2024-01-01T08:00:00Z",
+          lastModifiedAt: "2024-01-01T08:00:00Z",
+        },
       ];
       setLinkages(mockLinkages);
     } catch (error) {
-      console.error('Failed to load linkages:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load project linkages',
-        variant: 'destructive'
-      });
+      console.error("Failed to load linkages:", error);
+      toast("Failed to load project linkages");
     } finally {
       setLoading(false);
     }
@@ -123,17 +123,26 @@ export default function ProjectLinkagesPage() {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(linkage =>
-        linkage.thProjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        linkage.rrhProjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        linkage.thHudProjectId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        linkage.rrhHudProjectId.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (linkage) =>
+          linkage.thProjectName
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          linkage.rrhProjectName
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          linkage.thHudProjectId
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          linkage.rrhHudProjectId
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(linkage => linkage.status === statusFilter);
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((linkage) => linkage.status === statusFilter);
     }
 
     setFilteredLinkages(filtered);
@@ -142,19 +151,12 @@ export default function ProjectLinkagesPage() {
   const handleCreateLinkage = async (linkageData: any) => {
     try {
       await projectLinkageApi.createLinkage(linkageData);
-      toast({
-        title: 'Success',
-        description: 'Project linkage created successfully'
-      });
+      toast("Project linkage created successfully");
       setShowCreateForm(false);
       loadLinkages();
     } catch (error) {
-      console.error('Failed to create linkage:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create project linkage',
-        variant: 'destructive'
-      });
+      console.error("Failed to create linkage:", error);
+      toast("Failed to create project linkage");
     }
   };
 
@@ -162,67 +164,60 @@ export default function ProjectLinkagesPage() {
     if (!selectedLinkage) return;
 
     try {
-      await projectLinkageApi.modifyLinkage(selectedLinkage.linkageId, linkageData);
-      toast({
-        title: 'Success',
-        description: 'Project linkage updated successfully'
-      });
+      await projectLinkageApi.modifyLinkage(
+        selectedLinkage.linkageId,
+        linkageData
+      );
+      toast("Project linkage updated successfully");
       setShowEditForm(false);
       setSelectedLinkage(null);
       loadLinkages();
     } catch (error) {
-      console.error('Failed to update linkage:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update project linkage',
-        variant: 'destructive'
-      });
+      console.error("Failed to update linkage:", error);
+      toast("Failed to update project linkage");
     }
   };
 
   const handleRevokeLinkage = async (linkage: ProjectLinkage) => {
-    if (!confirm('Are you sure you want to revoke this linkage?')) return;
+    if (!confirm("Are you sure you want to revoke this linkage?")) return;
 
     try {
       const revocationData = {
-        revocationDate: new Date().toISOString().split('T')[0],
-        revocationReason: 'Manual revocation by administrator'
+        revocationDate: new Date().toISOString().split("T")[0],
+        revocationReason: "Manual revocation by administrator",
       };
 
       await projectLinkageApi.revokeLinkage(linkage.linkageId, revocationData);
-      toast({
-        title: 'Success',
-        description: 'Project linkage revoked successfully'
-      });
+      toast("Project linkage revoked successfully");
       loadLinkages();
     } catch (error) {
-      console.error('Failed to revoke linkage:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to revoke project linkage',
-        variant: 'destructive'
-      });
+      console.error("Failed to revoke linkage:", error);
+      toast("Failed to revoke project linkage");
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'REVOKED': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'EXPIRED': return <Clock className="h-4 w-4 text-yellow-600" />;
-      default: return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+      case "ACTIVE":
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case "REVOKED":
+        return <XCircle className="h-4 w-4 text-red-600" />;
+      case "EXPIRED":
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      ACTIVE: 'default',
-      REVOKED: 'destructive',
-      EXPIRED: 'secondary'
+      ACTIVE: "default",
+      REVOKED: "destructive",
+      EXPIRED: "secondary",
     } as const;
 
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
+      <Badge variant={variants[status as keyof typeof variants] || "outline"}>
         {getStatusIcon(status)}
         <span className="ml-1">{status}</span>
       </Badge>
@@ -317,7 +312,9 @@ export default function ProjectLinkagesPage() {
           {/* Linkages Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Project Linkages ({filteredLinkages.length})</CardTitle>
+              <CardTitle>
+                Project Linkages ({filteredLinkages.length})
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -336,22 +333,35 @@ export default function ProjectLinkagesPage() {
                   {filteredLinkages.map((linkage) => (
                     <TableRow key={linkage.linkageId}>
                       <TableCell>
-                        <div className="font-medium">{linkage.thProjectName}</div>
-                        <div className="text-sm text-muted-foreground">{linkage.thProjectId}</div>
+                        <div className="font-medium">
+                          {linkage.thProjectName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {linkage.thProjectId}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{linkage.rrhProjectName}</div>
-                        <div className="text-sm text-muted-foreground">{linkage.rrhProjectId}</div>
+                        <div className="font-medium">
+                          {linkage.rrhProjectName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {linkage.rrhProjectId}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{linkage.thHudProjectId}</div>
                         <div className="text-sm">{linkage.rrhHudProjectId}</div>
                       </TableCell>
                       <TableCell>
-                        {new Date(linkage.linkageEffectiveDate).toLocaleDateString()}
+                        {new Date(
+                          linkage.linkageEffectiveDate
+                        ).toLocaleDateString()}
                         {linkage.linkageEndDate && (
                           <div className="text-sm text-muted-foreground">
-                            End: {new Date(linkage.linkageEndDate).toLocaleDateString()}
+                            End:{" "}
+                            {new Date(
+                              linkage.linkageEndDate
+                            ).toLocaleDateString()}
                           </div>
                         )}
                       </TableCell>
@@ -369,7 +379,7 @@ export default function ProjectLinkagesPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {linkage.status === 'ACTIVE' && (
+                          {linkage.status === "ACTIVE" && (
                             <Button
                               variant="outline"
                               size="sm"

@@ -18,6 +18,7 @@ import type {
   CaseSearchParams,
   ServiceEpisode,
   CreateServiceEpisodeRequest,
+  CreateServiceEpisodeResponse,
   StartServiceRequest,
   CompleteServiceRequest,
   QuickCrisisServiceRequest,
@@ -30,6 +31,9 @@ import type {
   ServiceDeliveryModeResponse,
   FundingSource,
   EnrollmentSummary,
+  TransitionToRrhRequest,
+  TransitionToRrhResponse,
+  CombinedServicesResponse,
   IntakeAssessment,
   UpdateIntakeFieldRequest,
   FinancialAssistanceRequest,
@@ -38,7 +42,6 @@ import type {
   AssistanceSummary,
   ApprovalQueueItem,
   Payee,
-  FundingSource,
   HouseholdComposition,
   HouseholdMember,
   CreateHouseholdCompositionRequest,
@@ -47,6 +50,11 @@ import type {
   CreateCeAssessmentRequest,
   CeEvent,
   CreateCeEventRequest,
+  ConsentLedgerEntry,
+  ConsentSearchParams,
+  ConsentAuditEntry,
+  ConsentStatistics,
+  PaginatedConsentResponse,
 } from './types';
 
 import type {
@@ -385,33 +393,33 @@ export class ApiClient {
   // Service Episodes
   // =====================================
 
-  async createServiceEpisode(request: CreateServiceEpisodeRequest): Promise<{episodeId: string}> {
-    return this.post<{episodeId: string}>('/v1/service-episodes', request);
+  async createServiceEpisode(request: CreateServiceEpisodeRequest): Promise<CreateServiceEpisodeResponse> {
+    return this.post<CreateServiceEpisodeResponse>('/api/v1/service-episodes', request);
   }
 
   async startService(episodeId: string, request: StartServiceRequest): Promise<void> {
-    return this.post<void>(`/v1/service-episodes/${episodeId}/start`, request);
+    return this.post<void>(`/api/v1/service-episodes/${episodeId}/start`, request);
   }
 
   async completeService(episodeId: string, request: CompleteServiceRequest): Promise<void> {
-    return this.post<void>(`/v1/service-episodes/${episodeId}/complete`, request);
+    return this.post<void>(`/api/v1/service-episodes/${episodeId}/complete`, request);
   }
 
   async getServiceEpisode(episodeId: string): Promise<ServiceEpisode> {
-    return this.get<ServiceEpisode>(`/v1/service-episodes/${episodeId}`);
+    return this.get<ServiceEpisode>(`/api/v1/service-episodes/${episodeId}`);
   }
 
   async getServicesForClient(clientId: string): Promise<ServiceEpisode[]> {
-    return this.get<ServiceEpisode[]>(`/v1/service-episodes/client/${clientId}`);
+    return this.get<ServiceEpisode[]>(`/api/v1/service-episodes/client/${clientId}`);
   }
 
   async getServicesForEnrollment(enrollmentId: string): Promise<ServiceEpisode[]> {
-    return this.get<ServiceEpisode[]>(`/v1/service-episodes/enrollment/${enrollmentId}`);
+    return this.get<ServiceEpisode[]>(`/api/v1/service-episodes/enrollment/${enrollmentId}`);
   }
 
   async searchServices(criteria: ServiceSearchCriteria): Promise<ServiceEpisode[]> {
     const queryParams = new URLSearchParams();
-    
+
     if (criteria.clientId) queryParams.append('clientId', criteria.clientId);
     if (criteria.enrollmentId) queryParams.append('enrollmentId', criteria.enrollmentId);
     if (criteria.programId) queryParams.append('programId', criteria.programId);
@@ -426,15 +434,15 @@ export class ApiClient {
     if (criteria.followUpRequired) queryParams.append('followUpRequired', 'true');
 
     const query = queryParams.toString();
-    return this.get<ServiceEpisode[]>(`/v1/service-episodes/search${query ? '?' + query : ''}`);
+    return this.get<ServiceEpisode[]>(`/api/v1/service-episodes/search${query ? '?' + query : ''}`);
   }
 
   async getServicesRequiringFollowUp(): Promise<ServiceEpisode[]> {
-    return this.get<ServiceEpisode[]>('/v1/service-episodes/follow-up');
+    return this.get<ServiceEpisode[]>('/api/v1/service-episodes/follow-up');
   }
 
   async updateServiceOutcome(episodeId: string, request: UpdateOutcomeRequest): Promise<void> {
-    return this.put<void>(`/v1/service-episodes/${episodeId}/outcome`, request);
+    return this.put<void>(`/api/v1/service-episodes/${episodeId}/outcome`, request);
   }
 
   async addProviderToService(episodeId: string, request: {
@@ -442,7 +450,7 @@ export class ApiClient {
     providerName: string;
     role?: string;
   }): Promise<void> {
-    return this.post<void>(`/v1/service-episodes/${episodeId}/providers`, request);
+    return this.post<void>(`/api/v1/service-episodes/${episodeId}/providers`, request);
   }
 
   async addFundingSourceToService(episodeId: string, request: {
@@ -452,47 +460,47 @@ export class ApiClient {
     programName?: string;
     allocationPercentage: number;
   }): Promise<void> {
-    return this.post<void>(`/v1/service-episodes/${episodeId}/funding`, request);
+    return this.post<void>(`/api/v1/service-episodes/${episodeId}/funding`, request);
   }
 
   async markServiceAsCourtOrdered(episodeId: string, request: {
     courtOrderNumber: string;
   }): Promise<void> {
-    return this.post<void>(`/v1/service-episodes/${episodeId}/court-order`, request);
+    return this.post<void>(`/api/v1/service-episodes/${episodeId}/court-order`, request);
   }
 
   async getServiceStatistics(startDate: string, endDate: string): Promise<ServiceStatistics> {
     const queryParams = new URLSearchParams();
     queryParams.append('startDate', startDate);
     queryParams.append('endDate', endDate);
-    
-    return this.get<ServiceStatistics>(`/v1/service-episodes/statistics?${queryParams.toString()}`);
+
+    return this.get<ServiceStatistics>(`/api/v1/service-episodes/statistics?${queryParams.toString()}`);
   }
 
   // Quick service creation methods
-  async createCrisisIntervention(request: QuickCrisisServiceRequest): Promise<{episodeId: string}> {
-    return this.post<{episodeId: string}>('/v1/service-episodes/quick/crisis-intervention', request);
+  async createCrisisIntervention(request: QuickCrisisServiceRequest): Promise<CreateServiceEpisodeResponse> {
+    return this.post<CreateServiceEpisodeResponse>('/api/v1/service-episodes/quick/crisis-intervention', request);
   }
 
-  async createCounselingSession(request: QuickCounselingServiceRequest): Promise<{episodeId: string}> {
-    return this.post<{episodeId: string}>('/v1/service-episodes/quick/counseling', request);
+  async createCounselingSession(request: QuickCounselingServiceRequest): Promise<CreateServiceEpisodeResponse> {
+    return this.post<CreateServiceEpisodeResponse>('/api/v1/service-episodes/quick/counseling', request);
   }
 
-  async createCaseManagementContact(request: QuickCaseManagementServiceRequest): Promise<{episodeId: string}> {
-    return this.post<{episodeId: string}>('/v1/service-episodes/quick/case-management', request);
+  async createCaseManagementContact(request: QuickCaseManagementServiceRequest): Promise<CreateServiceEpisodeResponse> {
+    return this.post<CreateServiceEpisodeResponse>('/api/v1/service-episodes/quick/case-management', request);
   }
 
   // Service configuration lookups
   async getServiceTypes(): Promise<ServiceTypeResponse[]> {
-    return this.get<ServiceTypeResponse[]>('/v1/service-episodes/service-types');
+    return this.get<ServiceTypeResponse[]>('/api/v1/service-episodes/service-types');
   }
 
   async getDeliveryModes(): Promise<ServiceDeliveryModeResponse[]> {
-    return this.get<ServiceDeliveryModeResponse[]>('/v1/service-episodes/delivery-modes');
+    return this.get<ServiceDeliveryModeResponse[]>('/api/v1/service-episodes/delivery-modes');
   }
 
   async getFundingSources(): Promise<FundingSource[]> {
-    return this.get<FundingSource[]>('/v1/service-episodes/funding-sources');
+    return this.get<FundingSource[]>('/api/v1/service-episodes/funding-sources');
   }
 
   // =====================================
@@ -505,6 +513,39 @@ export class ApiClient {
 
   async getEnrollmentChain(enrollmentId: string): Promise<EnrollmentSummary[]> {
     return this.get<EnrollmentSummary[]>(`/api/v1/enrollments/${enrollmentId}/chain`);
+  }
+
+  async transitionToRrh(thEnrollmentId: string, request: TransitionToRrhRequest): Promise<TransitionToRrhResponse> {
+    return this.post<TransitionToRrhResponse>(`/api/v1/enrollments/${thEnrollmentId}/transition-to-rrh`, request);
+  }
+
+  async getCombinedServices(enrollmentId: string): Promise<CombinedServicesResponse> {
+    return this.get<CombinedServicesResponse>(`/api/v1/enrollments/${enrollmentId}/combined-services`);
+  }
+
+  async updateMoveInDate(enrollmentId: string, moveInDate: string): Promise<void> {
+    return this.patch(`/api/v1/enrollments/${enrollmentId}/move-in-date`, { moveInDate });
+  }
+
+  async getHudCoverage(): Promise<{
+    apiName: string;
+    elements: Array<{
+      hudId: string;
+      elementName: string;
+      route: string;
+      method: string;
+      fieldName: string;
+      implemented: boolean;
+    }>;
+    implementedCount: number;
+    totalCount: number;
+  }> {
+    return this.get('/api/v1/enrollments/hud-coverage');
+  }
+
+  private async patch<T>(path: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.axios.patch<T>(path, data, config);
+    return response.data;
   }
 
   // =====================================
@@ -719,6 +760,106 @@ export class ApiClient {
 
     getAccessLog: (noteId: string): Promise<NoteAuditEntry[]> => {
       return this.get<NoteAuditEntry[]>(`/api/restricted-notes/${noteId}/access-log`);
+    }
+  };
+
+  // =====================================
+  // Consent Ledger API
+  // =====================================
+
+  consentLedger = {
+    /**
+     * Search consent ledger with comprehensive filters and pagination
+     */
+    searchConsents: (params: ConsentSearchParams): Promise<PaginatedConsentResponse> => {
+      const queryParams = new URLSearchParams();
+
+      if (params.clientId) queryParams.append('clientId', params.clientId);
+      if (params.consentType) queryParams.append('consentType', params.consentType);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.recipientOrganization) queryParams.append('recipientOrganization', params.recipientOrganization);
+      if (params.grantedAfter) queryParams.append('grantedAfter', params.grantedAfter);
+      if (params.grantedBefore) queryParams.append('grantedBefore', params.grantedBefore);
+      if (params.includeVAWAProtected !== undefined) queryParams.append('includeVAWAProtected', String(params.includeVAWAProtected));
+      if (params.page !== undefined) queryParams.append('page', String(params.page));
+      if (params.size !== undefined) queryParams.append('size', String(params.size));
+
+      const queryString = queryParams.toString();
+      return this.get<PaginatedConsentResponse>(`/api/consent-ledger/search${queryString ? `?${queryString}` : ''}`);
+    },
+
+    /**
+     * Get consent ledger for a specific client
+     */
+    getClientConsents: (clientId: string, activeOnly: boolean = false): Promise<ConsentLedgerEntry[]> => {
+      const queryParams = new URLSearchParams();
+      if (activeOnly) queryParams.append('activeOnly', 'true');
+
+      const queryString = queryParams.toString();
+      return this.get<ConsentLedgerEntry[]>(`/api/consent-ledger/client/${clientId}${queryString ? `?${queryString}` : ''}`);
+    },
+
+    /**
+     * Get consents expiring soon (requiring review)
+     */
+    getConsentsExpiringSoon: (daysAhead: number = 30): Promise<ConsentLedgerEntry[]> => {
+      return this.get<ConsentLedgerEntry[]>(`/api/consent-ledger/expiring-soon?daysAhead=${daysAhead}`);
+    },
+
+    /**
+     * Get expired consents
+     */
+    getExpiredConsents: (): Promise<ConsentLedgerEntry[]> => {
+      return this.get<ConsentLedgerEntry[]>('/api/consent-ledger/expired');
+    },
+
+    /**
+     * Get consents by recipient organization
+     */
+    getConsentsByRecipient: (recipientOrganization: string): Promise<ConsentLedgerEntry[]> => {
+      return this.get<ConsentLedgerEntry[]>(`/api/consent-ledger/recipient/${recipientOrganization}`);
+    },
+
+    /**
+     * Get VAWA protected consents (restricted access)
+     */
+    getVAWAProtectedConsents: (): Promise<ConsentLedgerEntry[]> => {
+      return this.get<ConsentLedgerEntry[]>('/api/consent-ledger/vawa-protected');
+    },
+
+    /**
+     * Get audit trail for a specific consent
+     */
+    getConsentAuditTrail: (consentId: string): Promise<ConsentAuditEntry[]> => {
+      return this.get<ConsentAuditEntry[]>(`/api/consent-ledger/${consentId}/audit-trail`);
+    },
+
+    /**
+     * Export consent ledger data (CSV format)
+     */
+    exportConsentLedger: async (params: ConsentSearchParams): Promise<Blob> => {
+      const queryParams = new URLSearchParams();
+
+      if (params.clientId) queryParams.append('clientId', params.clientId);
+      if (params.consentType) queryParams.append('consentType', params.consentType);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.recipientOrganization) queryParams.append('recipientOrganization', params.recipientOrganization);
+      if (params.grantedAfter) queryParams.append('grantedAfter', params.grantedAfter);
+      if (params.grantedBefore) queryParams.append('grantedBefore', params.grantedBefore);
+      if (params.includeVAWAProtected !== undefined) queryParams.append('includeVAWAProtected', String(params.includeVAWAProtected));
+
+      const queryString = queryParams.toString();
+      const response = await this.axios.get(`/api/consent-ledger/export${queryString ? `?${queryString}` : ''}`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    },
+
+    /**
+     * Get consent statistics for dashboard
+     */
+    getConsentStatistics: (): Promise<ConsentStatistics> => {
+      return this.get<ConsentStatistics>('/api/consent-ledger/statistics');
     }
   };
 }
