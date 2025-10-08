@@ -4,7 +4,6 @@ import org.haven.clientprofile.domain.ClientId;
 import org.haven.shared.domain.AggregateRoot;
 import org.haven.shared.vo.*;
 import org.haven.casemgmt.domain.events.*;
-import org.haven.programenrollment.domain.ProgramEnrollmentId;
 import org.haven.shared.events.DomainEvent;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,13 +34,26 @@ public class CaseRecord extends AggregateRoot<CaseId> {
     private List<FinancialAssistanceRequestId> linkedFinancialRequests = new ArrayList<>();
     private Instant createdAt;
     
-    public static CaseRecord open(ClientId clientId, CodeableConcept caseType, 
+    public static CaseRecord open(ClientId clientId, CodeableConcept caseType,
                                  CodeableConcept priority, String description) {
         CaseId caseId = CaseId.generate();
         CaseRecord caseRecord = new CaseRecord();
-        caseRecord.apply(new CaseOpened(caseId.value(), clientId.value(), 
+        caseRecord.apply(new CaseOpened(caseId.value(), clientId.value(),
                                        caseType, priority, description, Instant.now()));
         return caseRecord;
+    }
+
+    /**
+     * Reconstruct aggregate from event history without creating new events
+     * Used when loading from repository
+     */
+    public static CaseRecord reconstruct(UUID caseId, List<DomainEvent> events) {
+        CaseRecord aggregate = new CaseRecord();
+        aggregate.id = new CaseId(caseId);
+        for (int i = 0; i < events.size(); i++) {
+            aggregate.replay(events.get(i), i + 1);
+        }
+        return aggregate;
     }
     
     public void assignTo(String assigneeId, String assigneeName, CodeableConcept role, 
