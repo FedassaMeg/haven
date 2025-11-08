@@ -63,6 +63,23 @@ public class Client extends AggregateRoot<ClientId> {
         client.apply(new ClientCreated(clientId.value(), name, gender, birthDate, Instant.now()));
         return client;
     }
+
+    public static Client create(HumanName name, AdministrativeGender gender, LocalDate birthDate,
+                                List<Address> addresses, List<ContactPoint> telecoms) {
+        ClientId clientId = new ClientId(UUID.randomUUID());
+        Client client = new Client();
+        client.apply(new ClientCreated(clientId.value(), name, gender, birthDate, Instant.now()));
+
+        // Add addresses and telecoms as part of creation
+        if (addresses != null) {
+            addresses.forEach(client::addAddress);
+        }
+        if (telecoms != null) {
+            telecoms.forEach(client::addTelecom);
+        }
+
+        return client;
+    }
     
     public static Client create(String firstName, String lastName) {
         HumanName name = new HumanName(
@@ -74,6 +91,42 @@ public class Client extends AggregateRoot<ClientId> {
             firstName + " " + lastName
         );
         return create(name, AdministrativeGender.UNKNOWN, LocalDate.of(1900, 1, 1));
+    }
+
+    public static Client rehydrate(
+        ClientId id,
+        List<HumanName> names,
+        AdministrativeGender gender,
+        LocalDate birthDate,
+        Instant createdAt,
+        List<Address> addresses,
+        List<ContactPoint> telecoms,
+        ContactSafetyPrefs contactSafetyPrefs,
+        AddressConfidentiality addressConfidentiality,
+        String aliasName,
+        DataSystem dataSystem,
+        String hmisClientKey,
+        boolean safeAtHomeParticipant
+    ) {
+        Client client = new Client();
+        client.id = id;
+        client.names = names != null ? new ArrayList<>(names) : new ArrayList<>();
+        client.gender = gender != null ? gender : AdministrativeGender.UNKNOWN;
+        client.birthDate = birthDate;
+        client.createdAt = createdAt;
+        client.status = ClientStatus.ACTIVE;
+        client.deceased = false;
+        client.activePeriod = createdAt != null ? new Period(createdAt, null) : null;
+        client.addresses = addresses != null ? new ArrayList<>(addresses) : new ArrayList<>();
+        client.telecoms = telecoms != null ? new ArrayList<>(telecoms) : new ArrayList<>();
+        client.householdMembers = new ArrayList<>();
+        client.contactSafetyPrefs = contactSafetyPrefs;
+        client.addressConfidentiality = addressConfidentiality;
+        client.aliasName = aliasName;
+        client.dataSystem = dataSystem;
+        client.hmisClientKey = hmisClientKey;
+        client.safeAtHomeParticipant = safeAtHomeParticipant;
+        return client;
     }
 
     public void updateDemographics(HumanName name, AdministrativeGender gender, LocalDate birthDate) {

@@ -31,10 +31,14 @@ public class ClientAppService {
             List.of(),
             null
         );
-        
+
         clientDomainService.validateClientCreation(name, cmd.gender());
-        
-        Client client = Client.create(name, cmd.gender(), cmd.birthDate());
+
+        // Create client with all data in a single aggregate operation
+        Client client = Client.create(name, cmd.gender(), cmd.birthDate(),
+                                     cmd.addresses(), cmd.telecoms());
+
+        // Single save operation for the complete aggregate
         clientRepository.save(client);
         return client.getId();
     }

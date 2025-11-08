@@ -34,30 +34,34 @@ public class ClientController {
     public ResponseEntity<?> createClient(@Valid @RequestBody CreateClientRequest request) {
         // Map FHIR request to internal command
         var humanName = request.name().toValueObject();
-        var cmd = new CreateClientCmd(
-            humanName.getFirstName(),
-            humanName.getLastName(), 
-            request.gender(),
-            request.birthDate()
-        );
-        
-        var clientId = clientAppService.handle(cmd);
 
-        // Persist initial addresses if provided
-        if (request.addresses() != null) {
-            request.addresses().stream()
+        // Collect all addresses
+        var addresses = (request.addresses() != null)
+            ? request.addresses().stream()
                 .filter(a -> a != null)
                 .map(CreateClientRequest.AddressDto::toValueObject)
-                .forEach(addr -> clientAppService.handle(new AddClientAddressCmd(clientId, addr)));
-        }
+                .toList()
+            : null;
 
-        // Persist initial telecoms if provided
-        if (request.telecoms() != null) {
-            request.telecoms().stream()
+        // Collect all telecoms
+        var telecoms = (request.telecoms() != null)
+            ? request.telecoms().stream()
                 .filter(t -> t != null)
                 .map(CreateClientRequest.ContactPointDto::toValueObject)
-                .forEach(tp -> clientAppService.handle(new AddClientTelecomCmd(clientId, tp)));
-        }
+                .toList()
+            : null;
+
+        // Single command with all data - single save operation
+        var cmd = new CreateClientCmd(
+            humanName.getFirstName(),
+            humanName.getLastName(),
+            request.gender(),
+            request.birthDate(),
+            addresses,
+            telecoms
+        );
+
+        var clientId = clientAppService.handle(cmd);
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(Map.of("id", clientId.value(), "resourceType", "Client"));

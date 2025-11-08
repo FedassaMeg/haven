@@ -14,60 +14,15 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Repository
-public interface JpaClientRepository extends JpaRepository<JpaClientEntity, UUID>, ClientRepository {
-    
-    @Override
-    default void save(Client client) {
-        JpaClientEntity entity = JpaClientEntity.fromDomain(client);
-        save(entity);
-    }
-    
-    @Override
-    default Optional<Client> findById(ClientId id) {
-        return findById(id.value())
-            .map(JpaClientEntity::toDomain);
-    }
-    
-    @Override
-    default List<Client> findByName(HumanName name) {
-        return findByFirstNameAndLastName(name.getFirstName(), name.getLastName()).stream()
-            .map(JpaClientEntity::toDomain)
-            .collect(Collectors.toList());
-    }
-    
+public interface JpaClientRepository extends JpaRepository<JpaClientEntity, UUID> {
+
+    /**
+     * Find clients by exact first and last name match
+     */
     List<JpaClientEntity> findByFirstNameAndLastName(String firstName, String lastName);
-    
-    @Override
-    default List<Client> findByNameContaining(String nameFragment) {
-        return findByFirstNameContainingOrLastNameContaining(nameFragment, nameFragment).stream()
-            .map(JpaClientEntity::toDomain)
-            .collect(Collectors.toList());
-    }
-    
+
+    /**
+     * Find clients by partial name match (searches both first and last names)
+     */
     List<JpaClientEntity> findByFirstNameContainingOrLastNameContaining(String firstNameFragment, String lastNameFragment);
-    
-    @Override
-    default List<Client> findActiveClients() {
-        // For now, return all clients - in a full implementation you'd check active status
-        return findAll().stream()
-            .map(JpaClientEntity::toDomain)
-            .collect(Collectors.toList());
-    }
-    
-    @Override
-    default Optional<Client> findByExternalId(String externalId) {
-        // For now, external ID is not implemented in the entity
-        // You would need to add an external_id column to the clients table
-        return Optional.empty();
-    }
-    
-    @Override
-    default void delete(Client client) {
-        deleteById(client.getId().value());
-    }
-    
-    @Override
-    default ClientId nextId() {
-        return ClientId.generate();
-    }
 }

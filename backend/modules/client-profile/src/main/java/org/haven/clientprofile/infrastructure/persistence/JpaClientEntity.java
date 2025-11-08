@@ -7,6 +7,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.UUID;
 
 @Entity
@@ -207,43 +208,18 @@ public class JpaClientEntity {
     }
     
     public Client toDomain() {
-        // For now, return a simple reconstruction
-        // Use persisted gender and birthDate instead of defaults
-        Client client = Client.create(
-            new org.haven.shared.vo.HumanName(
-                org.haven.shared.vo.HumanName.NameUse.OFFICIAL,
-                this.lastName,
-                java.util.List.of(this.firstName),
-                java.util.List.of(),
-                java.util.List.of(),
-                null
-            ),
-            this.gender != null ? this.gender : Client.AdministrativeGender.UNKNOWN,
-            this.birthDate
+        var names = new ArrayList<org.haven.shared.vo.HumanName>();
+        var primaryName = new org.haven.shared.vo.HumanName(
+            org.haven.shared.vo.HumanName.NameUse.OFFICIAL,
+            this.lastName,
+            java.util.List.of(this.firstName),
+            java.util.List.of(),
+            java.util.List.of(),
+            null
         );
-        
-        // Set confidentiality fields
-        client.setAliasName(this.aliasName);
-        client.setDataSystem(this.dataSystem);
-        client.setHmisClientKey(this.hmisClientKey);
+        names.add(primaryName);
 
-        // Reconstruct contact safety preferences
-        if (this.okToText != null || this.okToVoicemail != null || this.contactCodeWord != null) {
-            ContactSafetyPrefs.QuietHours quietHours = null;
-            if (this.quietHoursStart != null && this.quietHoursEnd != null) {
-                quietHours = new ContactSafetyPrefs.QuietHours(this.quietHoursStart, this.quietHoursEnd);
-            }
-            
-            ContactSafetyPrefs prefs = new ContactSafetyPrefs(
-                Boolean.TRUE.equals(this.okToText),
-                Boolean.TRUE.equals(this.okToVoicemail),
-                this.contactCodeWord,
-                quietHours
-            );
-            client.updateContactSafetyPrefs(prefs);
-        }
-
-        // Reconstruct primary address if present
+        var addresses = new ArrayList<org.haven.shared.vo.Address>();
         if (this.addressLine1 != null || this.city != null || this.state != null || this.postalCode != null) {
             String countryVal = (this.country != null && !this.country.isBlank()) ? this.country : "US";
             try {
@@ -257,15 +233,15 @@ public class JpaClientEntity {
                     org.haven.shared.vo.Address.AddressType.BOTH,
                     org.haven.shared.vo.Address.AddressUse.HOME
                 );
-                client.addAddress(addr);
+                addresses.add(addr);
             } catch (Exception ignored) {
                 // Skip invalid address reconstruction to avoid breaking reads
             }
         }
 
-        // Reconstruct telecoms if present
+        var telecoms = new ArrayList<org.haven.shared.vo.ContactPoint>();
         if (this.phonePrimary != null && !this.phonePrimary.isBlank()) {
-            client.addTelecom(new org.haven.shared.vo.ContactPoint(
+            telecoms.add(new org.haven.shared.vo.ContactPoint(
                 org.haven.shared.vo.ContactPoint.ContactSystem.PHONE,
                 this.phonePrimary,
                 org.haven.shared.vo.ContactPoint.ContactUse.HOME,
@@ -273,7 +249,7 @@ public class JpaClientEntity {
             ));
         }
         if (this.phoneSecondary != null && !this.phoneSecondary.isBlank()) {
-            client.addTelecom(new org.haven.shared.vo.ContactPoint(
+            telecoms.add(new org.haven.shared.vo.ContactPoint(
                 org.haven.shared.vo.ContactPoint.ContactSystem.PHONE,
                 this.phoneSecondary,
                 org.haven.shared.vo.ContactPoint.ContactUse.WORK,
@@ -281,15 +257,78 @@ public class JpaClientEntity {
             ));
         }
         if (this.email != null && !this.email.isBlank()) {
-            client.addTelecom(new org.haven.shared.vo.ContactPoint(
+            telecoms.add(new org.haven.shared.vo.ContactPoint(
                 org.haven.shared.vo.ContactPoint.ContactSystem.EMAIL,
                 this.email,
                 org.haven.shared.vo.ContactPoint.ContactUse.HOME,
                 null
             ));
         }
-        
-        return client;
+
+        ContactSafetyPrefs contactSafetyPrefs = null;
+        if (this.okToText != null || this.okToVoicemail != null || this.contactCodeWord != null ||
+            (this.quietHoursStart != null && this.quietHoursEnd != null)) {
+            ContactSafetyPrefs.QuietHours quietHours = null;
+            if (this.quietHoursStart != null && this.quietHoursEnd != null) {
+                quietHours = new ContactSafetyPrefs.QuietHours(this.quietHoursStart, this.quietHoursEnd);
+            }
+            contactSafetyPrefs = new ContactSafetyPrefs(
+                Boolean.TRUE.equals(this.okToText),
+                Boolean.TRUE.equals(this.okToVoicemail),
+                this.contactCodeWord,
+                quietHours
+            );
+        }
+
+        AddressConfidentiality addressConfidentiality = null;
+        boolean confidentialFlag = Boolean.TRUE.equals(this.isConfidentialLocation);
+        boolean hasSubstituteAddress = this.substituteAddressLine1 != null ||
+            this.substituteCity != null ||
+            this.substituteState != null ||
+            this.substitutePostalCode != null;
+        if (confidentialFlag || hasSubstituteAddress) {
+            String substituteCountryVal = (this.substituteCountry != null && !this.substituteCountry.isBlank())
+                ? this.substituteCountry : "US";
+            org.haven.shared.vo.Address substituteAddress = null;
+            try {
+                substituteAddress = new org.haven.shared.vo.Address(
+                    this.substituteAddressLine1 != null ? this.substituteAddressLine1 : "",
+                    this.substituteAddressLine2,
+                    this.substituteCity != null ? this.substituteCity : "",
+                    this.substituteState != null ? this.substituteState : "",
+                    this.substitutePostalCode != null ? this.substitutePostalCode : "",
+                    substituteCountryVal,
+                    org.haven.shared.vo.Address.AddressType.POSTAL,
+                    org.haven.shared.vo.Address.AddressUse.HOME
+                );
+            } catch (Exception ignored) {
+                substituteAddress = null;
+            }
+            addressConfidentiality = new AddressConfidentiality(
+                addresses.isEmpty() ? null : addresses.get(0),
+                substituteAddress,
+                confidentialFlag,
+                Boolean.TRUE.equals(this.safeAtHomeParticipant)
+                    ? AddressConfidentiality.SafeAtHomeStatus.ENROLLED
+                    : AddressConfidentiality.SafeAtHomeStatus.NOT_ENROLLED
+            );
+        }
+
+        return Client.rehydrate(
+            new ClientId(this.id),
+            names,
+            this.gender,
+            this.birthDate,
+            this.createdAt,
+            addresses,
+            telecoms,
+            contactSafetyPrefs,
+            addressConfidentiality,
+            this.aliasName,
+            this.dataSystem,
+            this.hmisClientKey,
+            Boolean.TRUE.equals(this.safeAtHomeParticipant)
+        );
     }
     
     // (no-op helpers removed; using PostgreSQLEnumType binding)
