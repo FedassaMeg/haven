@@ -1,7 +1,10 @@
 import React from "react";
 import Link from "next/link";
-import { NavigationItem } from "@haven/ui";
-import { 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  NavigationItem,
   Sidebar, 
   SidebarContent, 
   SidebarFooter, 
@@ -15,8 +18,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem
-} from "@/components/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@haven/ui/src/components/Collapsible";
+} from "@haven/ui";
+import { } from "@haven/ui/src/components/Collapsible";
 import { ChevronRight } from "lucide-react";
 
 export interface NavigationGroup {

@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/card';
-import { Button } from '@ui/components/button';
-import { Badge } from '@ui/components/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@ui/components/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/table';
-import { useClientConsents, ConsentLedgerEntry, ConsentStatus, ConsentType } from '@api/hooks';
-import { formatDate } from '@ui/lib/utils';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@haven/ui';
+import { useClientConsents, ConsentLedgerEntry, ConsentStatus, ConsentType } from '@haven/api-client';
+// import { formatDate } from '@haven/ui';
 
 interface ConsentLedgerCardProps {
   clientId: string;
@@ -52,12 +48,12 @@ export function ConsentLedgerCard({ clientId }: ConsentLedgerCardProps) {
 
   const formatExpirationText = (consent: ConsentLedgerEntry) => {
     if (!consent.expiresAt) return 'No expiration';
-    if (consent.isExpired) return `Expired ${formatDate(consent.expiresAt)}`;
+    if (consent.isExpired) return `Expired ${consent.expiresAt}`;
     if (consent.isExpiringSoon) {
       const days = consent.daysUntilExpiration;
       return days > 0 ? `Expires in ${days} days` : 'Expires today';
     }
-    return `Active until ${formatDate(consent.expiresAt)}`;
+    return `Active until ${consent.expiresAt}`;
   };
 
   if (loading) {
@@ -136,7 +132,7 @@ export function ConsentLedgerCard({ clientId }: ConsentLedgerCardProps) {
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(consent)}</TableCell>
-                          <TableCell>{formatDate(consent.grantedAt)}</TableCell>
+                          <TableCell>{consent.grantedAt}</TableCell>
                           <TableCell>{formatExpirationText(consent)}</TableCell>
                           <TableCell>{consent.recipientOrganization || 'Any organization'}</TableCell>
                           <TableCell>
@@ -278,7 +274,7 @@ export function ConsentLedgerCard({ clientId }: ConsentLedgerCardProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-secondary-700">Granted</label>
-                  <p className="text-sm">{formatDate(selectedConsent.grantedAt)}</p>
+                  <p className="text-sm">{selectedConsent.grantedAt}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-secondary-700">Expires</label>
