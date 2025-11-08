@@ -6,6 +6,7 @@ include("event-store")
 
 // bounded contexts
 include("modules:client-profile")
+include("modules:intake")
 include("modules:case-mgmt")
 include("modules:program-enrollment")
 include("modules:service-delivery")

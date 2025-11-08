@@ -17,6 +17,7 @@ springBoot {
 dependencies {
   // Domain modules
   implementation(project(":modules:client-profile"))
+  implementation(project(":modules:intake"))
   implementation(project(":modules:case-mgmt"))
   implementation(project(":modules:program-enrollment"))
   implementation(project(":modules:service-delivery"))
