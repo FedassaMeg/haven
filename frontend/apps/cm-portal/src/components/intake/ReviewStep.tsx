@@ -1,4 +1,4 @@
-import { IntakeFormData } from '../../pages/intake';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface ReviewStepProps {
   data: IntakeFormData;

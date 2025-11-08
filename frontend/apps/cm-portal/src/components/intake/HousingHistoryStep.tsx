@@ -1,5 +1,5 @@
 import { Input, FormSelect } from '@haven/ui';
-import { IntakeFormData } from '../../pages/intake';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface HousingHistoryStepProps {
   data: IntakeFormData;

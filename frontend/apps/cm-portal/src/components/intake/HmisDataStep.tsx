@@ -1,5 +1,5 @@
 import { FormSelect, FormCheckbox } from '@haven/ui';
-import { IntakeFormData } from '../../pages/intake';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface HmisDataStepProps {
   data: IntakeFormData;

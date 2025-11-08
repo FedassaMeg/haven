@@ -1,5 +1,5 @@
 import { Input, FormSelect, FormCheckbox as Checkbox } from '@haven/ui';
-import { IntakeFormData } from '../../pages/intake';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface ContactInfoStepProps {
   data: IntakeFormData;

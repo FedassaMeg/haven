@@ -1,5 +1,5 @@
-import { Input, FormSelect } from '@haven/ui';
-import { IntakeFormData } from '../../pages/intake';
+import { Input, FormSelect, Label } from '@haven/ui';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface BasicInfoStepProps {
   data: IntakeFormData;
@@ -48,42 +48,50 @@ export default function BasicInfoStep({ data, errors, onChange }: BasicInfoStepP
       <div>
         <h3 className="text-lg font-semibold mb-4">Legal Name</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            id="firstName"
-            label="First Name"
-            value={data.firstName}
-            onChange={(e) => onChange({ firstName: e.target.value })}
-            error={errors.firstName}
-            required
-            placeholder="Legal first name"
-          />
-          <Input
-            id="lastName"
-            label="Last Name"
-            value={data.lastName}
-            onChange={(e) => onChange({ lastName: e.target.value })}
-            error={errors.lastName}
-            required
-            placeholder="Legal last name"
-          />
-          <Input
-            id="preferredName"
-            label="Preferred Name"
-            value={data.preferredName}
-            onChange={(e) => onChange({ preferredName: e.target.value })}
-            placeholder="Name they prefer to be called"
-            helperText="Leave blank to use first name"
-            className="md:col-span-2"
-          />
-          <Input
-            id="aliasName"
-            label="Alias/Street Name"
-            value={data.aliasName}
-            onChange={(e) => onChange({ aliasName: e.target.value })}
-            placeholder="Other names used (optional)"
-            helperText="For client safety and identification"
-            className="md:col-span-2"
-          />
+          <div className="grid w-full max-w-sm items-center gap-3">
+            <Label htmlFor='firstName'>First Name</Label>
+            <Input
+              id="firstName"
+              value={data.firstName}
+              onChange={(e) => onChange({ firstName: e.target.value })}
+              error={errors.firstName}
+              required
+              placeholder="Legal first name"
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-3">
+            <Label htmlFor='lastName'>Last Name</Label>
+            <Input
+              id="lastName"
+              value={data.lastName}
+              onChange={(e) => onChange({ lastName: e.target.value })}
+              error={errors.lastName}
+              required
+              placeholder="Legal last name"
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-3">
+            <Label htmlFor='preferredName'>Preferred Name</Label>
+            <Input
+              id="preferredName"
+              value={data.preferredName}
+              onChange={(e) => onChange({ preferredName: e.target.value })}
+              placeholder="Name they prefer to be called"
+              helperText="Leave blank to use first name"
+              className="md:col-span-2"
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-3">
+            <Label htmlFor='aliasName'>Alias Name</Label>
+            <Input
+              id="aliasName"
+              value={data.aliasName}
+              onChange={(e) => onChange({ aliasName: e.target.value })}
+              placeholder="Other names used (optional)"
+              helperText="For client safety and identification"
+              className="md:col-span-2"
+            />
+          </div>
         </div>
       </div>
 

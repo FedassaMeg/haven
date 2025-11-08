@@ -1,5 +1,5 @@
 import { Input, FormCheckbox as Checkbox, FormSelect } from '@haven/ui';
-import { IntakeFormData } from '../../pages/intake';
+import { IntakeFormData } from '../../pages/intake/index-legacy';
 
 interface SafetyPlanStepProps {
   data: IntakeFormData;
