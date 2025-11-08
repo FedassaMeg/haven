@@ -647,7 +647,7 @@ function ClientContent({ client }: { client: Client }) {
                 )}
 
                 {/* Consent Management */}
-                <ConsentLedgerCard clientId={id} />
+                <ConsentLedgerCard clientId={client.id} />
 
                 {/* Emergency Contact */}
                 {client.contact && client.contact.length > 0 && (

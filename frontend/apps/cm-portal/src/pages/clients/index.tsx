@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@haven/auth';
 import { Card, CardHeader, CardTitle, CardContent, Table, Button, Input, Badge, EmptyState } from '@haven/ui';
 import { useClients, type Client } from '@haven/api-client';
 import AppLayout from '../../components/AppLayout';
 
+const CLIENTS_BREADCRUMBS = [
+  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Clients' },
+] as const;
+
 function ClientsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeOnly, setActiveOnly] = useState(true);
-  
-  const { clients, loading, error, refetch } = useClients({
+
+  // Memoize the params object to prevent unnecessary re-renders
+  const clientParams = useMemo(() => ({
     name: searchQuery || undefined,
     activeOnly,
-  });
+  }), [searchQuery, activeOnly]);
 
-  const columns = [
+  const { clients, loading, error, refetch } = useClients(clientParams);
+
+  const columns = useMemo(() => [
     {
       key: 'name' as const,
       label: 'Name',
@@ -88,11 +96,14 @@ function ClientsContent() {
         </div>
       ),
     },
-  ];
+  ], []);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
+  const handleSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setSearchQuery(event.target.value);
+    },
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -131,7 +142,7 @@ function ClientsContent() {
               label="Search by name"
               placeholder="Enter client name..."
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={handleSearchChange}
             />
             <div className="flex items-center space-x-2">
               <input
@@ -198,10 +209,7 @@ export default function ClientsPage() {
     <ProtectedRoute>
       <AppLayout 
         title="Clients" 
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Clients' }
-        ]}
+        breadcrumbs={CLIENTS_BREADCRUMBS}
       >
         <div className="p-6">
           <ClientsContent />
