@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiClient, handleApiError } from './client';
 import type {
   Client,
@@ -97,15 +97,16 @@ function useApiState<T>(initialData: T | null = null): [
     setState({ data: initialData, loading: false, error: null });
   }, [initialData]);
 
-  return [state, { setData, setLoading, setError, reset }];
+  // Memoize the returned object to ensure stable reference
+  const actions = useMemo(() => ({ setData, setLoading, setError, reset }), [setData, setLoading, setError, reset]);
+
+  return [state, actions];
 }
 
 // Client hooks
 export function useClients(params?: ClientSearchParams) {
   const [state, { setData, setLoading, setError }] = useApiState<Client[]>([]);
 
-  console.log(state);
-  
   // Stabilize params to prevent infinite re-renders
   const paramsKey = JSON.stringify(params || {});
 
@@ -119,7 +120,7 @@ export function useClients(params?: ClientSearchParams) {
         setError(handleApiError(error as ApiError));
       }
     };
-    
+
     fetchClients();
   }, [paramsKey, setData, setLoading, setError]);
 
@@ -131,7 +132,7 @@ export function useClients(params?: ClientSearchParams) {
     } catch (error) {
       setError(handleApiError(error as ApiError));
     }
-  }, [params, setData, setLoading, setError]);
+  }, [paramsKey, setData, setLoading, setError]);
 
   return {
     clients: state.data,
